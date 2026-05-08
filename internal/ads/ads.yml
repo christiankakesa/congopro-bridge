@@ -1,0 +1,88 @@
+# ─────────────────────────────────────────────────────────────────
+# Congopro Bridge — Ads Configuration
+# ─────────────────────────────────────────────────────────────────
+# active       : bool   — master switch for the entire ad system
+# rotation_sec : int    — how often the frontend rotates to the next ad (seconds)
+# max_per_page : int    — max ads shown per search results page
+#
+# Each ad:
+#   id          : unique string identifier
+#   active      : bool   — individual on/off switch
+#   title       : string — headline (max ~60 chars)
+#   description : string — body copy (max ~120 chars)
+#   url         : string — click-through destination
+#   display_url : string — friendly URL shown in the ad
+#   label       : string — badge text (default "Sponsored")
+#   color       : hex    — left accent bar colour
+#   period      :
+#     start : YYYY-MM-DD — inclusive start date (omit = always)
+#     end   : YYYY-MM-DD — inclusive end date   (omit = always)
+#   weight      : int    — relative rotation weight (higher = shown more)
+#   keywords    : list   — show ad only when query matches one of these
+#                          (omit or empty = show on all queries)
+# ─────────────────────────────────────────────────────────────────
+
+active: true
+rotation_sec: 8
+max_per_page: 2
+
+ads:
+  - id: ad_001
+    active: false
+    title: "Grow your business across Africa"
+    description: "Reach 10 000+ verified buyers on CongoPro Marketplace. List your company for free today."
+    url: "https://example.com/congopro"
+    display_url: "congopro.com/marketplace"
+    label: "Sponsored"
+    color: "#1a73e8"
+    weight: 10
+    period:
+      start: "2025-01-01"
+      end:   "2026-12-31"
+    keywords: []
+
+  - id: ad_002
+    active: false
+    title: "Professional accounting for SMEs — Kinshasa"
+    description: "Trusted by 500+ companies. Cloud invoicing, payroll & tax filing starting at $29/month."
+    url: "https://example.com/accounting"
+    display_url: "example.com/accounting"
+    label: "Sponsored"
+    color: "#34a853"
+    weight: 7
+    period:
+      start: "2025-06-01"
+      end:   "2026-12-31"
+    keywords:
+      - comptabilité
+      - accounting
+      - finance
+      - audit
+
+  - id: ad_003
+    active: false
+    title: "Logistics & freight forwarding — DRC"
+    description: "Door-to-door shipping, customs clearance and warehousing. Get a free quote in 24h."
+    url: "https://example.com/freight"
+    display_url: "example.com/freight"
+    label: "Sponsored"
+    color: "#fbbc04"
+    weight: 5
+    period: {}
+    keywords:
+      - transport
+      - logistique
+      - freight
+      - shipping
+
+  - id: ad_004
+    active: false
+    title: "List your company — it's free"
+    description: "Congopro Bridge is built on open data. Add or claim your company listing in minutes."
+    url: "https://example.com/list"
+    display_url: "searchbridge.io/list"
+    label: "Promote"
+    color: "#9c27b0"
+    weight: 3
+    period: {}
+    keywords: []

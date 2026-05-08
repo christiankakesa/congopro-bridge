@@ -1,0 +1,1711 @@
+<!doctype html>
+<html lang="fr" class="h-full overflow-x-hidden">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Congopro Bridge</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <script src="/js/tailwind-cdn.js"></script>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("consent", "default", {
+        analytics_storage: "denied",
+        ad_storage: "denied",
+      });
+      try {
+        if (localStorage.getItem("sb_cookie_consent") === "all")
+          gtag("consent", "update", {
+            analytics_storage: "granted",
+            ad_storage: "granted",
+          });
+      } catch (e) {}
+      gtag("js", new Date());
+      gtag("config", "G-VS32J060KG");
+    </script>
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@400;500;600&display=swap");
+
+      *,
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+      }
+      .font-google {
+        font-family: "Google Sans", "Inter", sans-serif;
+      }
+
+      /* ── Search box ── */
+      .search-box {
+        border: 1px solid #dfe1e5;
+        border-radius: 24px;
+        transition:
+          box-shadow 0.15s ease,
+          border-color 0.15s ease;
+        background: #fff;
+      }
+      .search-box:hover,
+      .search-box:focus-within {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        border-color: transparent;
+      }
+
+      /* ── Spinner ── */
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .spinner {
+        animation: spin 0.7s linear infinite;
+      }
+
+      /* ══════════════════════════════════════════════
+       RESULT ROW  — redesigned
+    ══════════════════════════════════════════════ */
+      .result-row {
+        max-width: 700px;
+        padding: 14px 0 16px;
+        border-bottom: 1px solid #f0f0f0;
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 0 12px;
+      }
+      .result-row:last-child {
+        border-bottom: none;
+      }
+
+      /* Left favicon column */
+      .result-favicon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #f1f3f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: #5f6368;
+        flex-shrink: 0;
+        margin-top: 2px;
+        border: 1px solid #e8eaed;
+        overflow: hidden;
+      }
+
+      /* Right content column */
+      .result-body {
+        min-width: 0;
+      }
+
+      /* Breadcrumb line */
+      .result-url {
+        font-size: 12px;
+        color: #70757a;
+        line-height: 18px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 3px;
+      }
+
+      /* Company name */
+      .result-title {
+        font-size: 19px;
+        line-height: 25px;
+        font-weight: 400;
+        color: #1a0dab;
+        font-family: "Google Sans", "Inter", sans-serif;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        margin-bottom: 4px;
+      }
+
+      /* Meta row: activity chip + location */
+      .result-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 5px;
+      }
+
+      /* Activity chip — truncated with tooltip */
+      .activity-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        padding: 2px 9px;
+        border-radius: 4px;
+        background: #e8f0fe;
+        color: #1967d2;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .activity-chip svg {
+        flex-shrink: 0;
+      }
+
+      /* Location pill */
+      .location-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 12px;
+        color: #5f6368;
+        flex-shrink: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* Description */
+      .result-desc {
+        font-size: 13.5px;
+        color: #4d5156;
+        line-height: 21px;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        /* clamp to 3 lines */
+        line-clamp: 3;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* Score badge */
+      .score-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: #137333;
+        background: #e6f4ea;
+        border-radius: 4px;
+        padding: 1px 6px;
+        white-space: nowrap;
+      }
+
+      mark {
+        background: #fff3cd;
+        color: #1a1a1a;
+        font-weight: 600;
+        padding: 0 1px;
+        border-radius: 2px;
+      }
+
+      /* ══════════════════════════════════════════════
+       AD SLOT
+    ══════════════════════════════════════════════ */
+      .ad-slot {
+        max-width: 700px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #fafafa;
+        border: 1px solid #e8eaed;
+        margin-bottom: 6px;
+        display: flex;
+        gap: 10px;
+      }
+      .ad-accent {
+        width: 3px;
+        border-radius: 2px;
+        align-self: stretch;
+        flex-shrink: 0;
+      }
+      .ad-label {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #fff;
+        padding: 1px 5px;
+        border-radius: 3px;
+        display: inline-block;
+        margin-bottom: 2px;
+      }
+      .ad-title {
+        font-size: 16px;
+        line-height: 22px;
+        font-weight: 400;
+        font-family: "Google Sans", "Inter", sans-serif;
+        text-decoration: none;
+        display: block;
+        overflow-wrap: break-word;
+      }
+      .ad-title:hover {
+        text-decoration: underline;
+      }
+      .ad-display-url {
+        font-size: 12px;
+        color: #70757a;
+        margin: 1px 0;
+        overflow-wrap: break-word;
+      }
+      .ad-desc {
+        font-size: 13px;
+        color: #4d5156;
+        line-height: 20px;
+        margin-top: 2px;
+        overflow-wrap: break-word;
+      }
+
+      /* ── Stats bar ── */
+      #statsBar {
+        font-size: 13px;
+        color: #70757a;
+        padding: 2px 0 12px;
+        max-width: 700px;
+      }
+
+      /* ── Top bar ── */
+      #topBar {
+        border-bottom: 1px solid #e8eaed;
+        background: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+
+      /* ── Logo colours ── */
+      .g-blue {
+        color: #4285f4;
+      }
+      .g-red {
+        color: #ea4335;
+      }
+      .g-redx {
+        color: #be0203;
+      }
+      .g-yellow {
+        color: #fbbc04;
+      }
+      .g-green {
+        color: #34a853;
+      }
+
+      /* ── Empty state ── */
+      .no-results-title {
+        font-size: 20px;
+        color: #202124;
+        font-family: "Google Sans", "Inter", sans-serif;
+      }
+      .no-results-sub {
+        font-size: 14px;
+        color: #4d5156;
+        margin-top: 4px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #dadce0;
+        border-radius: 8px;
+      }
+
+      /* ── Divider between ads and results ── */
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #9aa0a6;
+        padding: 0 0 8px;
+        max-width: 700px;
+      }
+    </style>
+  </head>
+
+  <body class="bg-white text-gray-900 antialiased min-h-full overflow-x-hidden">
+    <div
+      id="homepage"
+      class="relative w-full flex flex-col items-center justify-center min-h-screen px-4 pb-28"
+    >
+      <div class="mb-8 select-none text-center">
+        <span
+          class="font-google font-normal text-4xl sm:text-[52px] md:text-[64px] tracking-tight leading-none flex items-center justify-center gap-2 sm:gap-3"
+        >
+          <span>
+            <span class="g-redx">C</span><span class="g-redx">o</span
+            ><span class="g-redx">n</span><span class="g-redx">g</span
+            ><span class="g-redx">o</span><span class="g-redx">p</span
+            ><span class="g-redx">r</span><span class="g-redx">o</span>
+            <span class="text-gray-700"> Bridge</span>
+          </span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-[#4285f4]"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+            />
+          </svg>
+        </span>
+      </div>
+
+      <div class="w-full max-w-[584px] space-y-4">
+        <div class="search-box flex items-center gap-2 px-4 py-3 w-full">
+          <svg
+            id="homeSearchIcon"
+            class="w-5 h-5 text-gray-400 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"
+            />
+          </svg>
+          <svg
+            id="homeSpinner"
+            class="spinner w-5 h-5 text-blue-500 shrink-0 hidden"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-20"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            />
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"
+            />
+          </svg>
+          <input
+            id="homeInput"
+            type="text"
+            placeholder="Que recherchez-vous aujourd'hui ?"
+            autocomplete="off"
+            spellcheck="false"
+            class="flex-1 text-base text-gray-800 placeholder-gray-400 bg-transparent outline-none min-w-0"
+          />
+          <button
+            id="homeClear"
+            class="hidden text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+        <p
+          id="homeStatus"
+          class="text-center text-sm text-gray-400 min-h-[1.25rem]"
+        ></p>
+      </div>
+
+      <p
+        class="absolute bottom-6 inset-x-0 w-full text-xs text-gray-400 text-center px-4"
+        id="homeFooter"
+      ></p>
+    </div>
+
+    <div
+      id="staticPage"
+      class="hidden w-full max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-28"
+    >
+      <h1
+        id="staticTitle"
+        class="text-3xl font-google font-normal text-gray-900 mb-6"
+      ></h1>
+      <div
+        id="staticContent"
+        class="prose prose-blue text-gray-700 leading-relaxed space-y-4"
+      ></div>
+    </div>
+
+    <div id="resultsPage" class="hidden w-full">
+      <div id="topBar" class="px-4 sm:px-6 py-3 w-full">
+        <div
+          class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 max-w-5xl"
+        >
+          <a
+            id="logoLink"
+            href="#"
+            class="font-google text-[24px] sm:text-[26px] tracking-tight shrink-0 select-none leading-none flex items-center gap-1.5"
+          >
+            <span>
+              <span class="g-blue">C</span><span class="g-red">o</span
+              ><span class="g-yellow">n</span><span class="g-green">g</span
+              ><span class="g-blue">o</span><span class="g-red">p</span
+              ><span class="g-yellow">r</span><span class="g-green">o</span>
+              <span class="text-gray-600 text-[20px] sm:text-[22px]">
+                Bridge</span
+              >
+            </span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-5 h-5 sm:w-6 sm:h-6 text-[#4285f4]"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+              />
+            </svg>
+          </a>
+
+          <div
+            class="search-box w-full sm:flex-1 max-w-[584px] flex items-center gap-2 px-4 py-2"
+          >
+            <svg
+              id="topSearchIcon"
+              class="w-4 h-4 text-gray-400 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"
+              />
+            </svg>
+            <svg
+              id="topSpinner"
+              class="spinner w-4 h-4 text-blue-500 shrink-0 hidden"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-20"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              />
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"
+              />
+            </svg>
+            <input
+              id="topInput"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              class="flex-1 text-sm text-gray-800 placeholder-gray-400 bg-transparent outline-none min-w-0"
+            />
+            <button
+              id="topClear"
+              class="hidden text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+            >
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <main class="px-4 sm:px-6 pt-5 pb-20 sm:ml-[172px]">
+        <div id="statsBar" class="hidden"></div>
+        <div id="adContainer" class="hidden w-full mb-2"></div>
+        <div id="resultsLabel" class="section-label hidden">Results</div>
+
+        <div
+          id="aiOverview"
+          class="hidden mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-5 max-w-[700px]"
+        >
+          <div class="flex items-center gap-2 mb-3 text-indigo-700">
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              ></path>
+            </svg>
+            <span class="font-semibold text-sm uppercase tracking-wide"
+              >Assistant IA</span
+            >
+          </div>
+
+          <button
+            id="aiTriggerBtn"
+            class="hidden flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 font-medium text-sm rounded-lg shadow-sm border border-indigo-200 hover:bg-indigo-50 transition-colors"
+          >
+            Générer une synthèse avec l'IA
+          </button>
+
+          <div
+            id="aiLoading"
+            class="hidden items-center gap-3 text-indigo-500 text-sm font-medium"
+          >
+            <svg class="spinner w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle
+                class="opacity-20"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"
+              ></path>
+            </svg>
+            Analyse des entreprises en cours...
+          </div>
+
+          <div
+            id="aiContent"
+            class="hidden text-gray-800 text-sm leading-relaxed prose prose-indigo"
+          ></div>
+        </div>
+
+        <div id="resultsList" class="w-full"></div>
+
+        <div id="emptyState" class="hidden pt-4 max-w-[652px]">
+          <p class="no-results-title" id="emptyTitle"></p>
+          <p class="no-results-sub" id="emptySubtitle"></p>
+          <hr class="mt-6 border-[#f0f0f0]" />
+          <p class="mt-4 text-sm text-gray-500">Suggestions:</p>
+          <ul
+            class="mt-2 text-sm text-gray-500 list-disc list-inside space-y-1"
+          >
+            <li>Make sure all words are spelled correctly.</li>
+            <li>Try different or fewer keywords.</li>
+            <li>Try more general keywords.</li>
+          </ul>
+        </div>
+      </main>
+    </div>
+
+    <button
+      id="scrollToTopBtn"
+      aria-label="Back to top"
+      class="fixed bottom-24 right-4 md:bottom-8 md:right-8 lg:right-auto lg:left-[920px] z-[90] p-3 bg-white text-gray-600 rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-gray-200 transition-all duration-300 transform opacity-0 translate-y-8 pointer-events-none hover:bg-gray-50 hover:text-[#1a73e8] focus:outline-none"
+    >
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M5 15l7-7 7 7"
+        />
+      </svg>
+    </button>
+
+    <script>
+      // ── Config ────────────────────────────────────────────
+      const API_BASE = "";
+      const DEBOUNCE = 260;
+      const MAX_DESC = 200;
+
+      // ── State ─────────────────────────────────────────────
+      let serverReady = false;
+      let abortCtrl = null;
+
+      // ── DOM ───────────────────────────────────────────────
+      const staticPage = document.getElementById("staticPage");
+      const staticTitle = document.getElementById("staticTitle");
+      const staticContent = document.getElementById("staticContent");
+      const homepage = document.getElementById("homepage");
+      const resultsPage = document.getElementById("resultsPage");
+      const homeInput = document.getElementById("homeInput");
+      const homeClear = document.getElementById("homeClear");
+      const homeStatus = document.getElementById("homeStatus");
+      const homeFooter = document.getElementById("homeFooter");
+      const homeSearchIcon = document.getElementById("homeSearchIcon");
+      const homeSpinner = document.getElementById("homeSpinner");
+      const topInput = document.getElementById("topInput");
+      const topClear = document.getElementById("topClear");
+      const topSearchIcon = document.getElementById("topSearchIcon");
+      const topSpinner = document.getElementById("topSpinner");
+      const logoLink = document.getElementById("logoLink");
+      const statsBar = document.getElementById("statsBar");
+      const resultsList = document.getElementById("resultsList");
+      const resultsLabel = document.getElementById("resultsLabel");
+      const emptyState = document.getElementById("emptyState");
+      const adContainer = document.getElementById("adContainer");
+      const emptyTitle = document.getElementById("emptyTitle");
+      const emptySubtitle = document.getElementById("emptySubtitle");
+      const scrollToTopBtn = document.getElementById("scrollToTopBtn");
+
+      // ── Utilities ─────────────────────────────────────────
+      function debounce(fn, ms) {
+        let t;
+        return (...a) => {
+          clearTimeout(t);
+          t = setTimeout(() => fn(...a), ms);
+        };
+      }
+      function esc(s) {
+        return String(s)
+          .replace(/&/g, "&")
+          .replace(/</g, "<")
+          .replace(/>/g, ">");
+      }
+      function excerpt(text, max) {
+        if (!text) return "";
+        text = text.trim();
+        return text.length <= max
+          ? text
+          : text.slice(0, max).replace(/\s+\S*$/, "") + "…";
+      }
+
+      function highlight(text, q) {
+        if (!text) return "";
+        const safe = esc(text);
+        if (!q) return safe;
+
+        const tokens = q
+          .trim()
+          .split(/\s+/)
+          .filter((t) => t.length >= 3)
+          .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+        if (!tokens.length) return safe;
+        return safe.replace(
+          new RegExp(`(${tokens.join("|")})`, "gi"),
+          "<mark>$1</mark>",
+        );
+      }
+
+      // Deterministic 2-letter initials + hue from company name
+      function initials(name) {
+        const words = (name || "?").trim().split(/\s+/);
+        if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+        return (words[0][0] + words[1][0]).toUpperCase();
+      }
+      function nameToHue(name) {
+        let h = 0;
+        for (let i = 0; i < (name || "").length; i++)
+          h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+        return h % 360;
+      }
+
+      // Truncate activity label for display, keep full for title tooltip
+      function truncateActivity(activity, max = 32) {
+        if (!activity) return "";
+        return activity.length > max
+          ? activity.slice(0, max).trimEnd() + "…"
+          : activity;
+      }
+
+      // ── View switching ────────────────────────────────────
+      function showHome() {
+        if (window.location.pathname !== "/" || window.location.search !== "") {
+          history.pushState(null, "", "/");
+        }
+
+        window.scrollTo(0, 0);
+        resultsPage.classList.add("hidden");
+        homepage.style.display = "flex";
+        resultsList.innerHTML = "";
+        statsBar.classList.add("hidden");
+        resultsLabel.classList.add("hidden");
+        stopAdRotation();
+        emptyState.classList.add("hidden");
+        homeInput.value = "";
+        homeClear.classList.add("hidden");
+        homeInput.focus();
+      }
+      function showResults(q, fromHome) {
+        homepage.style.display = "none";
+        resultsPage.classList.remove("hidden");
+        if (fromHome) {
+          topInput.value = q;
+          topInput.focus();
+          const len = topInput.value.length;
+          topInput.setSelectionRange(len, len);
+        }
+        topClear.classList.toggle("hidden", !topInput.value);
+      }
+
+      logoLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        showHome();
+      });
+
+      // ── Spinner ───────────────────────────────────────────
+      function setLoading(on, inHome) {
+        const icon = inHome ? homeSearchIcon : topSearchIcon;
+        const spin = inHome ? homeSpinner : topSpinner;
+        icon.classList.toggle("hidden", on);
+        spin.classList.toggle("hidden", !on);
+      }
+
+      // ── Render one result row ─────────────────────────────
+      function renderRow(c, q) {
+        // Core Identity
+        const name = c.name || "Unnamed";
+        const activity = c.activity || "";
+        const desc = excerpt(c.description || c.slogan || "", MAX_DESC);
+        const website = c.website || "";
+        const score = c.score > 0 ? Math.round(c.score * 100) : null;
+
+        // Contact & Real-world Data
+        const phone = c.phone || "";
+        const email = c.email || "";
+        const addr1 = c.address || "";
+        const addr2 = c.address_line_2 || "";
+        const city = c.city || "";
+        const country = c.country || "";
+
+        // Metadata (Freshness & Popularity)
+        const views = ""; // c.stats_show > 0 ? `${c.stats_show.toLocaleString()} views` : "";
+        let dateStr = "";
+        // if (c.updated_at && !c.updated_at.startsWith("0001-01-01")) {
+        //   const d = new Date(c.updated_at);
+        //   if (!isNaN(d)) {
+        //     // Formats to something like "Oct 12, 2023"
+        //     dateStr = d.toLocaleDateString(undefined, {
+        //       year: "numeric",
+        //       month: "short",
+        //       day: "numeric",
+        //     });
+        //   }
+        // }
+
+        // Semantically correct breadcrumb (Domain only)
+        const domain = website
+          ? website.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
+          : null;
+
+        // Visuals (Favicon avatar)
+        const hue = nameToHue(name);
+        const bg = `hsl(${hue},55%,92%)`;
+        const fg = `hsl(${hue},50%,32%)`;
+        const ini = initials(name);
+
+        const actShort = truncateActivity(activity);
+        const actFull = esc(activity);
+
+        // Build a highly detailed location string
+        const fullLocation = [addr1, addr2, city, country]
+          .filter(Boolean)
+          .join(", ");
+
+        // Generate Google Maps URL
+        let mapsLink = "";
+        if (c.location && c.location.lat && c.location.lon) {
+          mapsLink = `https://www.google.com/maps/search/?api=1&query=${c.location.lat},${c.location.lon}`;
+        } else if (fullLocation) {
+          mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullLocation)}`;
+        }
+
+        return `
+      <div class="result-row">
+        <div class="result-favicon" style="background:${bg};color:${fg};">${ini}</div>
+
+        <div class="result-body">
+          ${domain ? `<div class="result-url">${esc(domain)}</div>` : ""}
+
+          <div class="flex items-start gap-2 flex-wrap">
+            ${
+              website
+                ? `<a href="${esc(website)}" target="_blank" rel="noopener noreferrer" class="result-title hover:underline flex-1 min-w-0">${highlight(name, q)}</a>`
+                : `<h2 class="result-title flex-1 min-w-0">${highlight(name, q)}</h2>`
+            }
+            ${
+              score !== null
+                ? `<span class="score-badge shrink-0 mt-1">${score}%</span>`
+                : ""
+            }
+          </div>
+
+          <div class="result-meta mt-1.5 gap-y-1.5 gap-x-2">
+            ${
+              activity
+                ? `<span class="activity-chip" title="${actFull}">
+                  <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M6 6V5a3 3 0 016 0v1h2a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h1zm2-1a1 1 0 112 0v1H8V5zm1 5a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/>
+                  </svg>
+                  ${esc(actShort)}
+                </span>`
+                : ""
+            }
+            ${
+              fullLocation
+                ? `<a href="${mapsLink}" target="_blank" rel="noopener noreferrer" class="location-pill hover:underline text-gray-600">
+                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                  </svg>
+                  ${esc(fullLocation)}
+                </a>`
+                : ""
+            }
+            ${
+              phone
+                ? `<a href="tel:${esc(phone)}" class="location-pill hover:underline text-blue-600">
+                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
+                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                  </svg>
+                  ${esc(phone)}
+                </a>`
+                : ""
+            }
+            ${
+              email
+                ? `<a href="mailto:${esc(email)}" class="location-pill hover:underline text-blue-600">
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0; margin-top:1px;">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                  </svg>
+                  Email
+                </a>`
+                : ""
+            }
+          </div>
+
+          <p class="result-desc mt-1.5">
+            ${
+              dateStr || views
+                ? `<span class="text-gray-500 font-medium mr-1 whitespace-nowrap">${[dateStr, views].filter(Boolean).join(" · ")} —</span>`
+                : ""
+            }
+            ${desc ? highlight(desc, q) : ""}
+          </p>
+        </div>
+      </div>`;
+      }
+
+      // ── Render list ───────────────────────────────────────
+      function renderResults(data, q) {
+        const results = data.results || [];
+
+        if (!results.length) {
+          resultsList.innerHTML = "";
+          statsBar.classList.add("hidden");
+          resultsLabel.classList.add("hidden");
+          emptyState.classList.remove("hidden");
+          emptyTitle.textContent = `No results for "${q}"`;
+          emptySubtitle.textContent = "Your search did not match any company.";
+          return;
+        }
+
+        emptyState.classList.add("hidden");
+        resultsList.innerHTML = results.map((c) => renderRow(c, q)).join("");
+
+        const total = data.total || results.length;
+        statsBar.classList.remove("hidden");
+        statsBar.innerHTML = `About <strong>${total.toLocaleString()}</strong> result${total !== 1 ? "s" : ""}`;
+      }
+
+      // ── Search ────────────────────────────────────────────
+      async function doSearch(q, fromHome) {
+        if (!serverReady || !q.trim()) {
+          if (!q.trim()) showHome();
+          return;
+        }
+
+        const isSlugSearch = q.startsWith("-company-slug:");
+        const displayQ = isSlugSearch ? "" : q;
+
+        if (!isSlugSearch) {
+          const searchUrl = `/?q=${encodeURIComponent(q)}`;
+          if (window.location.pathname + window.location.search !== searchUrl) {
+            history.replaceState(null, "", searchUrl);
+          }
+        }
+
+        showResults(displayQ, fromHome);
+        setLoading(true, fromHome);
+
+        if (abortCtrl) abortCtrl.abort();
+        abortCtrl = new AbortController();
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/search?q=${encodeURIComponent(q)}`,
+            { signal: abortCtrl.signal },
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          // Pass the cleaned displayQ to the render function!
+          renderResults(data, displayQ);
+
+          const aiBox = document.getElementById("aiOverview");
+          if (!isSlugSearch && data.results && data.results.length > 0) {
+            aiBox.classList.remove("hidden");
+
+            // Si c'est une requête complexe, on déclenche automatiquement
+            if (isComplexQuery(displayQ)) {
+              triggerAI(displayQ);
+            } else {
+              // Sinon, on affiche juste le bouton pour inviter l'utilisateur
+              document
+                .getElementById("aiTriggerBtn")
+                .classList.remove("hidden");
+              document.getElementById("aiTriggerBtn").classList.add("flex");
+              document.getElementById("aiLoading").classList.add("hidden");
+              document.getElementById("aiLoading").classList.remove("flex");
+              document.getElementById("aiContent").classList.add("hidden");
+
+              // On attache l'événement au clic
+              document.getElementById("aiTriggerBtn").onclick = () =>
+                triggerAI(displayQ);
+            }
+          } else {
+            aiBox.classList.add("hidden");
+          }
+
+          // Don't fetch ads if this is a direct company profile lookup
+          if (!isSlugSearch) fetchAds(q);
+          else stopAdRotation();
+        } catch (err) {
+          if (err.name === "AbortError") return;
+          resultsList.innerHTML = "";
+          statsBar.classList.add("hidden");
+          resultsLabel.classList.add("hidden");
+          document.getElementById("aiOverview").classList.add("hidden");
+          emptyState.classList.remove("hidden");
+          emptyTitle.textContent = "Something went wrong";
+          emptySubtitle.textContent = err.message;
+        } finally {
+          setLoading(false, fromHome);
+        }
+      }
+
+      const debouncedSearch = debounce(
+        (q, fromHome) => doSearch(q, fromHome),
+        DEBOUNCE,
+      );
+
+      // ── Home input ────────────────────────────────────────
+      homeInput.addEventListener("input", () => {
+        const q = homeInput.value.trim();
+        homeClear.classList.toggle("hidden", !q);
+        if (q.length >= 3) {
+          debouncedSearch(q, true);
+        } else if (q.length === 0) {
+          showHome();
+        }
+      });
+      homeInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doSearch(homeInput.value.trim(), true);
+      });
+      homeClear.addEventListener("click", () => {
+        homeInput.value = "";
+        homeClear.classList.add("hidden");
+        homeInput.focus();
+      });
+
+      // ── Top bar input ─────────────────────────────────────
+      topInput.addEventListener("input", () => {
+        const q = topInput.value.trim();
+        topClear.classList.toggle("hidden", !q);
+        if (q.length >= 3) {
+          debouncedSearch(q, false);
+        } else if (q.length === 0) {
+          showHome();
+        }
+      });
+      topInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doSearch(topInput.value.trim(), false);
+      });
+      topClear.addEventListener("click", () => {
+        topInput.value = "";
+        topClear.classList.add("hidden");
+        showHome();
+      });
+
+      // ── The Router ─────────────────────────────────────────
+      function handleRoute() {
+        const path = window.location.pathname;
+
+        // Reset the view state
+        homepage.style.display = "none";
+        resultsPage.classList.add("hidden");
+        staticPage.classList.add("hidden");
+
+        if (path.startsWith("/company/")) {
+          const parts = path.split("/");
+          if (parts.length >= 3 && parts[2]) {
+            const slug = parts[2];
+            topInput.value = "";
+            topClear.classList.add("hidden");
+            doSearch(`-company-slug:${slug}`, false);
+          } else {
+            showHome();
+          }
+        } else if (path === "/help") {
+          fetchStaticContent("Help & Support", "help");
+        } else if (path === "/privacy") {
+          fetchStaticContent("Privacy Policy", "privacy");
+        } else if (path === "/terms") {
+          fetchStaticContent("Terms of Service", "terms");
+        } else {
+          // Route: Home OR a Shared Search Link
+          const urlParams = new URLSearchParams(window.location.search);
+          const queryParam = urlParams.get("q");
+
+          if (queryParam) {
+            topInput.value = queryParam;
+            topClear.classList.remove("hidden");
+            doSearch(queryParam, false);
+          } else {
+            showHome();
+          }
+        }
+      }
+
+      let aiAbortCtrl = null;
+
+      function isComplexQuery(q) {
+        if (!q || q.length < 5) return false;
+
+        const text = q.trim().toLowerCase();
+        const words = text.split(/\s+/);
+        const wordCount = words.length;
+
+        // ----- Interrogative words (English + French) -----
+        const interrogatives = [
+          "what",
+          "where",
+          "when",
+          "why",
+          "how",
+          "which",
+          "who",
+          "whom",
+          "que",
+          "quoi",
+          "où",
+          "quand",
+          "pourquoi",
+          "comment",
+          "quel",
+          "quelle",
+          "quels",
+          "quelles",
+          "qui",
+          "est-ce que",
+          "qu'est-ce",
+        ];
+        const hasInterrogative = interrogatives.some(
+          (w) =>
+            text.startsWith(w) ||
+            text.includes(" " + w) ||
+            text.includes(w + " "),
+        );
+
+        // ----- Action verbs (synthesis, comparison, explanation) -----
+        const actionVerbs = [
+          "compare",
+          "explain",
+          "describe",
+          "summarize",
+          "recommend",
+          "list",
+          "analyse",
+          "analyze",
+          "evaluate",
+          "discuss",
+          "contrast",
+          "detail",
+          "enumerate",
+          "justify",
+          "show", // end English
+          "comparer",
+          "expliquer",
+          "décrire",
+          "résumer",
+          "recommander",
+          "lister",
+          "analyser",
+          "évaluer",
+          "discuter",
+          "contraster",
+          "détailler",
+          "énumérer",
+          "justifier",
+          "montre",
+        ];
+        const hasActionVerb = actionVerbs.some((v) => text.includes(v));
+
+        // ----- Ranking / comparative terms -----
+        const rankingTerms = [
+          "top",
+          "best",
+          "highest",
+          "lowest",
+          "most",
+          "least",
+          "better",
+          "cheapest",
+          "largest",
+          "smallest",
+          "meilleur",
+          "meilleure",
+          "meilleurs",
+          "meilleures",
+          "plus haut",
+          "plus élevé",
+          "plus bas",
+          "moins cher",
+          "le plus",
+          "la plus",
+          "les plus",
+          "le moins",
+          "la moins",
+          "mieux",
+          "pire",
+        ];
+        const hasRanking = rankingTerms.some((t) => text.includes(t));
+
+        // ----- Question mark (we'll use it at the very end) -----
+        const endsWithQuestion = q.trim().endsWith("?");
+
+        // ----- Length threshold (>=5 words) -----
+        const isLong = wordCount >= 5;
+
+        // ----- Named entity heuristic (capitalised words, supports French accents) -----
+        const capitalised = (q.match(/\b[A-ZÀ-ÖØ-öø-ÿ][a-zà-öø-ÿ]+\b/g) || [])
+          .length;
+        const hasEntities = capitalised >= 2;
+
+        // Score system
+        let score = 0;
+        if (hasInterrogative) score += 2;
+        if (hasActionVerb) score += 2;
+        if (hasRanking) score += 1;
+        if (isLong) score += 1;
+        if (hasEntities) score += 1;
+
+        // Require BOTH score >= 3 AND question mark at the end
+        return score >= 3 && endsWithQuestion;
+      }
+
+      async function triggerAI(q) {
+        const triggerBtn = document.getElementById("aiTriggerBtn");
+        const loading = document.getElementById("aiLoading");
+        const content = document.getElementById("aiContent");
+
+        triggerBtn.classList.add("hidden");
+        loading.classList.remove("hidden");
+        loading.classList.add("flex");
+        content.classList.add("hidden");
+
+        if (aiAbortCtrl) aiAbortCtrl.abort();
+        aiAbortCtrl = new AbortController();
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/ask?q=${encodeURIComponent(q)}`,
+            {
+              signal: aiAbortCtrl.signal,
+            },
+          );
+          if (!res.ok) throw new Error("Erreur IA");
+          const data = await res.json();
+
+          loading.classList.add("hidden");
+          loading.classList.remove("flex");
+          content.classList.remove("hidden");
+          content.innerHTML = esc(data.answer).replace(/\n/g, "<br>");
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            loading.classList.add("hidden");
+            loading.classList.remove("flex");
+            // En cas d'erreur, on remet le bouton pour réessayer
+            triggerBtn.classList.remove("hidden");
+            triggerBtn.textContent = "Réessayer de générer";
+          }
+        }
+      }
+
+      async function fetchStaticContent(title, pageSlug) {
+        staticPage.classList.remove("hidden");
+        staticTitle.textContent = title;
+        staticContent.innerHTML = `<div class="flex items-center gap-2 text-gray-500">
+            <svg class="spinner w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
+            Loading...
+          </div>`;
+        window.scrollTo(0, 0);
+
+        try {
+          const res = await fetch(`${API_BASE}/content/${pageSlug}`);
+          if (!res.ok) throw new Error("Failed to load content");
+          const html = await res.text();
+          staticContent.innerHTML = html;
+        } catch (err) {
+          staticContent.innerHTML = `<p class="text-red-500">⚠️ Could not load the document. Please check your connection and try again.</p>`;
+        }
+      }
+
+      // ── Override standard links for SPA Navigation ──────────
+      // This allows you to use normal <a href="/privacy"> tags in your footer!
+      document.addEventListener("click", (e) => {
+        const link = e.target.closest("a");
+        if (
+          link &&
+          link.host === window.location.host &&
+          !link.hasAttribute("target")
+        ) {
+          e.preventDefault();
+          // Push the new URL to the browser without reloading the page
+          history.pushState(null, "", link.href);
+          handleRoute();
+        }
+      });
+
+      // Listen for the Browser Back/Forward buttons
+      window.addEventListener("popstate", handleRoute);
+
+      // ── Health polling & Boot ─────────────────────────────
+      async function checkHealth() {
+        try {
+          const res = await fetch(`${API_BASE}/health`);
+          const data = await res.json();
+          if (data.status === "ready") {
+            serverReady = true;
+            homeFooter.innerHTML = `© ${new Date().getFullYear()} Congopro · 
+              <a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 hover:underline transition-colors">Support</a> ·
+              <a href="/help" class="hover:text-gray-600 hover:underline transition-colors">Aide</a> · 
+              <a href="/privacy" class="hover:text-gray-600 hover:underline transition-colors">Confidentialité</a> · 
+              <a href="/terms" class="hover:text-gray-600 hover:underline transition-colors">Conditions</a>`;
+            homeStatus.textContent = "";
+
+            handleRoute();
+          } else {
+            homeStatus.textContent = "⏳ Indexing in progress…";
+            setTimeout(checkHealth, 1500);
+          }
+        } catch {
+          homeStatus.textContent = "⚠️ Cannot reach the server. Retrying…";
+          setTimeout(checkHealth, 3000);
+        }
+      }
+
+      // Start the boot sequence
+      homeStatus.textContent = "⏳ Connecting…";
+      checkHealth();
+
+      // ── Ad engine ─────────────────────────────────────────
+      const adState = {
+        pool: [],
+        rotationSec: 8,
+        maxPerPage: 2,
+        timer: null,
+        cursor: 0,
+      };
+
+      function adAccentStyle(color) {
+        return color ? `background:${color}` : "background:#1a73e8";
+      }
+      function renderAdSlot(ad) {
+        const label = ad.label || "Sponsored";
+        const color = ad.color || "#1a73e8";
+        return `<div class="ad-slot">
+        <div class="ad-accent" style="${adAccentStyle(color)}"></div>
+        <div class="flex-1 min-w-0">
+          <span class="ad-label" style="${adAccentStyle(color)}">${esc(label)}</span>
+          <a href="${esc(ad.url)}" target="_blank" rel="noopener sponsored"
+             class="ad-title" style="color:${color}">${esc(ad.title)}</a>
+          <div class="ad-display-url">${esc(ad.display_url || ad.url)}</div>
+          <p class="ad-desc">${esc(ad.description)}</p>
+        </div>
+      </div>`;
+      }
+      function renderAds() {
+        const pool = adState.pool;
+        if (!pool.length) {
+          adContainer.classList.add("hidden");
+          adContainer.innerHTML = "";
+          return;
+        }
+        const slots = [],
+          seen = new Set();
+        for (
+          let i = 0;
+          i < pool.length && slots.length < adState.maxPerPage;
+          i++
+        ) {
+          const ad = pool[(adState.cursor + i) % pool.length];
+          if (!seen.has(ad.id)) {
+            seen.add(ad.id);
+            slots.push(ad);
+          }
+        }
+        adState.cursor = (adState.cursor + 1) % pool.length;
+        adContainer.innerHTML = slots.map(renderAdSlot).join("");
+        adContainer.classList.remove("hidden");
+        // Show "Results" label only when there are ads above
+        resultsLabel.classList.toggle("hidden", !slots.length);
+      }
+      function startAdRotation() {
+        if (adState.timer) clearInterval(adState.timer);
+        if (!adState.pool.length) return;
+        adState.timer = setInterval(renderAds, adState.rotationSec * 1000);
+      }
+      function stopAdRotation() {
+        if (adState.timer) {
+          clearInterval(adState.timer);
+          adState.timer = null;
+        }
+        adContainer.classList.add("hidden");
+        adContainer.innerHTML = "";
+        resultsLabel.classList.add("hidden");
+      }
+      async function fetchAds(q) {
+        try {
+          const res = await fetch(`${API_BASE}/ads?q=${encodeURIComponent(q)}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.active) {
+            stopAdRotation();
+            return;
+          }
+          adState.pool = data.ads || [];
+          adState.rotationSec = data.rotation_sec || 8;
+          adState.maxPerPage = data.max_per_page || 2;
+          adState.cursor = 0;
+          renderAds();
+          startAdRotation();
+        } catch {
+          /* ads are non-critical */
+        }
+      }
+
+      // ── Scroll to Top Widget ──────────────────────────────
+      window.addEventListener("scroll", () => {
+        // Show button after scrolling down 300px
+        if (window.scrollY > 300) {
+          scrollToTopBtn.classList.remove(
+            "opacity-0",
+            "translate-y-8",
+            "pointer-events-none",
+          );
+          scrollToTopBtn.classList.add("opacity-100", "translate-y-0");
+        } else {
+          scrollToTopBtn.classList.add(
+            "opacity-0",
+            "translate-y-8",
+            "pointer-events-none",
+          );
+          scrollToTopBtn.classList.remove("opacity-100", "translate-y-0");
+        }
+      });
+
+      // Native browser smooth scrolling
+      scrollToTopBtn.addEventListener("click", () => {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      });
+
+      // ── Boot ──────────────────────────────────────────────
+      homeStatus.textContent = "⏳ Connecting…";
+      checkHealth();
+    </script>
+
+    <div
+      id="cookieBanner"
+      class="fixed bottom-0 inset-x-0 z-[100] hidden"
+      role="dialog"
+      aria-live="polite"
+      aria-label="Cookie notice"
+    >
+      <div
+        class="bg-white/95 backdrop-blur border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]"
+      >
+        <div
+          class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+        >
+          <span class="text-2xl shrink-0 select-none" aria-hidden="true"
+            >🔒</span
+          >
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-700 leading-relaxed">
+              <strong class="font-semibold text-gray-900"
+                >Your privacy matters.</strong
+              >
+              We use essential cookies and trusted partner SDKs only for
+              security, performance, and anonymous analytics.
+              <strong class="font-semibold text-gray-900"
+                >We never sell your personal data or share it with
+                advertisers.</strong
+              >
+              <button
+                id="cookieLearnMore"
+                class="ml-1 text-blue-600 hover:underline text-sm font-medium whitespace-nowrap"
+              >
+                Learn more
+              </button>
+            </p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              id="cookieDecline"
+              class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              Essential only
+            </button>
+            <button
+              id="cookieAccept"
+              class="px-5 py-2 text-sm font-semibold text-white rounded-full transition-colors"
+              style="background: #1a73e8"
+            >
+              Accept all
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="cookieModal"
+      class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+      <div
+        class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        id="cookieModalBackdrop"
+      ></div>
+      <div
+        class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden"
+      >
+        <div
+          class="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between"
+        >
+          <h2 id="modalTitle" class="text-base font-semibold text-gray-900">
+            Cookie & privacy details
+          </h2>
+          <button
+            id="cookieModalClose"
+            class="text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          class="px-6 py-5 space-y-5 text-sm text-gray-600 max-h-[60vh] overflow-y-auto"
+        >
+          <p class="text-gray-700">
+            We believe you should know exactly what runs when you use Congopro
+            Bridge.
+          </p>
+          <div class="rounded-xl border border-gray-100 p-4 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span
+                class="font-semibold text-gray-900 flex items-center gap-1.5"
+              >
+                <span
+                  class="w-2 h-2 rounded-full bg-green-500 inline-block"
+                ></span
+                >Essential cookies
+              </span>
+              <span
+                class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full"
+                >Always on</span
+              >
+            </div>
+            <p>
+              Required for the site to function — session handling and security
+              tokens. No personal data is stored.
+            </p>
+          </div>
+          <div class="rounded-xl border border-gray-100 p-4 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span
+                class="font-semibold text-gray-900 flex items-center gap-1.5"
+              >
+                <span
+                  class="w-2 h-2 rounded-full bg-blue-500 inline-block"
+                ></span
+                >Anonymous analytics
+              </span>
+              <span
+                class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full"
+                >Optional</span
+              >
+            </div>
+            <p>
+              Aggregated, anonymised usage stats (e.g. popular searches, error
+              rates) help us improve the product. No IP addresses or identifiers
+              are stored.
+            </p>
+          </div>
+          <div
+            class="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-2"
+          >
+            <p class="font-semibold text-blue-900">What we never do</p>
+            <ul class="space-y-1 text-blue-800">
+              <li class="flex items-start gap-2">
+                <span class="mt-0.5">✗</span> Sell or rent your data to third
+                parties
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="mt-0.5">✗</span> Build advertising profiles
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="mt-0.5">✗</span> Share search queries with external
+                ad networks
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="mt-0.5">✗</span> Track you across other websites
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+          <button
+            id="modalDecline"
+            class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            Essential only
+          </button>
+          <button
+            id="modalAccept"
+            class="px-5 py-2 text-sm font-semibold text-white rounded-full transition-colors"
+            style="background: #1a73e8"
+          >
+            Accept all
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const COOKIE_KEY = "sb_cookie_consent";
+        const banner = document.getElementById("cookieBanner");
+        const modal = document.getElementById("cookieModal");
+
+        function getConsent() {
+          try {
+            return localStorage.getItem(COOKIE_KEY);
+          } catch {
+            return null;
+          }
+        }
+        function setConsent(v) {
+          try {
+            localStorage.setItem(COOKIE_KEY, v);
+          } catch {}
+        }
+        function hideBanner() {
+          banner.classList.add("hidden");
+        }
+        function showBanner() {
+          banner.classList.remove("hidden");
+        }
+        function openModal() {
+          modal.classList.remove("hidden");
+          modal.classList.add("flex");
+        }
+        function closeModal() {
+          modal.classList.add("hidden");
+          modal.classList.remove("flex");
+        }
+
+        function accept() {
+          setConsent("all");
+          hideBanner();
+          closeModal();
+          if (typeof gtag === "function")
+            gtag("consent", "update", {
+              analytics_storage: "granted",
+              ad_storage: "granted",
+            });
+        }
+        function decline() {
+          setConsent("essential");
+          hideBanner();
+          closeModal();
+          if (typeof gtag === "function")
+            gtag("consent", "update", {
+              analytics_storage: "denied",
+              ad_storage: "denied",
+            });
+        }
+
+        document
+          .getElementById("cookieAccept")
+          .addEventListener("click", accept);
+        document
+          .getElementById("cookieDecline")
+          .addEventListener("click", decline);
+        document
+          .getElementById("cookieLearnMore")
+          .addEventListener("click", openModal);
+        document
+          .getElementById("cookieModalClose")
+          .addEventListener("click", closeModal);
+        document
+          .getElementById("cookieModalBackdrop")
+          .addEventListener("click", closeModal);
+        document
+          .getElementById("modalAccept")
+          .addEventListener("click", accept);
+        document
+          .getElementById("modalDecline")
+          .addEventListener("click", decline);
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") closeModal();
+        });
+
+        if (!getConsent()) showBanner();
+      })();
+    </script>
+  </body>
+</html>

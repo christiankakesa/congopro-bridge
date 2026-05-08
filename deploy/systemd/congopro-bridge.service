@@ -1,0 +1,34 @@
+[Unit]
+Description=Congopro Bridge
+After=network.target
+# Add "After=traefik.service" if you want strict ordering.
+
+[Service]
+Type=simple
+User=ops
+Group=ops
+
+Environment=PORT=8110
+
+WorkingDirectory=/opt/congopro-bridge
+ExecStart=/opt/congopro-bridge/congopro-bridge
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+
+# Logging — viewable with: journalctl -u congopro-bridge -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=congopro-bridge
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/congopro-bridge
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
