@@ -105,6 +105,20 @@ max_per_page: 2
 
 ads:
 
+  - id: "frahane-enterecommerce"
+    active: true
+    title: "Vendez à l'international comme à domicile"
+    description: "Solution e-commerce autonome : Stripe, USDT, Mobile Money. Sans abonnement, sans commission. Démo et contact sur mon site."
+    url: "https://enterecommerce.netlify.app/"
+    display_url: "enterecommerce.netlify.app"
+    label: *top_choice_label
+    color: *top_choice_color
+    period:
+      start: "2026-05-09"
+      end: "2026-05-31"
+    weight: 10
+    keywords: []
+
   - id: "congopro-business-discovery"
     active: true
     title: "Découvrez les meilleures entreprises du Congo"
