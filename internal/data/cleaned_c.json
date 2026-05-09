@@ -247,7 +247,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "IMMOKIN gr. orgaman",
+    "name": "Immokin Groupe Orgaman",
     "name_seo": "immokin-gr-orgaman",
     "published": true,
     "stats_show": 2787,
@@ -6303,7 +6303,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "TREFILKIN",
+    "name": "Trefilkin",
     "name_seo": "trefilkin",
     "published": true,
     "stats_show": 1547,
@@ -9375,7 +9375,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "SOFIKIN - Société Fiduciaire Kinoise S.P.R.L.",
+    "name": "Sofikin - Société Fiduciaire Kinoise S.P.R.L.",
     "name_seo": "sofikin-societe-fiduciaire-kinoise-s-p-r-l",
     "published": true,
     "stats_show": 1550,
@@ -9843,7 +9843,7 @@
     "message_send_gplus": true,
     "message_send_twitter": true,
     "modifier_id": null,
-    "name": "EGEMATKIN",
+    "name": "Egematkin",
     "name_seo": "egematkin",
     "published": true,
     "stats_show": 810,
@@ -11563,7 +11563,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "KIN GR@PHIC",
+    "name": "Kin Gr@phic",
     "name_seo": "kin-gr-phic",
     "published": true,
     "stats_show": 1152,
@@ -12679,7 +12679,7 @@
     "message_send_gplus": true,
     "message_send_twitter": true,
     "modifier_id": null,
-    "name": "SOFIKIN",
+    "name": "Sofikin",
     "name_seo": "sofikin",
     "published": true,
     "stats_show": 1016,
@@ -12786,7 +12786,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "SOGECOKIN",
+    "name": "Sogecokin",
     "name_seo": "sogecokin",
     "published": true,
     "stats_show": 2772,
@@ -13203,7 +13203,7 @@
     "message_send_gplus": true,
     "message_send_twitter": true,
     "modifier_id": null,
-    "name": "MEDICAL KIN CENTER",
+    "name": "Medical Kin Center",
     "name_seo": "medical-kin-center",
     "published": true,
     "stats_show": 1162,
@@ -13503,7 +13503,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "TREFILKIN",
+    "name": "Trefilkin",
     "name_seo": "trefilkin-1",
     "published": true,
     "stats_show": 3174,
@@ -13994,7 +13994,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "POISSONNERIE DE KINSHASA",
+    "name": "Poissonnerie de Kinshasa",
     "name_seo": "poissonnerie-de-kinshasa",
     "published": true,
     "stats_show": 1568,
@@ -14742,8 +14742,8 @@
     },
     "email": "ecoleeureka@yahoo.fr",
     "geo": [
-      15.2900562,
-      -4.3174141
+      15.2899727,
+      -4.3173871
     ],
     "main_phone": "+243 818 102 749",
     "message_send_fb": false,
@@ -14847,7 +14847,7 @@
     "message_send_gplus": true,
     "message_send_twitter": true,
     "modifier_id": null,
-    "name": "LITTLE JEWELS INTER. SCHOOL OF KIN",
+    "name": "Little Jewels Inter. School of Kin",
     "name_seo": "little-jewels-inter-school-of-kin",
     "published": true,
     "stats_show": 1317,
@@ -18896,7 +18896,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "TISSAKIN",
+    "name": "Tissakin",
     "name_seo": "tissakin",
     "published": true,
     "stats_show": 5151,
@@ -20153,7 +20153,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "SINTEXKIN SPRL",
+    "name": "Sintexkin SPRL",
     "name_seo": "sintexkin-sprl",
     "published": true,
     "stats_show": 3031,
@@ -20365,7 +20365,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "ESCOKIN",
+    "name": "Escokin",
     "name_seo": "escokin",
     "published": true,
     "stats_show": 1942,
@@ -21348,7 +21348,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "KIN GRAPHIC SPRL",
+    "name": "Kin Graphic SPRL",
     "name_seo": "kin-graphic-sprl",
     "published": true,
     "stats_show": 1339,
@@ -21559,7 +21559,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "COLIKIN",
+    "name": "Colikin",
     "name_seo": "colikin",
     "published": true,
     "stats_show": 2221,
@@ -31313,7 +31313,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "LAYAKIN GARAGE",
+    "name": "Layakin Garage",
     "name_seo": "layakin-garage",
     "published": true,
     "stats_show": 1131,
@@ -33189,7 +33189,7 @@
     "message_send_gplus": true,
     "message_send_twitter": true,
     "modifier_id": null,
-    "name": "KIN FINANCES MESSAGERIE",
+    "name": "Kin Finances Messagerie",
     "name_seo": "kin-finances-messagerie",
     "published": true,
     "stats_show": 949,
@@ -38883,7 +38883,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "NGUBA KIN",
+    "name": "Nguba Kin",
     "name_seo": "nguba-kin",
     "published": true,
     "stats_show": 1713,
@@ -43939,7 +43939,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "GLOBAL KIN VIDEO",
+    "name": "Global Kin Video",
     "name_seo": "global-kin-video",
     "published": true,
     "stats_show": 1084,
@@ -45177,7 +45177,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "TOUTKIN",
+    "name": "Toutkin",
     "name_seo": "toutkin",
     "published": true,
     "slogan": "Le portail des 24 communes de Kinshasa",
