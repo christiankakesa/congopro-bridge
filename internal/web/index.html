@@ -66,9 +66,7 @@
         animation: spin 0.7s linear infinite;
       }
 
-      /* ══════════════════════════════════════════════
-       RESULT ROW  — redesigned
-    ══════════════════════════════════════════════ */
+      /* ── Result row ── */
       .result-row {
         max-width: 700px;
         padding: 14px 0 16px;
@@ -81,7 +79,6 @@
         border-bottom: none;
       }
 
-      /* Left favicon column */
       .result-favicon {
         width: 32px;
         height: 32px;
@@ -99,7 +96,6 @@
         overflow: hidden;
       }
 
-      /* Right content column */
       .result-body {
         min-width: 0;
       }
@@ -115,7 +111,6 @@
         margin-bottom: 3px;
       }
 
-      /* Company name */
       .result-title {
         font-size: 19px;
         line-height: 25px;
@@ -127,7 +122,6 @@
         margin-bottom: 4px;
       }
 
-      /* Meta row: activity chip + location */
       .result-meta {
         display: flex;
         flex-wrap: wrap;
@@ -136,7 +130,6 @@
         margin-bottom: 5px;
       }
 
-      /* Activity chip — truncated with tooltip */
       .activity-chip {
         display: inline-flex;
         align-items: center;
@@ -158,7 +151,6 @@
         flex-shrink: 0;
       }
 
-      /* Location pill */
       .location-pill {
         display: inline-flex;
         align-items: center;
@@ -172,14 +164,12 @@
         white-space: nowrap;
       }
 
-      /* Description */
       .result-desc {
         font-size: 13.5px;
         color: #4d5156;
         line-height: 21px;
         overflow-wrap: break-word;
         word-break: break-word;
-        /* clamp to 3 lines */
         line-clamp: 3;
         display: -webkit-box;
         -webkit-line-clamp: 3;
@@ -187,7 +177,6 @@
         overflow: hidden;
       }
 
-      /* Score badge */
       .score-badge {
         display: inline-flex;
         align-items: center;
@@ -208,9 +197,6 @@
         border-radius: 2px;
       }
 
-      /* ══════════════════════════════════════════════
-       AD SLOT
-    ══════════════════════════════════════════════ */
       .ad-slot {
         max-width: 700px;
         padding: 12px 14px;
@@ -264,7 +250,6 @@
         overflow-wrap: break-word;
       }
 
-      /* ── Stats bar ── */
       #statsBar {
         font-size: 13px;
         color: #70757a;
@@ -272,7 +257,6 @@
         max-width: 700px;
       }
 
-      /* ── Top bar ── */
       #topBar {
         border-bottom: 1px solid #e8eaed;
         background: #fff;
@@ -298,7 +282,6 @@
         color: #34a853;
       }
 
-      /* ── Empty state ── */
       .no-results-title {
         font-size: 20px;
         color: #202124;
@@ -318,7 +301,7 @@
         border-radius: 8px;
       }
 
-      /* ── Divider between ads and results ── */
+      /* ── in ex. Divider between ads and results ── */
       .section-label {
         font-size: 11px;
         font-weight: 600;
@@ -695,10 +678,14 @@
       }
       function excerpt(text, max) {
         if (!text) return "";
+
         text = text.trim();
-        return text.length <= max
-          ? text
-          : text.slice(0, max).replace(/\s+\S*$/, "") + "…";
+        if (text.length <= max) return text;
+
+        const lastSpace = text.lastIndexOf(" ", max);
+        if (lastSpace === -1) return text;
+
+        return text.slice(0, lastSpace).trimEnd() + "…";
       }
 
       function highlight(text, q) {
@@ -721,7 +708,7 @@
 
       // Deterministic 2-letter initials + hue from company name
       function initials(name) {
-        const words = (name || "?").trim().split(/\s+/);
+        const words = (name || "?").trim().match(/[a-zA-Z0-9]+/g) || ["?"];
         if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
         return (words[0][0] + words[1][0]).toUpperCase();
       }
@@ -732,12 +719,18 @@
         return h % 360;
       }
 
-      // Truncate activity label for display, keep full for title tooltip
       function truncateActivity(activity, max = 32) {
         if (!activity) return "";
-        return activity.length > max
-          ? activity.slice(0, max).trimEnd() + "…"
-          : activity;
+        activity = activity.trim();
+        if (activity.length <= max) return activity;
+
+        const lastSpace = activity.lastIndexOf(" ", max);
+        if (lastSpace > 0) {
+          return activity.slice(0, lastSpace).trimEnd() + "…";
+        }
+
+        // If no space, cut the word (strict limit)
+        return activity.slice(0, max).trimEnd() + "…";
       }
 
       // ── View switching ────────────────────────────────────
@@ -784,11 +777,14 @@
       }
 
       // ── Render one result row ─────────────────────────────
-      function renderRow(c, q) {
+      function renderRow(c, q, isFullDesc = false) {
         // Core Identity
         const name = c.name || "Unnamed";
         const activity = c.activity || "";
-        const desc = excerpt(c.description || c.slogan || "", MAX_DESC);
+
+        const rawDesc = c.description || c.slogan || "";
+        const desc = !isFullDesc ? excerpt(rawDesc, MAX_DESC) : rawDesc;
+
         const website = c.website || "";
         const score = c.score > 0 ? Math.round(c.score * 100) : null;
 
@@ -815,10 +811,8 @@
         //   }
         // }
 
-        // Semantically correct breadcrumb (Domain only)
-        const domain = website
-          ? website.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
-          : null;
+        const domain =
+          website?.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?#]+)/)?.[1] ?? null;
 
         // Visuals (Favicon avatar)
         const hue = nameToHue(name);
@@ -933,7 +927,7 @@
         }
 
         emptyState.classList.add("hidden");
-        resultsList.innerHTML = results.map((c) => renderRow(c, q)).join("");
+        resultsList.innerHTML = results.map((c) => renderRow(c, q, results.length === 1)).join("");
 
         const total = data.total || results.length;
         statsBar.classList.remove("hidden");
@@ -971,18 +965,15 @@
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
 
-          // Pass the cleaned displayQ to the render function!
           renderResults(data, displayQ);
 
           const aiBox = document.getElementById("aiOverview");
           if (!isSlugSearch && data.results && data.results.length > 0) {
             aiBox.classList.remove("hidden");
 
-            // Si c'est une requête complexe, on déclenche automatiquement
             if (isComplexQuery(displayQ)) {
               triggerAI(displayQ);
             } else {
-              // Sinon, on affiche juste le bouton pour inviter l'utilisateur
               document
                 .getElementById("aiTriggerBtn")
                 .classList.remove("hidden");
@@ -991,7 +982,6 @@
               document.getElementById("aiLoading").classList.remove("flex");
               document.getElementById("aiContent").classList.add("hidden");
 
-              // On attache l'événement au clic
               document.getElementById("aiTriggerBtn").onclick = () =>
                 triggerAI(displayQ);
             }
@@ -999,7 +989,6 @@
             aiBox.classList.add("hidden");
           }
 
-          // Don't fetch ads if this is a direct company profile lookup
           if (!isSlugSearch) fetchAds(q);
           else stopAdRotation();
         } catch (err) {
@@ -1063,7 +1052,6 @@
       function handleRoute() {
         const path = window.location.pathname;
 
-        // Reset the view state
         homepage.style.display = "none";
         resultsPage.classList.add("hidden");
         staticPage.classList.add("hidden");
@@ -1108,7 +1096,6 @@
         const words = text.split(/\s+/);
         const wordCount = words.length;
 
-        // ----- Interrogative words (English + French) -----
         const interrogatives = [
           "what",
           "where",
@@ -1117,7 +1104,7 @@
           "how",
           "which",
           "who",
-          "whom",
+          "whom", // end English
           "que",
           "quoi",
           "où",
@@ -1139,7 +1126,6 @@
             text.includes(w + " "),
         );
 
-        // ----- Action verbs (synthesis, comparison, explanation) -----
         const actionVerbs = [
           "compare",
           "explain",
@@ -1173,7 +1159,6 @@
         ];
         const hasActionVerb = actionVerbs.some((v) => text.includes(v));
 
-        // ----- Ranking / comparative terms -----
         const rankingTerms = [
           "top",
           "best",
@@ -1203,18 +1188,14 @@
         ];
         const hasRanking = rankingTerms.some((t) => text.includes(t));
 
-        // ----- Question mark (we'll use it at the very end) -----
         const endsWithQuestion = q.trim().endsWith("?");
 
-        // ----- Length threshold (>=5 words) -----
         const isLong = wordCount >= 5;
 
-        // ----- Named entity heuristic (capitalised words, supports French accents) -----
         const capitalised = (q.match(/\b[A-ZÀ-ÖØ-öø-ÿ][a-zà-öø-ÿ]+\b/g) || [])
           .length;
         const hasEntities = capitalised >= 2;
 
-        // Score system
         let score = 0;
         if (hasInterrogative) score += 2;
         if (hasActionVerb) score += 2;
@@ -1222,7 +1203,6 @@
         if (isLong) score += 1;
         if (hasEntities) score += 1;
 
-        // Require BOTH score >= 3 AND question mark at the end
         return score >= 3 && endsWithQuestion;
       }
 
@@ -1257,9 +1237,8 @@
           if (err.name !== "AbortError") {
             loading.classList.add("hidden");
             loading.classList.remove("flex");
-            // En cas d'erreur, on remet le bouton pour réessayer
             triggerBtn.classList.remove("hidden");
-            triggerBtn.textContent = "Réessayer de générer";
+            triggerBtn.textContent = "Re-générer";
           }
         }
       }
@@ -1284,7 +1263,6 @@
       }
 
       // ── Override standard links for SPA Navigation ──────────
-      // This allows you to use normal <a href="/privacy"> tags in your footer!
       document.addEventListener("click", (e) => {
         const link = e.target.closest("a");
         if (
@@ -1293,13 +1271,11 @@
           !link.hasAttribute("target")
         ) {
           e.preventDefault();
-          // Push the new URL to the browser without reloading the page
           history.pushState(null, "", link.href);
           handleRoute();
         }
       });
 
-      // Listen for the Browser Back/Forward buttons
       window.addEventListener("popstate", handleRoute);
 
       // ── Health polling & Boot ─────────────────────────────
@@ -1327,7 +1303,7 @@
         }
       }
 
-      // Start the boot sequence
+      // START!!!
       homeStatus.textContent = "⏳ Connecting…";
       checkHealth();
 
@@ -1380,7 +1356,6 @@
         adState.cursor = (adState.cursor + 1) % pool.length;
         adContainer.innerHTML = slots.map(renderAdSlot).join("");
         adContainer.classList.remove("hidden");
-        // Show "Results" label only when there are ads above
         resultsLabel.classList.toggle("hidden", !slots.length);
       }
       function startAdRotation() {
@@ -1413,13 +1388,12 @@
           renderAds();
           startAdRotation();
         } catch {
-          /* ads are non-critical */
+          // OK to avoid catching ads errors!
         }
       }
 
       // ── Scroll to Top Widget ──────────────────────────────
       window.addEventListener("scroll", () => {
-        // Show button after scrolling down 300px
         if (window.scrollY > 300) {
           scrollToTopBtn.classList.remove(
             "opacity-0",
@@ -1437,7 +1411,6 @@
         }
       });
 
-      // Native browser smooth scrolling
       scrollToTopBtn.addEventListener("click", () => {
         window.scrollTo({
           top: 0,
