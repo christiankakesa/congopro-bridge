@@ -821,7 +821,6 @@
         const ini = initials(name);
 
         const actShort = truncateActivity(activity);
-        const actFull = esc(activity);
 
         // Build a highly detailed location string
         const fullLocation = [addr1, addr2, city, country]
@@ -859,11 +858,11 @@
           <div class="result-meta mt-1.5 gap-y-1.5 gap-x-2">
             ${
               activity
-                ? `<span class="activity-chip" title="${actFull}">
+                ? `<span class="activity-chip" title="${esc(activity)}">
                   <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M6 6V5a3 3 0 016 0v1h2a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h1zm2-1a1 1 0 112 0v1H8V5zm1 5a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/>
                   </svg>
-                  ${esc(actShort)}
+                  ${esc(!isFullDesc ? actShort : activity)}
                 </span>`
                 : ""
             }
@@ -948,13 +947,6 @@
 
         if (!isSlugSearch) {
           const searchUrl = `/?q=${encodeURIComponent(q)}`;
-          if (window.location.pathname + window.location.search !== searchUrl) {
-            history.replaceState(null, "", searchUrl);
-          }
-        } else {
-          const [prefix, slug] = q.split(":");
-          const encodedSlug = encodeURIComponent(slug);
-          const searchUrl = `/?q=${prefix}:${encodedSlug}`;
           if (window.location.pathname + window.location.search !== searchUrl) {
             history.replaceState(null, "", searchUrl);
           }
