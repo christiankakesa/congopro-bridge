@@ -1,15 +1,3 @@
-// Package data encapsulates all indexing and search logic for Congopro Bridge.
-//
-// Tuning rationale (see inline comments for details):
-//   - Analyser "fr" for French text fields; "keyword" for cities/countries.
-//   - Name boost 18× > activity 20× > description 5× > address_line_2 4×.
-//   - Fuzzy only for tokens > 6 chars (avoids false positives on short African names).
-//   - embeddingDim 512 (sufficient for ~1 500-company corpus, half the RAM of 1024).
-//   - chromemBatch 128 (limits peak RAM per batch to ~0.5 MB of float32 vectors).
-//   - bleveWeight 0.60 / semanticWeight 0.40 (balanced for natural-language queries).
-//   - Score floor 0.05 filters noise from near-zero combined scores.
-//   - slugMap provides O(1) lookup for company-detail page requests.
-//   - sync.Once + IndexingDone channel: safe concurrent startup.
 package data
 
 import (
@@ -45,10 +33,6 @@ import (
 //go:embed cleaned_c.json
 var CompaniesJSON []byte
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-
 const (
 	fieldName         = "name"
 	fieldActivity     = "activity"
@@ -81,7 +65,6 @@ const (
 	boostSlogan       = 0.5
 )
 
-// Global replacer compiled ONCE for performance.
 var punctuationReplacer = strings.NewReplacer(
 	"'", " ",
 	"’", " ",
@@ -209,10 +192,6 @@ type ollamaResponse struct {
 	Response string `json:"response"`
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Engine
-// ─────────────────────────────────────────────────────────────────────────────
-
 type Engine struct {
 	initOnce     sync.Once
 	IndexingDone chan struct{}
@@ -243,10 +222,6 @@ func (e *Engine) Companies() []Company {
 	return e.companies
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Text Processing Pipeline
-// ─────────────────────────────────────────────────────────────────────────────
-
 var htmlTagRE = regexp.MustCompile(`<[^>]+>`)
 
 func stripHTML(s string) string {
@@ -263,14 +238,13 @@ func normalizeForBleve(s string) string {
 
 func normalizeToken(tok string) string {
 	tok = normalizeForBleve(tok)
-	// Conservative plural handling
 	if strings.HasSuffix(tok, "s") && len(tok) > 4 && !strings.HasSuffix(tok, "ss") && !strings.HasSuffix(tok, "us") {
 		tok = strings.TrimSuffix(tok, "s")
 	}
+
 	return tok
 }
 
-// cleanAndSplit normalizes text, replaces punctuation, and returns clean tokens.
 func cleanAndSplit(s string) []string {
 	s = normalizeForBleve(s)
 	s = punctuationReplacer.Replace(s)
@@ -288,12 +262,9 @@ func cleanAndSplit(s string) []string {
 	return clean
 }
 
-// tokenize is used for TF-IDF. It KEEPS duplicate words to count term frequency.
 func tokenize(s string) []string {
 	return cleanAndSplit(s)
 }
-
-// extractKeywords is used for Bleve. It REMOVES duplicate words to build clean query boolean logic.
 func extractKeywords(q string) []string {
 	rawTokens := cleanAndSplit(q)
 	keywords := make([]string, 0, len(rawTokens))
@@ -309,10 +280,6 @@ func extractKeywords(q string) []string {
 	}
 	return keywords
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Local TF-IDF Vectorization
-// ─────────────────────────────────────────────────────────────────────────────
 
 func (e *Engine) buildVocab() {
 	freq := make(map[string]int, 8192)
@@ -373,10 +340,6 @@ func (e *Engine) embed(text string) []float32 {
 	}
 	return vec
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Indexing Lifecycle
-// ─────────────────────────────────────────────────────────────────────────────
 
 func (e *Engine) LoadAndIndex() error {
 	var loadErr error
@@ -587,10 +550,6 @@ func (e *Engine) indexChromem() error {
 	return nil
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HybridSearch Logic
-// ─────────────────────────────────────────────────────────────────────────────
-
 func (e *Engine) HybridSearch(q string) ([]SearchResult, error) {
 	e.mu.RLock()
 	bleveIdx := e.bleveIdx
@@ -650,8 +609,6 @@ func (e *Engine) HybridSearch(q string) ([]SearchResult, error) {
 		merged[id] += semanticWeight * s
 	}
 
-	// OPIMIZATION: Apply exact-match boost ONLY to companies that were actually
-	// returned by the search engines (O(Found) instead of O(Total Corpus)).
 	normQ := normalizeForBleve(q)
 	e.mu.RLock()
 	for id := range merged {
@@ -828,10 +785,6 @@ func (e *Engine) runChromemSearch(q string) (map[string]float64, error) {
 	}
 	return hits, nil
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RAG Pipeline
-// ─────────────────────────────────────────────────────────────────────────────
 
 func (e *Engine) GenerateAnswer(userQuery string, topResults []SearchResult) (string, error) {
 	if len(topResults) == 0 {
