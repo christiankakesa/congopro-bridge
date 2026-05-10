@@ -51,9 +51,9 @@ ENV OLLAMA_NUM_THREADS=2
 
 COPY --from=builder /out/congopro-bridge /congopro-bridge
 
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /root/.ollama /congopro-bridge /start.sh
-
-USER appuser
+## If you want the file to belong to a normal user, uncomment the next 2 lines
+# RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /root/.ollama /congopro-bridge /start.sh
+# USER appuser
 
 EXPOSE 8080
 ENTRYPOINT ["/start.sh"]
