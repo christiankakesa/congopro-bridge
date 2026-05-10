@@ -10,7 +10,7 @@ var IndexHTML []byte
 //go:embed favicon.ico
 var FaviconICO []byte
 
-//go:embed js/tailwind-cdn.js
+//go:embed css/style.min.css
 var TailwindCSS []byte
 
 //go:embed content/help.html

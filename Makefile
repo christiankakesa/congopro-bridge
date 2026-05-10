@@ -13,6 +13,7 @@ CMD_PATH     := ./cmd/congopro-bridge
 BINARY       := congopro-bridge
 BUILD_DIR    := ./build
 SERVICE      := congopro-bridge
+TAILWIND_CLI := $(shell which tailwindcss)
 
 _ssh_opts    := -p $(DEPLOY_PORT) -i $(SSH_KEY) \
                 -o StrictHostKeyChecking=accept-new \
@@ -32,7 +33,18 @@ RSYNC        := rsync -az --progress --delete \
 
 all: build
 
-build:
+css:
+	@echo "▶ Compiling Tailwind CSS using local binary…"
+	@# On vérifie si le fichier existe avant de lancer
+	@if [ ! -f $(TAILWIND_CLI) ]; then \
+		echo "❌ Erreur: ./tailwindcss introuvable à la racine."; \
+		echo "Télécharge-le via: curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && mv tailwindcss-linux-x64 tailwindcss && chmod +x tailwindcss"; \
+		exit 1; \
+	fi
+	@$(TAILWIND_CLI) -i ./internal/web/css/input.css -o ./internal/web/css/style.min.css --minify
+	@echo "✓ CSS compiled"
+
+build: css
 	@echo "▶ Building $(BINARY)…"
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \

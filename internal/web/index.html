@@ -3,37 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Découvrez Congopro Bridge, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance en RDC grâce à l'IA." />
+    <meta
+      name="description"
+      content="Découvrez Congopro Bridge, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance en RDC grâce à l'IA."
+    />
     <title>Congopro Bridge</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <script src="/js/tailwind-cdn.js"></script>
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("consent", "default", {
-        analytics_storage: "denied",
-        ad_storage: "denied",
-      });
-      try {
-        if (localStorage.getItem("sb_cookie_consent") === "all")
-          gtag("consent", "update", {
-            analytics_storage: "granted",
-            ad_storage: "granted",
-          });
-      } catch (e) {}
-      gtag("js", new Date());
-      gtag("config", "G-VS32J060KG");
-    </script>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="preload" href="/css/style.min.css" as="style" />
+    <link rel="stylesheet" href="/css/style.min.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@400;500;600&display=swap");
-
       *,
       body {
         font-family: "Inter", system-ui, sans-serif;
@@ -313,6 +297,29 @@
         max-width: 700px;
       }
     </style>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("consent", "default", {
+        analytics_storage: "denied",
+        ad_storage: "denied",
+      });
+      try {
+        if (localStorage.getItem("sb_cookie_consent") === "all")
+          gtag("consent", "update", {
+            analytics_storage: "granted",
+            ad_storage: "granted",
+          });
+      } catch (e) {}
+      gtag("js", new Date());
+      gtag("config", "G-VS32J060KG");
+    </script>
   </head>
 
   <body class="bg-white text-gray-900 antialiased min-h-full overflow-x-hidden">

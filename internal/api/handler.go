@@ -222,9 +222,9 @@ func FaviconHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TailwindCssHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	http.ServeContent(w, r, "tailwind-cdn.js", startupTime, bytes.NewReader(web.TailwindCSS))
+	http.ServeContent(w, r, "style.min.css", startupTime, bytes.NewReader(web.TailwindCSS))
 }
 
 func ContentHandler(w http.ResponseWriter, r *http.Request) {
