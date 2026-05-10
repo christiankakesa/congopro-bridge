@@ -606,7 +606,7 @@ func (e *Engine) HybridSearch(q string) ([]SearchResult, error) {
 		return []SearchResult{}, nil
 	}
 
-	const slugPrefix = "-company-slug:"
+	const slugPrefix = "-company-slug="
 	if strings.HasPrefix(q, slugPrefix) {
 		slug := strings.TrimSpace(strings.TrimPrefix(q, slugPrefix))
 		e.mu.RLock()

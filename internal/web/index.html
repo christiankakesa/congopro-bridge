@@ -941,7 +941,7 @@
           return;
         }
 
-        const isSlugSearch = q.startsWith("-company-slug:");
+        const isSlugSearch = q.startsWith("-company-slug=");
         const displayQ = isSlugSearch ? "" : q;
 
         if (!isSlugSearch) {
@@ -1062,7 +1062,7 @@
             const slug = parts[2];
             topInput.value = "";
             topClear.classList.add("hidden");
-            doSearch(`-company-slug:${slug}`, false);
+            doSearch(`-company-slug=${slug}`, false);
           } else {
             showHome();
           }
