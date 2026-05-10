@@ -14,21 +14,11 @@ import (
 	"congopro-bridge/internal/web"
 )
 
-// ─────────────────────────────────────────────
-// Dependency Injection Struct
-// ─────────────────────────────────────────────
-
 type AppEngine struct {
 	Engine *data.Engine
 }
 
 var startupTime = time.Now()
-
-// ─────────────────────────────────────────────
-// API Response Structs (Zero-Allocation Maps)
-// En Go, utiliser des structs au lieu de map[string]interface{}
-// est beaucoup plus rapide et soulage le Garbage Collector.
-// ─────────────────────────────────────────────
 
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -50,10 +40,6 @@ type AIResponse struct {
 	Answer string `json:"answer"`
 }
 
-// ─────────────────────────────────────────────
-// HTTP handlers
-// ─────────────────────────────────────────────
-
 func WithCORS(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -72,9 +58,7 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	select {
 	case <-a.Engine.IndexingDone:
-		// Moteur prêt, on continue
 	case <-r.Context().Done():
-		// Le client (navigateur) a annulé la requête (ex: frappe rapide + debounce)
 		return
 	default:
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -84,7 +68,6 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	if q == "" {
-		// CORRECTION: Renvoyer un JSON vide valide, sinon `await res.json()` crashe en JS
 		json.NewEncoder(w).Encode(SearchResponse{
 			Query:   q,
 			Results: []data.SearchResult{},
@@ -101,7 +84,6 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// S'assurer que Results n'est jamais nil (pour que le JS reçoive [] et non null)
 	if results == nil {
 		results = []data.SearchResult{}
 	}
@@ -138,7 +120,6 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. On récupère les résultats sémantiques (Retrieval)
 	results, err := a.Engine.HybridSearch(q)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -146,7 +127,6 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. On génère la réponse (Generation)
 	answer, err := a.Engine.GenerateAnswer(q, results)
 	if err != nil {
 		log.Printf("[ai] erreur Ollama: %v", err)
@@ -155,16 +135,11 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. On renvoie la réponse
 	json.NewEncoder(w).Encode(AIResponse{
 		Query:  q,
 		Answer: answer,
 	})
 }
-
-// ─────────────────────────────────────────────
-// Static & SPA Handlers
-// ─────────────────────────────────────────────
 
 var (
 	langSubscriptionsPathRegex = regexp.MustCompile(`^(/(fr|en))?/subscriptions/?$`)
@@ -176,7 +151,6 @@ var (
 
 func ServeSPAHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// Cache control strict pour le point d'entrée SPA (HTML)
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(web.IndexHTML))
 }
@@ -191,7 +165,6 @@ func FrontendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if matches := langCompanyPathRegex.FindStringSubmatch(r.URL.Path); matches != nil {
-		// matches[3] contient le slug de l'entreprise grâce au 3ème groupe de capture
 		companySlug := matches[3]
 		http.Redirect(w, r, "/company/"+companySlug, http.StatusPermanentRedirect)
 		return
@@ -209,8 +182,6 @@ func FrontendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Si l'URL ne correspond pas à la racine ou à une route SPA connue (gérée en JS),
-	// on renvoie une 404 pure pour éviter de polluer le SEO.
 	if r.URL.Path != "/" && !strings.HasPrefix(r.URL.Path, "/company/") && r.URL.Path != "/help" && r.URL.Path != "/privacy" && r.URL.Path != "/terms" {
 		http.NotFound(w, r)
 		return
@@ -221,7 +192,6 @@ func FrontendHandler(w http.ResponseWriter, r *http.Request) {
 
 func FaviconHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/x-icon")
-	// Cache très long pour les assets immuables
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	http.ServeContent(w, r, "favicon.ico", startupTime, bytes.NewReader(web.FaviconICO))
 }
@@ -236,7 +206,6 @@ func ContentHandler(w http.ResponseWriter, r *http.Request) {
 	page := strings.TrimPrefix(r.URL.Path, "/content/")
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// Petit cache pour les pages de contenu textuel
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 
 	var content []byte
