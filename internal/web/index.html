@@ -927,7 +927,9 @@
         }
 
         emptyState.classList.add("hidden");
-        resultsList.innerHTML = results.map((c) => renderRow(c, q, results.length === 1)).join("");
+        resultsList.innerHTML = results
+          .map((c) => renderRow(c, q, results.length === 1))
+          .join("");
 
         const total = data.total || results.length;
         statsBar.classList.remove("hidden");
@@ -941,11 +943,18 @@
           return;
         }
 
-        const isSlugSearch = q.startsWith("-company-slug=");
+        const isSlugSearch = q.startsWith("-company-slug:");
         const displayQ = isSlugSearch ? "" : q;
 
         if (!isSlugSearch) {
           const searchUrl = `/?q=${encodeURIComponent(q)}`;
+          if (window.location.pathname + window.location.search !== searchUrl) {
+            history.replaceState(null, "", searchUrl);
+          }
+        } else {
+          const [prefix, slug] = q.split(":");
+          const encodedSlug = encodeURIComponent(slug);
+          const searchUrl = `/?q=${prefix}:${encodedSlug}`;
           if (window.location.pathname + window.location.search !== searchUrl) {
             history.replaceState(null, "", searchUrl);
           }
@@ -1062,7 +1071,7 @@
             const slug = parts[2];
             topInput.value = "";
             topClear.classList.add("hidden");
-            doSearch(`-company-slug=${slug}`, false);
+            doSearch(`-company-slug:${slug}`, false);
           } else {
             showHome();
           }
