@@ -1,3 +1,282 @@
 @import "tailwindcss";
 
 @source "../../../internal/web/**/*.html";
+
+*,
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+      }
+      .font-google {
+        font-family: "Google Sans", "Inter", sans-serif;
+      }
+
+      /* ── Search box ── */
+      .search-box {
+        border: 1px solid #dfe1e5;
+        border-radius: 24px;
+        transition:
+          box-shadow 0.15s ease,
+          border-color 0.15s ease;
+        background: #fff;
+      }
+      .search-box:hover,
+      .search-box:focus-within {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        border-color: transparent;
+      }
+
+      /* ── Spinner ── */
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .spinner {
+        animation: spin 0.7s linear infinite;
+      }
+
+      /* ── Result row ── */
+      .result-row {
+        max-width: 700px;
+        padding: 14px 0 16px;
+        border-bottom: 1px solid #f0f0f0;
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 0 12px;
+      }
+      .result-row:last-child {
+        border-bottom: none;
+      }
+
+      .result-favicon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #f1f3f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: #5f6368;
+        flex-shrink: 0;
+        margin-top: 2px;
+        border: 1px solid #e8eaed;
+        overflow: hidden;
+      }
+
+      .result-body {
+        min-width: 0;
+      }
+
+      /* Breadcrumb line */
+      .result-url {
+        font-size: 12px;
+        color: #70757a;
+        line-height: 18px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 3px;
+      }
+
+      .result-title {
+        font-size: 19px;
+        line-height: 25px;
+        font-weight: 400;
+        color: #1a0dab;
+        font-family: "Google Sans", "Inter", sans-serif;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        margin-bottom: 4px;
+      }
+
+      .result-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 5px;
+      }
+
+      .activity-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        padding: 2px 9px;
+        border-radius: 4px;
+        background: #e8f0fe;
+        color: #1967d2;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .activity-chip svg {
+        flex-shrink: 0;
+      }
+
+      .location-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 12px;
+        color: #5f6368;
+        flex-shrink: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .result-desc {
+        font-size: 13.5px;
+        color: #4d5156;
+        line-height: 21px;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        line-clamp: 3;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .score-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: #137333;
+        background: #e6f4ea;
+        border-radius: 4px;
+        padding: 1px 6px;
+        white-space: nowrap;
+      }
+
+      mark {
+        background: #fff3cd;
+        color: #1a1a1a;
+        font-weight: 600;
+        padding: 0 1px;
+        border-radius: 2px;
+      }
+
+      .ad-slot {
+        max-width: 700px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #fafafa;
+        border: 1px solid #e8eaed;
+        margin-bottom: 6px;
+        display: flex;
+        gap: 10px;
+      }
+      .ad-accent {
+        width: 3px;
+        border-radius: 2px;
+        align-self: stretch;
+        flex-shrink: 0;
+      }
+      .ad-label {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #fff;
+        padding: 1px 5px;
+        border-radius: 3px;
+        display: inline-block;
+        margin-bottom: 2px;
+      }
+      .ad-title {
+        font-size: 16px;
+        line-height: 22px;
+        font-weight: 400;
+        font-family: "Google Sans", "Inter", sans-serif;
+        text-decoration: none;
+        display: block;
+        overflow-wrap: break-word;
+      }
+      .ad-title:hover {
+        text-decoration: underline;
+      }
+      .ad-display-url {
+        font-size: 12px;
+        color: #70757a;
+        margin: 1px 0;
+        overflow-wrap: break-word;
+      }
+      .ad-desc {
+        font-size: 13px;
+        color: #4d5156;
+        line-height: 20px;
+        margin-top: 2px;
+        overflow-wrap: break-word;
+      }
+
+      #statsBar {
+        font-size: 13px;
+        color: #70757a;
+        padding: 2px 0 12px;
+        max-width: 700px;
+      }
+
+      #topBar {
+        border-bottom: 1px solid #e8eaed;
+        background: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+
+      /* ── Logo colours ── */
+      .g-blue {
+        color: #4285f4;
+      }
+      .g-red {
+        color: #ea4335;
+      }
+      .g-redx {
+        color: #be0203;
+      }
+      .g-yellow {
+        color: #fbbc04;
+      }
+      .g-green {
+        color: #34a853;
+      }
+
+      .no-results-title {
+        font-size: 20px;
+        color: #202124;
+        font-family: "Google Sans", "Inter", sans-serif;
+      }
+      .no-results-sub {
+        font-size: 14px;
+        color: #4d5156;
+        margin-top: 4px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #dadce0;
+        border-radius: 8px;
+      }
+
+      /* ── in ex. Divider between ads and results ── */
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #9aa0a6;
+        padding: 0 0 8px;
+        max-width: 700px;
+      }

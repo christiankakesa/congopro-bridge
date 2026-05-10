@@ -34,6 +34,7 @@ func main() {
 	mux.HandleFunc("GET /ask", api.WithCORS(apiAppEngine.AIAnswerHandler))
 	mux.HandleFunc("GET /ads", api.WithCORS(api.AdsHandler))
 	mux.HandleFunc("GET /health", api.WithCORS(apiAppEngine.HealthHandler))
+	mux.HandleFunc("GET /fonts/", api.FontsHandler)
 	mux.HandleFunc("GET /css/style.min.css", api.TailwindCssHandler)
 	mux.HandleFunc("GET /favicon.ico", api.FaviconHandler)
 

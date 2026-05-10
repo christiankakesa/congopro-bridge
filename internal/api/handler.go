@@ -2,7 +2,10 @@ package api
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
+	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"regexp"
@@ -18,8 +21,6 @@ import (
 type AppEngine struct {
 	Engine *data.Engine
 }
-
-var startupTime = time.Now()
 
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -39,6 +40,18 @@ type HealthResponse struct {
 type AIResponse struct {
 	Query  string `json:"query"`
 	Answer string `json:"answer"`
+}
+
+var (
+	indexTmpl   *template.Template
+	cssHash     string
+	startupTime = time.Now()
+)
+
+func init() {
+	hash := md5.Sum(web.TailwindCSS)
+	cssHash = fmt.Sprintf("%.8x", hash)
+	indexTmpl = template.Must(template.New("index").Parse(string(web.IndexHTML)))
 }
 
 func WithCORS(h http.HandlerFunc) http.HandlerFunc {
@@ -177,7 +190,13 @@ var (
 func ServeSPAHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(web.IndexHTML))
+
+	data := struct {
+		CSSVersion string
+	}{
+		CSSVersion: cssHash,
+	}
+	indexTmpl.Execute(w, data)
 }
 
 func FrontendHandler(w http.ResponseWriter, r *http.Request) {
@@ -219,6 +238,20 @@ func FaviconHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/x-icon")
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	http.ServeContent(w, r, "favicon.ico", startupTime, bytes.NewReader(web.FaviconICO))
+}
+
+func FontsHandler(w http.ResponseWriter, r *http.Request) {
+	fileName := strings.TrimPrefix(r.URL.Path, "/fonts/")
+	content, err := web.FontsFS.ReadFile("fonts/" + fileName)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	w.Header().Set("Content-Type", "font/woff2")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+
+	http.ServeContent(w, r, fileName, startupTime, strings.NewReader(string(content)))
 }
 
 func TailwindCssHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,7 +1,7 @@
 package web
 
 import (
-	_ "embed"
+	"embed"
 )
 
 //go:embed index.html
@@ -24,3 +24,6 @@ var TermsHTML []byte
 
 //go:embed robots.txt
 var RobotsTXT []byte
+
+//go:embed fonts/*.woff2
+var FontsFS embed.FS
