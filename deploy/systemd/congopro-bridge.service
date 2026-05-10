@@ -18,7 +18,6 @@ ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5s
 
-# Logging — viewable with: journalctl -u congopro-bridge -f
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=congopro-bridge

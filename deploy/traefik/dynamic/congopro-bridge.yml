@@ -1,11 +1,4 @@
-# deploy/traefik/dynamic/congopro-bridge.yml
-# ─────────────────────────────────────────────────────────────────
-# Traefik dynamic configuration file — watched at runtime.
-# Edit and save; Traefik reloads automatically (no restart needed).
-#
-# For production, replace the tls.certificates block with a Let's
-# Encrypt ACME resolver entry in traefik's static config instead.
-# ─────────────────────────────────────────────────────────────────
+---
 http:
   services:
     congopro-bridge-service:
@@ -20,7 +13,6 @@ http:
           X-Forwarded-Proto: "https"
 
   routers:
-    # === Default ===
     congopro-bridge-router:
       rule: "Host(`congopro.com`) || Host(`www.congopro.com`)"
       service: congopro-bridge-service
