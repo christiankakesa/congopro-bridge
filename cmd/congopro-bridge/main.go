@@ -14,10 +14,6 @@ import (
 	"congopro-bridge/internal/data"
 )
 
-// ─────────────────────────────────────────────
-// Main
-// ─────────────────────────────────────────────
-
 func main() {
 	ads.LoadAds()
 
@@ -50,10 +46,6 @@ func main() {
 
 	mux.HandleFunc("/", api.FrontendHandler)
 
-	// ─────────────────────────────────────────────
-	// Configuration du Serveur
-	// ─────────────────────────────────────────────
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -68,10 +60,6 @@ func main() {
 		WriteTimeout:      45 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
-
-	// ─────────────────────────────────────────────
-	// Graceful Shutdown
-	// ─────────────────────────────────────────────
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
