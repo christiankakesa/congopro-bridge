@@ -2,11 +2,13 @@ package data
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -178,7 +180,7 @@ type Company struct {
 
 type SearchResult struct {
 	Company
-	Score float64 `json:"score"`
+	Score  float64 `json:"score"`
 }
 
 type ollamaRequest struct {
@@ -190,6 +192,13 @@ type ollamaRequest struct {
 
 type ollamaResponse struct {
 	Response string `json:"response"`
+}
+
+type SitemapEntry struct {
+	Loc        string
+	LastMod    time.Time
+	ChangeFreq string
+	Priority   float64
 }
 
 type Engine struct {
@@ -206,6 +215,9 @@ type Engine struct {
 
 	vocab    []string
 	vocabMap map[string]int
+
+	SitemapCache []byte
+	SitemapMu    sync.RWMutex
 }
 
 func NewEngine() *Engine {
@@ -434,6 +446,8 @@ func (e *Engine) loadAndIndexOnce() error {
 	if err := e.indexChromem(); err != nil {
 		return err
 	}
+
+	e.refreshSitemapCache()
 
 	log.Printf("[load] all systems ready in %s (%d companies indexed)", time.Since(start).Round(time.Millisecond), len(companies))
 	return nil
@@ -847,4 +861,82 @@ CONTEXTE (Entreprises trouvées) :
 		return "", fmt.Errorf("decode Ollama response: %w", err)
 	}
 	return out.Response, nil
+}
+
+func (e *Engine) generateSitemapEntries() []SitemapEntry {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	entries := make([]SitemapEntry, 0, len(e.companies)+4)
+
+	staticPages := []struct {
+		path       string
+		changefreq string
+		priority   float64
+	}{
+		{"/", "daily", 1.0},
+		{"/help", "weekly", 0.5},
+		{"/privacy", "monthly", 0.3},
+		{"/terms", "monthly", 0.3},
+	}
+	now := time.Now()
+	for _, p := range staticPages {
+		entries = append(entries, SitemapEntry{
+			Loc:        p.path,
+			LastMod:    now,
+			ChangeFreq: p.changefreq,
+			Priority:   p.priority,
+		})
+	}
+
+	for _, comp := range e.companies {
+		if comp.NameSeo == "" {
+			continue
+		}
+
+		lastMod := comp.UpdatedAt
+		if lastMod.IsZero() {
+			lastMod = now
+		}
+		entries = append(entries, SitemapEntry{
+			Loc:        "/company/" + comp.NameSeo,
+			LastMod:    lastMod,
+			ChangeFreq: "monthly",
+			Priority:   0.6,
+		})
+	}
+	return entries
+}
+
+func (e *Engine) refreshSitemapCache() {
+	entries := e.generateSitemapEntries()
+	var buf bytes.Buffer
+	if err := e.WriteSitemapXML(&buf, entries); err != nil {
+		log.Printf("[sitemap] generation error: %v", err)
+		return
+	}
+	var gzBuf bytes.Buffer
+	gz := gzip.NewWriter(&gzBuf)
+	_, _ = gz.Write(buf.Bytes())
+	gz.Close()
+
+	e.SitemapMu.Lock()
+	e.SitemapCache = gzBuf.Bytes()
+	e.SitemapMu.Unlock()
+}
+
+func (e *Engine) WriteSitemapXML(w io.Writer, entries []SitemapEntry) error {
+	w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>` + "\n"))
+	w.Write([]byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n"))
+
+	for _, e := range entries {
+		fmt.Fprintf(w, "  <url>\n")
+		fmt.Fprintf(w, "    <loc>https://congopro.com%s</loc>\n", e.Loc)
+		fmt.Fprintf(w, "    <lastmod>%s</lastmod>\n", e.LastMod.Format("2006-01-02"))
+		fmt.Fprintf(w, "    <changefreq>%s</changefreq>\n", e.ChangeFreq)
+		fmt.Fprintf(w, "    <priority>%.1f</priority>\n", e.Priority)
+		fmt.Fprintf(w, "  </url>\n")
+	}
+	w.Write([]byte(`</urlset>`))
+	return nil
 }

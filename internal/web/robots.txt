@@ -1,0 +1,12 @@
+User-agent: *
+Crawl-delay: 1
+Disallow: /
+
+Allow: /$
+Allow: /help$
+Allow: /privacy$
+Allow: /terms$
+Allow: /company/*
+
+# Sitemap location
+Sitemap: https://congopro.com/sitemap.xml.gz

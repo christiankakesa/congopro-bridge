@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,6 +142,30 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func RobotsTxt(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	w.Header().Set("Content-Length", strconv.Itoa(len(web.RobotsTXT)))
+	w.Write(web.RobotsTXT)
+}
+
+func (a *AppEngine) SitemapHandler(w http.ResponseWriter, r *http.Request) {
+	a.Engine.SitemapMu.RLock()
+	data := a.Engine.SitemapCache
+	a.Engine.SitemapMu.RUnlock()
+
+	if len(data) == 0 {
+		http.Error(w, "Not ready", http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("Vary", "Accept-Encoding")
+	w.Header().Set("Content-Encoding", "gzip")
+	w.Header().Set("Cache-Control", "max-age=86400") // 1 day
+	w.Header().Set("Content-Type", "application/xml")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.Write(data)
+}
+
 var (
 	langSubscriptionsPathRegex = regexp.MustCompile(`^(/(fr|en))?/subscriptions/?$`)
 	langCompanyPathRegex       = regexp.MustCompile(`^(/(fr|en))?/company/([^/]+)/?$`)
@@ -164,6 +189,11 @@ func FrontendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Path != "/" && !strings.HasPrefix(r.URL.Path, "/company/") && r.URL.Path != "/help" && r.URL.Path != "/privacy" && r.URL.Path != "/terms" {
+		http.NotFound(w, r)
+		return
+	}
+
 	if matches := langCompanyPathRegex.FindStringSubmatch(r.URL.Path); matches != nil {
 		companySlug := matches[3]
 		http.Redirect(w, r, "/company/"+companySlug, http.StatusPermanentRedirect)
@@ -179,11 +209,6 @@ func FrontendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if langTermsPathRegex.MatchString(r.URL.Path) {
 		http.Redirect(w, r, "/terms", http.StatusPermanentRedirect)
-		return
-	}
-
-	if r.URL.Path != "/" && !strings.HasPrefix(r.URL.Path, "/company/") && r.URL.Path != "/help" && r.URL.Path != "/privacy" && r.URL.Path != "/terms" {
-		http.NotFound(w, r)
 		return
 	}
 

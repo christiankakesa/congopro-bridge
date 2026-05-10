@@ -21,3 +21,6 @@ var PrivacyHTML []byte
 
 //go:embed content/terms.html
 var TermsHTML []byte
+
+//go:embed robots.txt
+var RobotsTXT []byte

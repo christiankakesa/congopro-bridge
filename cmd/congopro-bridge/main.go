@@ -37,6 +37,9 @@ func main() {
 	mux.HandleFunc("GET /js/tailwind-cdn.js", api.TailwindCssHandler)
 	mux.HandleFunc("GET /favicon.ico", api.FaviconHandler)
 
+	mux.HandleFunc("GET /robots.txt", api.RobotsTxt)
+	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
+
 	mux.HandleFunc("GET /content/", api.WithCORS(api.ContentHandler))
 
 	mux.HandleFunc("GET /company/", api.ServeSPAHandler)
