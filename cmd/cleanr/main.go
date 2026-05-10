@@ -13,7 +13,6 @@ import (
 
 // extractID safely extracts the ID, regardless of flat or nested MongoDB format.
 func extractID(record map[string]interface{}) string {
-	// 1. Check for standard flat "_id" or "id" (string)
 	if id, ok := record["_id"].(string); ok {
 		return id
 	}
@@ -21,7 +20,6 @@ func extractID(record map[string]interface{}) string {
 		return id
 	}
 
-	// 2. Check for nested MongoDB {"_id": {"$oid": "..."}}
 	if idObj, ok := record["_id"].(map[string]interface{}); ok {
 		if oid, ok := idObj["$oid"].(string); ok {
 			return oid
@@ -31,7 +29,6 @@ func extractID(record map[string]interface{}) string {
 }
 
 func main() {
-	// Setup command-line flags
 	inFile := flag.String("in", "data.json", "Input JSON file path")
 	outFile := flag.String("out", "cleaned_data.json", "Output JSON file path")
 	fieldsFlag := flag.String("fields", "name,slogan", "Comma-separated list of fields to check")
@@ -41,7 +38,6 @@ func main() {
 	fieldsToCheck := strings.Split(*fieldsFlag, ",")
 	autoMode := strings.ToLower(strings.TrimSpace(*autoAction))
 
-	// Read input file
 	data, err := os.ReadFile(*inFile)
 	if err != nil {
 		fmt.Printf("Error reading file %q: %v\n", *inFile, err)
@@ -54,7 +50,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Compile Regexes once into a slice for cleaner iteration
 	spamPatterns := []*regexp.Regexp{
 		regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`),              // Emails
 		regexp.MustCompile(`(?i)(https?://|www\.)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/[^\s]*)?`), // URLs
@@ -66,9 +61,6 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	idsToDelete := make(map[string]bool)
 
-	// ==========================================
-	// PASS 1: Identify and Flag
-	// ==========================================
 	for i, record := range records {
 		recordName := "Unknown"
 		if n, ok := record["name"].(string); ok {
@@ -87,7 +79,6 @@ func main() {
 			decodedStr := html.UnescapeString(val)
 			var matches []string
 
-			// Collect all matches across all patterns
 			for _, pattern := range spamPatterns {
 				matches = append(matches, pattern.FindAllString(decodedStr, -1)...)
 			}
@@ -97,7 +88,6 @@ func main() {
 			}
 
 			for _, match := range matches {
-				// If running in auto-mode, skip prompts
 				answer := autoMode
 				if answer == "" {
 					fmt.Printf("\n[!] Suspicious data found in '%s' (Field: %s)\n", recordName, field)
@@ -128,7 +118,6 @@ func main() {
 				}
 			}
 
-			// Save the cleared string back to the record if we aren't deleting the whole thing
 			if !shouldDeleteRecord {
 				record[field] = strings.TrimSpace(decodedStr)
 				records[i] = record
@@ -136,10 +125,6 @@ func main() {
 		}
 	}
 
-	// ==========================================
-	// PASS 2: Filter and Build Final Slice
-	// ==========================================
-	// Pre-allocate slice capacity to optimize memory and prevent resizing overhead
 	finalRecords := make([]map[string]interface{}, 0, len(records))
 
 	for _, record := range records {
