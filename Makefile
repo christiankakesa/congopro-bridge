@@ -12,6 +12,7 @@ DOMAIN       ?= congopro.com
 CMD_PATH     := ./cmd/congopro-bridge
 BINARY       := congopro-bridge
 BUILD_DIR    := ./build
+MODELS_DIR   := models
 SERVICE      := congopro-bridge
 TAILWIND_CLI := $(shell which tailwindcss)
 
@@ -81,7 +82,8 @@ docker-save: docker-build
 	@echo "✓ $(BUILD_DIR)/$(IMAGE)-$(TAG).tar.gz"
 
 docker-run: docker-build
-	docker run -p 8080:8080 $(IMAGE):$(TAG)
+	@mkdir -p $(MODELS_DIR)
+	docker run -p 8080:8080 -v $(shell pwd)/$(MODELS_DIR):/app/$(MODELS_DIR) $(IMAGE):$(TAG)
 
 ping:
 	@echo "▶ pinging $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PORT)…"
@@ -90,7 +92,7 @@ ping:
 ssh:
 	ssh $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST)
 
-deploy: deploy-binary deploy-config service-restart
+deploy: deploy-binary deploy-models deploy-config service-restart
 	@echo ""
 	@echo "╔══════════════════════════════════════╗"
 	@echo "║  ✓ Deployment complete               ║"
@@ -103,6 +105,13 @@ deploy-binary: build
 	@$(RSYNC) $(BUILD_DIR)/$(BINARY) $(DEPLOY_USER)@$(DEPLOY_HOST):$(REMOTE_DIR)/$(BINARY)
 	@$(SSH) "chmod +x $(REMOTE_DIR)/$(BINARY)"
 	@echo "✓ binary uploaded"
+
+deploy-models:
+	@echo "▶ Syncing ML models (Cybertron)…"
+	@mkdir -p $(MODELS_DIR)
+	@$(SSH) "sudo mkdir -p $(REMOTE_DIR)/$(MODELS_DIR) && sudo chown -R $(DEPLOY_USER): $(REMOTE_DIR)/$(MODELS_DIR)"
+	@$(RSYNC) $(MODELS_DIR)/ $(DEPLOY_USER)@$(DEPLOY_HOST):$(REMOTE_DIR)/$(MODELS_DIR)/
+	@echo "✓ ML models synced"
 
 deploy-config:
 	@echo "▶ Uploading Traefik dynamic config…"

@@ -6,6 +6,7 @@ type Config struct {
 	OllamaURL     string
 	AiModel       string
 	AllowedOrigin string
+	ModelsDir     string
 }
 
 func Load() *Config {
@@ -19,6 +20,9 @@ func Load() *Config {
 	if ao := os.Getenv("ALLOWED_ORIGIN"); ao != "" {
 		cfg.AllowedOrigin = ao
 	}
+	if md := os.Getenv("MODELS_DIR"); md != "" {
+		cfg.ModelsDir = md
+	}
 
 	return cfg
 }
@@ -28,5 +32,6 @@ func defaults() *Config {
 		OllamaURL:     "http://localhost:11434/api/generate",
 		AiModel:       "gemma:2b",
 		AllowedOrigin: "*",
+		ModelsDir:     "models",
 	}
 }

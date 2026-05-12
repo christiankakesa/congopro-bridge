@@ -1,4 +1,5 @@
 /build/
+/models/
 /.env
 /TODO.md
 .vscode/

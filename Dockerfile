@@ -37,6 +37,8 @@ RUN nohup ollama serve > /tmp/ollama.log 2>&1 & \
     echo "Models pulled, stopping Ollama..." && \
     pkill ollama || true
 
+WORKDIR /app
+
 RUN echo '#!/bin/bash\n\
 set -e\n\
 ollama serve &\n\
@@ -44,16 +46,16 @@ OLLAMA_PID=$!\n\
 echo "Waiting for Ollama to be ready..."\n\
 while ! curl -s http://localhost:11434/api/tags > /dev/null; do sleep 1; done\n\
 echo "Ollama is ready. Starting Go app..."\n\
-exec /congopro-bridge "$@"\n\
-' > /start.sh && chmod +x /start.sh
+exec ./congopro-bridge "$@"\n\
+' > start.sh && chmod +x start.sh
 
 ENV OLLAMA_NUM_THREADS=2
 
-COPY --from=builder /out/congopro-bridge /congopro-bridge
+COPY --from=builder /out/congopro-bridge ./
 
 ## If you want the file to belong to a normal user, uncomment the next 2 lines
-# RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /root/.ollama /congopro-bridge /start.sh
+# RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /root/.ollama /app
 # USER appuser
 
 EXPOSE 8080
-ENTRYPOINT ["/start.sh"]
+ENTRYPOINT ["./start.sh"]

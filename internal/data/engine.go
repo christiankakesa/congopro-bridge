@@ -3,7 +3,6 @@ package data
 import (
 	"bytes"
 	"compress/gzip"
-	"congopro-bridge/internal/config"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -12,6 +11,8 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -25,12 +26,18 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	bleve "github.com/blevesearch/bleve/v2"
+	"github.com/blevesearch/bleve/v2/mapping"
 	"github.com/blevesearch/bleve/v2/search/query"
+	"github.com/nlpodyssey/cybertron/pkg/models/bert"
+	"github.com/nlpodyssey/cybertron/pkg/tasks"
+	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
 	chromem "github.com/philippgille/chromem-go"
 	"github.com/rs/zerolog/log"
 
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/en"
 	"github.com/blevesearch/bleve/v2/analysis/lang/fr"
+
+	"congopro-bridge/internal/config"
 )
 
 //go:embed cleaned_c.json
@@ -48,9 +55,8 @@ const (
 	fieldLocation     = "location"
 
 	MaxResults     = 30
-	bleveWeight    = 0.60
-	semanticWeight = 0.40
-	embeddingDim   = 512
+	bleveWeight    = 0.50
+	semanticWeight = 0.50
 	chromemBatch   = 128
 	bleveBatch     = 500
 	scoreFloor     = 0.05
@@ -79,6 +85,15 @@ var frStopWords = map[string]bool{
 	"que": true, "quoi": true, "dont": true, "où": true, "ou": true, "montre": true, "moi": true,
 	"est": true, "sont": true, "ce": true, "ces": true, "avec": true, "je": true, "cherche": true,
 	"trouve": true, "l": true, "d": true, "qu": true, "m": true, "s": true, "t": true,
+}
+
+var synonymMap = map[string][]string{
+	"pain":       {"boulangerie", "pâtisserie", "boulanger", "baguette", "croissant"},
+	"médicament": {"pharmacie", "officine"},
+	"voiture":    {"garage", "mécanicien", "concessionnaire", "automobile"},
+	"docteur":    {"médecin", "clinique", "hôpital", "cabinet", "pédiatre"},
+	"école":      {"collège", "lycée", "institut", "université"},
+	// Vous pourrez en ajouter d'autres au fur et à mesure selon les recherches des utilisateurs
 }
 
 var geoNoise = map[string]bool{
@@ -217,6 +232,8 @@ type Engine struct {
 	SitemapCache []byte
 	SitemapMu    sync.RWMutex
 	Config       *config.Config
+
+	encoder textencoding.Interface
 }
 
 func NewEngine(cfg *config.Config) *Engine {
@@ -291,66 +308,6 @@ func extractKeywords(q string) []string {
 		keywords = append(keywords, token)
 	}
 	return keywords
-}
-
-func (e *Engine) buildVocab() {
-	freq := make(map[string]int, 8192)
-	for _, c := range e.companies {
-		text := strings.Join([]string{
-			c.Name, c.Activity, c.Address, c.AddressLine2,
-			c.City, c.Country, c.Description,
-		}, " ")
-		for _, tok := range tokenize(text) {
-			freq[tok]++
-		}
-	}
-	type kv struct {
-		k string
-		v int
-	}
-	pairs := make([]kv, 0, len(freq))
-	for k, v := range freq {
-		pairs = append(pairs, kv{k, v})
-	}
-	sort.Slice(pairs, func(i, j int) bool { return pairs[i].v > pairs[j].v })
-
-	dim := embeddingDim
-	if len(pairs) < dim {
-		dim = len(pairs)
-	}
-	e.vocab = make([]string, 0, dim)
-	e.vocabMap = make(map[string]int, dim)
-	for i := 0; i < dim; i++ {
-		e.vocab = append(e.vocab, pairs[i].k)
-		e.vocabMap[pairs[i].k] = i
-	}
-	log.Info().Msgf("[embed] vocabulary built — %d dimensions (corpus tokens: %d)", dim, len(pairs))
-}
-
-func (e *Engine) embed(text string) []float32 {
-	vec := make([]float32, embeddingDim)
-	for _, tok := range tokenize(text) {
-		idx, ok := e.vocabMap[tok]
-		if !ok || idx < 0 || idx >= len(vec) {
-			continue
-		}
-		vec[idx] += 1.0
-	}
-
-	var norm float64
-	for _, v := range vec {
-		norm += float64(v * v)
-	}
-	if norm == 0 {
-		return vec
-	}
-
-	norm = math.Sqrt(norm)
-	inv := float32(1.0 / norm)
-	for i := range vec {
-		vec[i] *= inv
-	}
-	return vec
 }
 
 func (e *Engine) LoadAndIndex() error {
@@ -432,18 +389,43 @@ func (e *Engine) loadAndIndexOnce() error {
 	raws = nil
 	runtime.GC()
 
-	e.buildVocab()
-
-	idx, err := buildBleveMapping()
+	log.Info().Msg("[load] loading semantic embedding model (first boot may download ~118MB)...")
+	encoder, err := tasks.Load[textencoding.Interface](&tasks.Config{
+		ModelsDir: e.Config.ModelsDir,
+		ModelName: textencoding.DefaultModelMulti,
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load cybertron model: %w", err)
 	}
-	e.bleveIdx = idx
-	if err := e.indexBleve(); err != nil {
-		return err
+	e.encoder = encoder
+
+	indexPath := filepath.Join(e.Config.ModelsDir, "bleve.idx")
+
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		log.Info().Msg("[load] building Bleve text index from scratch (this will take a moment)...")
+
+		mapping, _ := buildBleveMapping()
+		idx, err := bleve.New(indexPath, mapping)
+		if err != nil {
+			return err
+		}
+		e.bleveIdx = idx
+
+		if err := e.indexBleve(); err != nil {
+			return err
+		}
+	} else {
+		log.Info().Msg("[load] loading existing Bleve text index from disk (fast)...")
+
+		idx, err := bleve.Open(indexPath)
+		if err != nil {
+			return err
+		}
+		e.bleveIdx = idx
 	}
 
-	if err := e.indexChromem(); err != nil {
+	chromemPath := filepath.Join(e.Config.ModelsDir, "chromem.db")
+	if err := e.indexChromem(chromemPath); err != nil {
 		return err
 	}
 
@@ -453,7 +435,7 @@ func (e *Engine) loadAndIndexOnce() error {
 	return nil
 }
 
-func buildBleveMapping() (bleve.Index, error) {
+func buildBleveMapping() (*mapping.IndexMappingImpl, error) {
 	mapping := bleve.NewIndexMapping()
 	docMap := bleve.NewDocumentMapping()
 
@@ -480,7 +462,7 @@ func buildBleveMapping() (bleve.Index, error) {
 	mapping.DefaultMapping = docMap
 	mapping.DefaultAnalyzer = frAnalyzer
 
-	return bleve.NewMemOnly(mapping)
+	return mapping, nil
 }
 
 func (e *Engine) indexBleve() error {
@@ -517,50 +499,84 @@ func (e *Engine) indexBleve() error {
 	return nil
 }
 
-func (e *Engine) indexChromem() error {
-	db := chromem.NewDB()
-	embFn := chromem.EmbeddingFunc(func(ctx context.Context, text string) ([]float32, error) {
-		return e.embed(text), nil
-	})
-
-	coll, err := db.CreateCollection("companies", nil, embFn)
+func (e *Engine) indexChromem(chromemPath string) error {
+	db, err := chromem.NewPersistentDB(chromemPath, false)
 	if err != nil {
 		return err
 	}
 
-	total := len(e.companies)
-	for start := 0; start < total; start += chromemBatch {
-		end := start + chromemBatch
-		if end > total {
-			end = total
+	embFn := chromem.EmbeddingFunc(func(ctx context.Context, text string) ([]float32, error) {
+		result, err := e.encoder.Encode(ctx, text, int(bert.MeanPooling))
+		if err != nil {
+			return nil, err
 		}
 
-		docs := make([]chromem.Document, 0, end-start)
-		for _, c := range e.companies[start:end] {
-			text := strings.Join([]string{
-				c.Name, c.Name, // Repeated intentionally for vector weight
-				c.Activity, c.Activity,
-				c.Description, c.Slogan,
-				c.Address, c.AddressLine2,
-				c.City, c.Country,
-			}, " ")
-
-			docs = append(docs, chromem.Document{
-				ID:      c.ID,
-				Content: text,
-				Metadata: map[string]string{
-					fieldName:     c.Name,
-					fieldActivity: c.Activity,
-					fieldCity:     c.City,
-					fieldCountry:  c.Country,
-				},
-			})
+		f64Data := result.Vector.Data().F64()
+		vec32 := make([]float32, len(f64Data))
+		for i, v := range f64Data {
+			vec32[i] = float32(v)
 		}
-		if err := coll.AddDocuments(context.Background(), docs, 4); err != nil {
+
+		return vec32, nil
+	})
+
+	coll := db.GetCollection("companies", embFn)
+
+	if coll == nil {
+		log.Info().Msg("[load] building Chromem semantic index from scratch (this takes a few minutes)...")
+
+		coll, err = db.CreateCollection("companies", nil, embFn)
+		if err != nil {
 			return err
 		}
+		e.chromemColl = coll
+
+		total := len(e.companies)
+		for start := 0; start < total; start += chromemBatch {
+			end := start + chromemBatch
+			if end > total {
+				end = total
+			}
+
+			docs := make([]chromem.Document, 0, end-start)
+			for _, c := range e.companies[start:end] {
+				text := strings.Join([]string{
+					c.Name,
+					c.Activity,
+					c.Slogan,
+					c.Address,
+					c.AddressLine2,
+					c.City,
+					c.Country,
+					c.Description,
+				}, " ")
+
+				textRunes := []rune(text)
+				if len(textRunes) > 1800 {
+					text = string(textRunes[:1800])
+				}
+
+				docs = append(docs, chromem.Document{
+					ID:      c.ID,
+					Content: text,
+					Metadata: map[string]string{
+						fieldName:     c.Name,
+						fieldActivity: c.Activity,
+						fieldCity:     c.City,
+						fieldCountry:  c.Country,
+					},
+				})
+			}
+
+			if err := coll.AddDocuments(context.Background(), docs, 4); err != nil {
+				return err
+			}
+		}
+	} else {
+		log.Info().Msg("[load] loading existing Chromem semantic index from disk (fast)...")
+		e.chromemColl = coll
 	}
-	e.chromemColl = coll
+
 	return nil
 }
 
@@ -721,16 +737,21 @@ func (e *Engine) runBleveSearch(q string) (map[string]float64, error) {
 		}
 		tokenQ.AddShould(fieldQuery(token, fieldAddress, addressBoost))
 
+		if syns, ok := synonymMap[token]; ok {
+			for _, syn := range syns {
+				tokenQ.AddShould(fieldQuery(syn, fieldName, boostName*0.8))
+				tokenQ.AddShould(fieldQuery(syn, fieldActivity, boostActivity*0.8))
+				tokenQ.AddShould(fieldQuery(syn, fieldDescription, boostDescription*0.5))
+			}
+		}
+
 		tokenQ.SetMinShould(1)
 		topQ.AddShould(tokenQ)
 	}
 
-	minShould := 1
-	if len(tokens) >= 3 {
-		minShould = 2
-	}
-	if len(tokens) >= 5 {
-		minShould = 3
+	minShould := len(tokens)
+	if len(tokens) >= 4 {
+		minShould = len(tokens) - 1
 	}
 	topQ.SetMinShould(float64(minShould))
 
