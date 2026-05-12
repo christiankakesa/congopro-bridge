@@ -2,8 +2,6 @@
 
 ## 1. Vision Stratégique : L'Architecture "Event-Driven"
 
-Pour gérer 13 millions d'entreprises sans jamais perdre une seule mise à jour, nous abandonnons le modèle classique "Client-Serveur" au profit d'un modèle **orienté événements**.
-
 ### A. Ingestion Souple (NATS JetStream)
 
 Les données entrent par divers canaux (API, imports CSV massifs, Google Address).
@@ -17,8 +15,6 @@ Des programmes Go spécialisés consomment les messages de NATS :
 
 * **Worker Géo :** Calcule les coordonnées GPS.
 * **Worker Media :** Récupère les logos, les compresse en **WebP** et les stocke sur **S3/MinIO** pour minimiser la consommation de bande passante des utilisateurs (critique en Afrique).
-
----
 
 ## 2. Le Cœur de Données : Cohérence et Vitesse
 
@@ -35,8 +31,6 @@ Nous séparons la **Source de Vérité** de la **Performance de Recherche**.
 * **Rôle :** Un index ultra-rapide en RAM synchronisé avec rqlite.
 * **Performance :** Recherche instantanée sur 13M d'entreprises, même avec des fautes de frappe ou des connexions 3G instables.
 
----
-
 ### 3. Gestion Intelligente : Dé-duplication & Litiges
 
 Avec 13 millions d'entrées, la qualité de la donnée est votre plus grand actif.
@@ -44,16 +38,12 @@ Avec 13 millions d'entrées, la qualité de la donnée est votre plus grand acti
 * **La Fusion (Merge) Périodique :** Un programme Go analyse la base de données (hebdomadairement/mensuellement). Il regroupe les entreprises par similarité (Nom proche + même zone GPS + même téléphone).
 * **Human-in-the-loop (Telegram) :** Le programme ne fusionne pas aveuglément les cas suspects. Il envoie une notification à l'équipe via une **Telegram Mini App**. Un modérateur valide la fusion d'un simple "Swipe" depuis son téléphone.
 
----
-
 ## 4. Infrastructure : Scalabilité Continentale
 
 Le système est conçu pour être déployé pays par pays de manière isolée mais connectée.
 
 * **Kubernetes (K8s) :** Gère la couche applicative (APIs, Workers, Assistant IA). Permet de scaler horizontalement pendant les pics d'utilisation.
 * **VPS Managés :** Pour le stockage (rqlite, S3/MinIO). Les données restent sur des disques performants et isolés, facilitant la conformité aux lois locales sur la protection des données dans chaque pays africain.
-
----
 
 ## 5. L'Expérience Utilisateur : Mobile-First & Telegram
 
@@ -64,10 +54,6 @@ L'accès à la donnée doit être universel.
 * **Clients :** Gèrent leur profil et paient leurs abonnements via le bot.
 * **Équipe Support :** Reçoit les tickets de litiges et discute directement avec les propriétaires d'entreprises.
 
-
-
----
-
 ## 6. Synthèse pour Investisseurs : Pourquoi ce projet va réussir
 
 | Pilier | Solution Technique | Avantage Concurrentiel |
@@ -77,8 +63,6 @@ L'accès à la donnée doit être universel.
 | **Accessibilité** | Telegram + Web Hybride | Pénétration maximale du marché mobile africain. |
 | **IA** | Assistant IA local | Recherche contextuelle intelligente, unique sur le continent. |
 | **Confiance** | Système de claim/litige | Base de données vérifiée et certifiée, contrairement au scraping sauvage. |
-
----
 
 ### Prochaines étapes suggérées :
 
