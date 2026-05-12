@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,6 +14,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/rs/zerolog/log"
+
+	"congopro-bridge/internal/logger"
 )
 
 // Config holds command line flags
@@ -27,6 +30,7 @@ type Config struct {
 }
 
 func main() {
+	logger.Init(true)
 	cfg := parseFlags()
 
 	// 1. Gérer l'arrêt gracieux (Ctrl+C)
@@ -37,21 +41,21 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		log.Println("\nArrêt demandé par l'utilisateur. Clôture propre du fichier en cours...")
+		log.Info().Msg("\nArrêt demandé par l'utilisateur. Clôture propre du fichier en cours...")
 		cancel()
 	}()
 
 	// 2. Ouvrir le fichier d'entrée
 	inFile, err := os.Open(cfg.InputFile)
 	if err != nil {
-		log.Fatalf("Échec de l'ouverture du fichier source: %v", err)
+		log.Fatal().Msgf("Échec de l'ouverture du fichier source: %v", err)
 	}
 	defer inFile.Close()
 
 	// 3. Préparer le fichier de sortie
 	outFile, err := os.Create(cfg.OutputFile)
 	if err != nil {
-		log.Fatalf("Échec de la création du fichier de destination: %v", err)
+		log.Fatal().Msgf("Échec de la création du fichier de destination: %v", err)
 	}
 	defer outFile.Close()
 
@@ -62,7 +66,7 @@ func main() {
 	// Lire le premier token (qui devrait être '[')
 	t, err := decoder.Token()
 	if err != nil || t != json.Delim('[') {
-		log.Fatalf("Le fichier JSON doit commencer par un tableau '['")
+		log.Fatal().Msgf("Le fichier JSON doit commencer par un tableau '['")
 	}
 
 	// Écrire le début du tableau
@@ -77,23 +81,23 @@ func main() {
 	skipped := 0
 	isFirst := true
 
-	log.Println("Début du traitement...")
+	log.Info().Msg("Début du traitement...")
 	if cfg.DelayMs < 1000 {
-		log.Printf("⚠️ Attention: Un délai de %dms peut entraîner un bannissement sur les serveurs publics OSM Nominatim.", cfg.DelayMs)
+		log.Warn().Msgf("⚠️ Attention: Un délai de %dms peut entraîner un bannissement sur les serveurs publics OSM Nominatim.", cfg.DelayMs)
 	}
 
 	// 4. Traitement en Streaming (objet par objet)
 	for decoder.More() {
 		select {
 		case <-ctx.Done():
-			log.Println("Arrêt de la boucle de traitement.")
+			log.Info().Msg("Arrêt de la boucle de traitement.")
 			goto Cleanup
 		default:
 		}
 
 		var rec map[string]interface{}
 		if err := decoder.Decode(&rec); err != nil {
-			log.Printf("Erreur de décodage à l'index %d: %v", count, err)
+			log.Error().Msgf("Erreur de décodage à l'index %d: %v", count, err)
 			continue
 		}
 		count++
@@ -105,14 +109,14 @@ func main() {
 			continue
 		}
 
-		log.Printf("[%d] Traitement: %v", count, rec["name"])
+		log.Info().Msgf("[%d] Traitement: %v", count, rec["name"])
 
 		// Essayer d'obtenir les coordonnées avec stratégie de repli (Fallback)
 		lon, lat, err := resolveCoordinates(client, rec)
 		if err != nil {
-			log.Printf("  -> Échec géocodage: %v", err)
+			log.Error().Msgf("  -> Échec géocodage: %v", err)
 		} else {
-			log.Printf("  -> Succès: lon=%.6f, lat=%.6f", lon, lat)
+			log.Info().Msgf("  -> Succès: lon=%.6f, lat=%.6f", lon, lat)
 			rec["geo"] = []interface{}{lon, lat}
 			updated++
 		}
@@ -131,7 +135,7 @@ Cleanup:
 	} else {
 		outFile.WriteString("\n]\n")
 	}
-	log.Printf("Terminé ! Traités: %d | Mis à jour: %d | Ignorés (déjà ok): %d", count, updated, skipped)
+	log.Info().Msgf("Terminé ! Traités: %d | Mis à jour: %d | Ignorés (déjà ok): %d", count, updated, skipped)
 }
 
 func parseFlags() Config {
@@ -158,7 +162,7 @@ func writeRecord(w io.Writer, rec map[string]interface{}, isFirst *bool, minify 
 	}
 
 	if err != nil {
-		log.Printf("Erreur d'encodage du record: %v", err)
+		log.Error().Msgf("Erreur d'encodage du record: %v", err)
 		return
 	}
 
@@ -204,7 +208,7 @@ func resolveCoordinates(client *http.Client, rec map[string]interface{}) (float6
 		if err == nil {
 			return lon, lat, nil
 		}
-		log.Printf("     [Info] Adresse précise introuvable, essai au niveau de la ville...")
+		log.Warn().Msg("     [Info] Adresse précise introuvable, essai au niveau de la ville...")
 	}
 
 	// Tentative 2 : Repli (Fallback) sur Ville + Pays
@@ -295,7 +299,6 @@ func geocode(client *http.Client, address string) (float64, float64, error) {
 	if len(results) == 0 {
 		return 0, 0, fmt.Errorf("aucun résultat")
 	}
-	// log.Println(results) //TODO
 
 	lat, err := strconv.ParseFloat(results[0].Lat, 64)
 	if err != nil {

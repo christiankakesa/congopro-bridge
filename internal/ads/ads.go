@@ -2,9 +2,10 @@ package ads
 
 import (
 	_ "embed"
-	"log"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"gopkg.in/yaml.v3"
 )
@@ -66,7 +67,7 @@ const dateLayout = "2006-01-02"
 
 func LoadAds() {
 	if err := yaml.Unmarshal(adsYAML, &AdsConfig); err != nil {
-		log.Printf("[ads] failed to parse ads.yaml: %v", err)
+		log.Error().Msgf("[ads] failed to parse ads.yaml: %v", err)
 		return
 	}
 
@@ -93,7 +94,7 @@ func LoadAds() {
 			if t, err := time.Parse(dateLayout, ad.Period.Start); err == nil {
 				ad.parsedStart = t
 			} else {
-				log.Printf("[ads] invalid start date for ad %q: %v", ad.ID, err)
+				log.Error().Msgf("[ads] invalid start date for ad %q: %v", ad.ID, err)
 			}
 		}
 
@@ -102,7 +103,7 @@ func LoadAds() {
 				// adds the entire current day
 				ad.parsedEnd = t.Add(24*time.Hour - time.Nanosecond)
 			} else {
-				log.Printf("[ads] invalid end date for ad %q: %v", ad.ID, err)
+				log.Error().Msgf("[ads] invalid end date for ad %q: %v", ad.ID, err)
 			}
 		}
 
@@ -112,7 +113,7 @@ func LoadAds() {
 		}
 	}
 
-	log.Printf("[ads] loaded %d ads (%d active)", len(AdsConfig.Ads), active)
+	log.Info().Msgf("[ads] loaded %d ads (%d active)", len(AdsConfig.Ads), active)
 }
 
 func adInPeriod(ad *AdConfig, now time.Time) bool {

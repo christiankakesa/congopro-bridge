@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"congopro-bridge/internal/ads"
 	"congopro-bridge/internal/data"
@@ -92,7 +93,7 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	results, err := a.Engine.HybridSearch(q)
 	if err != nil {
-		log.Printf("[search] error: %v", err)
+		log.Error().Msgf("[search] error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(ErrorResponse{Error: "search failed"})
 		return
@@ -143,7 +144,7 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 
 	answer, err := a.Engine.GenerateAnswer(q, results)
 	if err != nil {
-		log.Printf("[ai] erreur Ollama: %v", err)
+		log.Error().Msgf("[ai] erreur Ollama: %v", err)
 		w.WriteHeader(http.StatusBadGateway)
 		json.NewEncoder(w).Encode(ErrorResponse{Error: "Le service IA est indisponible"})
 		return

@@ -4,11 +4,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"html"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/rs/zerolog/log"
+
+	"congopro-bridge/internal/logger"
 )
 
 // extractID safely extracts the ID, regardless of flat or nested MongoDB format.
@@ -29,6 +32,7 @@ func extractID(record map[string]interface{}) string {
 }
 
 func main() {
+	logger.Init(true)
 	inFile := flag.String("in", "data.json", "Input JSON file path")
 	outFile := flag.String("out", "cleaned_data.json", "Output JSON file path")
 	fieldsFlag := flag.String("fields", "name,slogan", "Comma-separated list of fields to check")
@@ -40,13 +44,13 @@ func main() {
 
 	data, err := os.ReadFile(*inFile)
 	if err != nil {
-		fmt.Printf("Error reading file %q: %v\n", *inFile, err)
+		log.Error().Msgf("Can't read file %q: %v", *inFile, err)
 		os.Exit(1)
 	}
 
 	var records []map[string]interface{}
 	if err := json.Unmarshal(data, &records); err != nil {
-		fmt.Printf("Error parsing JSON: %v\n", err)
+		log.Error().Msgf("Can't parse JSON: %v", err)
 		os.Exit(1)
 	}
 
@@ -90,9 +94,9 @@ func main() {
 			for _, match := range matches {
 				answer := autoMode
 				if answer == "" {
-					fmt.Printf("\n[!] Suspicious data found in '%s' (Field: %s)\n", recordName, field)
-					fmt.Printf("    Data: %s\n", match)
-					fmt.Print("    Action: (d)elete entire record, (c)lear text only, (k)eep text: ")
+					log.Warn().Msgf("\n[!] Suspicious data found in '%s' (Field: %s)", recordName, field)
+					log.Info().Msgf("    Data: %s", match)
+					log.Info().Msg("    Action: (d)elete entire record, (c)lear text only, (k)eep text: ")
 					scanner.Scan()
 					answer = strings.ToLower(strings.TrimSpace(scanner.Text()))
 				}
@@ -101,20 +105,20 @@ func main() {
 					if recordID != "" {
 						idsToDelete[recordID] = true
 						if autoMode == "" {
-							fmt.Println("    -> Record flagged for complete deletion.")
+							log.Info().Msg("    -> Record flagged for complete deletion.")
 						}
 						shouldDeleteRecord = true
 						break // Exit the match loop, record is already doomed
 					} else if autoMode == "" {
-						fmt.Println("    -> Error: Could not extract ID. Cannot delete record.")
+						log.Warn().Msg("    -> Could not extract ID. Cannot delete record.")
 					}
 				} else if answer == "c" || answer == "clear" {
 					decodedStr = strings.ReplaceAll(decodedStr, match, "")
 					if autoMode == "" {
-						fmt.Println("    -> Text cleared.")
+						log.Info().Msg("    -> Text cleared.")
 					}
 				} else if autoMode == "" {
-					fmt.Println("    -> Kept.")
+					log.Info().Msg("    -> Kept.")
 				}
 			}
 
@@ -134,21 +138,21 @@ func main() {
 		}
 	}
 
-	fmt.Printf("\n--- Cleanup Summary ---\n")
-	fmt.Printf("Original count: %d\n", len(records))
-	fmt.Printf("Deleted count:  %d\n", len(idsToDelete))
-	fmt.Printf("Final count:    %d\n", len(finalRecords))
+	log.Info().Msgf("\n--- Cleanup Summary ---")
+	log.Info().Msgf("Original count: %d", len(records))
+	log.Info().Msgf("Deleted count:  %d", len(idsToDelete))
+	log.Info().Msgf("Final count:    %d", len(finalRecords))
 
 	cleanedJSON, err := json.MarshalIndent(finalRecords, "", "  ")
 	if err != nil {
-		fmt.Printf("Error marshaling cleaned JSON: %v\n", err)
+		log.Error().Msgf("Error marshaling cleaned JSON: %v", err)
 		os.Exit(1)
 	}
 
 	if err := os.WriteFile(*outFile, cleanedJSON, 0644); err != nil {
-		fmt.Printf("Error writing to file: %v\n", err)
+		log.Error().Msgf("Error writing to file: %v", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("✅ Complete. Saved to %s\n", *outFile)
+	log.Info().Msgf("✅ Complete. Saved to %s", *outFile)
 }

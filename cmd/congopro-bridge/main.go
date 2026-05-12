@@ -2,52 +2,61 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"congopro-bridge/internal/ads"
 	"congopro-bridge/internal/api"
 	"congopro-bridge/internal/data"
+	"congopro-bridge/internal/logger"
 )
 
 func main() {
+	logger.Init(false)
 	ads.LoadAds()
 
 	engine := data.NewEngine()
 	go func() {
 		start := time.Now()
 		if err := engine.LoadAndIndex(); err != nil {
-			log.Fatalf("[startup] indexing failed: %v", err)
+			log.Fatal().Msgf("[startup] indexing failed: %v", err)
 		}
-		log.Printf("[startup] indexing completed in %s", time.Since(start).Round(time.Millisecond))
+		log.Info().Msgf("[startup] indexing completed in %s", time.Since(start).Round(time.Millisecond))
 	}()
 
 	apiAppEngine := &api.AppEngine{Engine: engine}
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /search", api.WithCORS(apiAppEngine.SearchHandler))
-	mux.HandleFunc("GET /ask", api.WithCORS(apiAppEngine.AIAnswerHandler))
-	mux.HandleFunc("GET /ads", api.WithCORS(api.AdsHandler))
-	mux.HandleFunc("GET /health", api.WithCORS(apiAppEngine.HealthHandler))
+	// SEO
+	mux.HandleFunc("GET /robots.txt", api.RobotsTxt)
+	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
+
+	// Static
 	mux.HandleFunc("GET /fonts/", api.FontsHandler)
 	mux.HandleFunc("GET /css/style.min.css", api.TailwindCssHandler)
 	mux.HandleFunc("GET /favicon.ico", api.FaviconHandler)
 
-	mux.HandleFunc("GET /robots.txt", api.RobotsTxt)
-	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
-
+	// Static pages
 	mux.HandleFunc("GET /content/", api.WithCORS(api.ContentHandler))
-
-	mux.HandleFunc("GET /company/", api.ServeSPAHandler)
 	mux.HandleFunc("GET /help", api.ServeSPAHandler)
 	mux.HandleFunc("GET /privacy", api.ServeSPAHandler)
 	mux.HandleFunc("GET /terms", api.ServeSPAHandler)
 
+	// Search API
+	mux.HandleFunc("GET /search", api.WithCORS(apiAppEngine.SearchHandler))
+	mux.HandleFunc("GET /ask", api.WithCORS(apiAppEngine.AIAnswerHandler))
+	mux.HandleFunc("GET /ads", api.WithCORS(api.AdsHandler))
+	mux.HandleFunc("GET /health", api.WithCORS(apiAppEngine.HealthHandler))
+	// Serves old company routes
+	mux.HandleFunc("GET /company/", api.ServeSPAHandler)
+
+	// Default routes
 	mux.HandleFunc("/", api.FrontendHandler)
 
 	port := os.Getenv("PORT")
@@ -69,21 +78,21 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("[server] listening on http://localhost%s", addr)
+		log.Info().Msgf("[server] listening on http://localhost%s", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("[server] listen error: %v", err)
+			log.Fatal().Msgf("[server] listen error: %v", err)
 		}
 	}()
 
 	<-stop
-	log.Println("[server] shutdown signal received, finishing active requests...")
+	log.Info().Msg("[server] shutdown signal received, finishing active requests...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("[server] forced shutdown due to error/timeout: %v", err)
+		log.Error().Msgf("[server] forced shutdown due to error/timeout: %v", err)
 	}
 
-	log.Println("[server] successfully stopped")
+	log.Info().Msg("[server] successfully stopped")
 }

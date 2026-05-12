@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"regexp"
@@ -27,6 +26,7 @@ import (
 	bleve "github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/search/query"
 	chromem "github.com/philippgille/chromem-go"
+	"github.com/rs/zerolog/log"
 
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/en"
 	"github.com/blevesearch/bleve/v2/analysis/lang/fr"
@@ -180,7 +180,7 @@ type Company struct {
 
 type SearchResult struct {
 	Company
-	Score  float64 `json:"score"`
+	Score float64 `json:"score"`
 }
 
 type ollamaRequest struct {
@@ -324,7 +324,7 @@ func (e *Engine) buildVocab() {
 		e.vocab = append(e.vocab, pairs[i].k)
 		e.vocabMap[pairs[i].k] = i
 	}
-	log.Printf("[embed] vocabulary built — %d dimensions (corpus tokens: %d)", dim, len(pairs))
+	log.Info().Msgf("[embed] vocabulary built — %d dimensions (corpus tokens: %d)", dim, len(pairs))
 }
 
 func (e *Engine) embed(text string) []float32 {
@@ -371,7 +371,7 @@ func (e *Engine) loadAndIndexOnce() error {
 	if err := json.Unmarshal(CompaniesJSON, &raws); err != nil {
 		return fmt.Errorf("unmarshal companies: %w", err)
 	}
-	log.Printf("[load] parsed %d raw companies", len(raws))
+	log.Info().Msgf("[load] parsed %d raw companies", len(raws))
 
 	companies := make([]Company, 0, len(raws))
 	seenIDs := make(map[string]struct{}, len(raws))
@@ -449,7 +449,7 @@ func (e *Engine) loadAndIndexOnce() error {
 
 	e.refreshSitemapCache()
 
-	log.Printf("[load] all systems ready in %s (%d companies indexed)", time.Since(start).Round(time.Millisecond), len(companies))
+	log.Info().Msgf("[load] all systems ready in %s (%d companies indexed)", time.Since(start).Round(time.Millisecond), len(companies))
 	return nil
 }
 
@@ -912,7 +912,7 @@ func (e *Engine) refreshSitemapCache() {
 	entries := e.generateSitemapEntries()
 	var buf bytes.Buffer
 	if err := e.WriteSitemapXML(&buf, entries); err != nil {
-		log.Printf("[sitemap] generation error: %v", err)
+		log.Error().Msgf("[sitemap] generation error: %v", err)
 		return
 	}
 	var gzBuf bytes.Buffer
