@@ -3,6 +3,7 @@ package data
 import (
 	"bytes"
 	"compress/gzip"
+	"congopro-bridge/internal/config"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -54,9 +55,6 @@ const (
 	bleveBatch     = 500
 	scoreFloor     = 0.05
 	fuzzyMinLen    = 6
-
-	ollamaURL = "http://localhost:11434/api/generate"
-	aiModel   = "gemma:2b"
 
 	boostName         = 18.0
 	boostActivity     = 20.0
@@ -218,13 +216,15 @@ type Engine struct {
 
 	SitemapCache []byte
 	SitemapMu    sync.RWMutex
+	Config       *config.Config
 }
 
-func NewEngine() *Engine {
+func NewEngine(cfg *config.Config) *Engine {
 	return &Engine{
 		IndexingDone: make(chan struct{}),
 		companyMap:   make(map[string]*Company),
 		slugMap:      make(map[string]*Company),
+		Config:       cfg,
 	}
 }
 
@@ -839,7 +839,7 @@ CONTEXTE (Entreprises trouvées) :
 	sb.WriteString("\n\nRÉPONSE :")
 
 	body, _ := json.Marshal(ollamaRequest{
-		Model:  aiModel,
+		Model:  e.Config.AiModel,
 		Prompt: sb.String(),
 		Stream: false,
 		Options: map[string]interface{}{
@@ -850,9 +850,9 @@ CONTEXTE (Entreprises trouvées) :
 	})
 
 	client := &http.Client{Timeout: 45 * time.Second}
-	resp, err := client.Post(ollamaURL, "application/json", bytes.NewBuffer(body))
+	resp, err := client.Post(e.Config.OllamaURL, "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return "", fmt.Errorf("connexion Ollama: %w", err)
+		return "", fmt.Errorf("Ollama connection: %w", err)
 	}
 	defer resp.Body.Close()
 

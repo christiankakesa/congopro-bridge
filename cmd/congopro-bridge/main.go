@@ -12,15 +12,18 @@ import (
 
 	"congopro-bridge/internal/ads"
 	"congopro-bridge/internal/api"
+	"congopro-bridge/internal/config"
 	"congopro-bridge/internal/data"
 	"congopro-bridge/internal/logger"
 )
 
 func main() {
 	logger.Init(false)
+	cfg := config.Load()
+
 	ads.LoadAds()
 
-	engine := data.NewEngine()
+	engine := data.NewEngine(cfg)
 	go func() {
 		start := time.Now()
 		if err := engine.LoadAndIndex(); err != nil {
@@ -43,16 +46,16 @@ func main() {
 	mux.HandleFunc("GET /favicon.ico", api.FaviconHandler)
 
 	// Static pages
-	mux.HandleFunc("GET /content/", api.WithCORS(api.ContentHandler))
+	mux.HandleFunc("GET /content/", apiAppEngine.WithCORS(api.ContentHandler))
 	mux.HandleFunc("GET /help", api.ServeSPAHandler)
 	mux.HandleFunc("GET /privacy", api.ServeSPAHandler)
 	mux.HandleFunc("GET /terms", api.ServeSPAHandler)
 
 	// Search API
-	mux.HandleFunc("GET /search", api.WithCORS(apiAppEngine.SearchHandler))
-	mux.HandleFunc("GET /ask", api.WithCORS(apiAppEngine.AIAnswerHandler))
-	mux.HandleFunc("GET /ads", api.WithCORS(api.AdsHandler))
-	mux.HandleFunc("GET /health", api.WithCORS(apiAppEngine.HealthHandler))
+	mux.HandleFunc("GET /search", apiAppEngine.WithCORS(apiAppEngine.SearchHandler))
+	mux.HandleFunc("GET /ask", apiAppEngine.WithCORS(apiAppEngine.AIAnswerHandler))
+	mux.HandleFunc("GET /ads", apiAppEngine.WithCORS(api.AdsHandler))
+	mux.HandleFunc("GET /health", apiAppEngine.WithCORS(apiAppEngine.HealthHandler))
 	// Serves old company routes
 	mux.HandleFunc("GET /company/", api.ServeSPAHandler)
 

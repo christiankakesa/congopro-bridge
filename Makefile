@@ -35,10 +35,10 @@ all: build
 
 css:
 	@echo "▶ Compiling Tailwind CSS using local binary…"
-	@# On vérifie si le fichier existe avant de lancer
+	@# We check whether the file exists before running
 	@if [ ! -f $(TAILWIND_CLI) ]; then \
-		echo "❌ Erreur: ./tailwindcss introuvable à la racine."; \
-		echo "Télécharge-le via: curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && mv tailwindcss-linux-x64 tailwindcss && chmod +x tailwindcss"; \
+		echo "❌ Error: ./tailwindcss not found at root."; \
+		echo "Download it via: curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && mv tailwindcss-linux-x64 tailwindcss && chmod +x tailwindcss"; \
 		exit 1; \
 	fi
 	@$(TAILWIND_CLI) -i ./internal/web/css/input.css -o ./internal/web/css/style.min.css --minify

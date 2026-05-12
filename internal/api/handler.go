@@ -44,20 +44,23 @@ type AIResponse struct {
 }
 
 var (
-	indexTmpl   *template.Template
-	cssHash     string
 	startupTime = time.Now()
+	cssHash     string
+	indexTmpl   *template.Template
 )
 
 func init() {
-	hash := md5.Sum(web.TailwindCSS)
-	cssHash = fmt.Sprintf("%.8x", hash)
+	cssHash = fmt.Sprintf("%.8x", md5.Sum(web.TailwindCSS))
 	indexTmpl = template.Must(template.New("index").Parse(string(web.IndexHTML)))
 }
 
-func WithCORS(h http.HandlerFunc) http.HandlerFunc {
+func (a *AppEngine) WithCORS(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if a.Engine.Config.AllowedOrigin != "*" {
+			w.Header().Add("Vary", "Origin")
+		}
+
+		w.Header().Set("Access-Control-Allow-Origin", a.Engine.Config.AllowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == http.MethodOptions {
@@ -131,22 +134,22 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	if q == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "requête vide"})
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "empty query"})
 		return
 	}
 
 	results, err := a.Engine.HybridSearch(q)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "erreur de recherche"})
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "search error"})
 		return
 	}
 
 	answer, err := a.Engine.GenerateAnswer(q, results)
 	if err != nil {
-		log.Error().Msgf("[ai] erreur Ollama: %v", err)
+		log.Error().Msgf("[ai] Ollama error: %v", err)
 		w.WriteHeader(http.StatusBadGateway)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Le service IA est indisponible"})
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "AI service is unavailable"})
 		return
 	}
 

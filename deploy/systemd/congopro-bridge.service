@@ -9,6 +9,9 @@ User=ops
 Group=ops
 
 Environment=PORT=8110
+Environment=OLLAMA_URL=http://localhost:11434/api/generate
+Environment=AI_MODEL=gemma:2b
+Environment=ALLOWED_ORIGIN=https://congopro.com
 
 WorkingDirectory=/opt/congopro-bridge
 ExecStart=/opt/congopro-bridge/congopro-bridge
