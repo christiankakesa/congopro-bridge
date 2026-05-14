@@ -27,15 +27,8 @@ import (
 
 	bleve "github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/mapping"
-	"github.com/blevesearch/bleve/v2/search/query"
-	"github.com/nlpodyssey/cybertron/pkg/models/bert"
-	"github.com/nlpodyssey/cybertron/pkg/tasks"
-	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
 	chromem "github.com/philippgille/chromem-go"
 	"github.com/rs/zerolog/log"
-
-	_ "github.com/blevesearch/bleve/v2/analysis/lang/en"
-	"github.com/blevesearch/bleve/v2/analysis/lang/fr"
 
 	"congopro-bridge/internal/config"
 )
@@ -54,55 +47,19 @@ const (
 	fieldSlogan       = "slogan"
 	fieldLocation     = "location"
 
-	MaxResults     = 30
-	bleveWeight    = 0.50
-	semanticWeight = 0.50
-	chromemBatch   = 128
-	bleveBatch     = 500
-	scoreFloor     = 0.05
-	fuzzyMinLen    = 6
-
-	boostName         = 18.0
-	boostActivity     = 20.0
-	boostDescription  = 5.0
-	boostAddress      = 3.0
-	boostAddressLine2 = 4.0
-	boostCity         = 2.0
-	boostSlogan       = 0.5
+	MaxResults   = 30
+	chromemBatch = 128
+	bleveBatch   = 500
 )
 
-var punctuationReplacer = strings.NewReplacer(
-	"'", " ",
-	"’", " ",
-	"\"", " ",
-	"-", " ",
-)
-
-var frStopWords = map[string]bool{
-	"le": true, "la": true, "les": true, "de": true, "des": true, "un": true, "une": true,
-	"et": true, "à": true, "a": true, "il": true, "elle": true, "en": true, "pour": true,
-	"par": true, "dans": true, "sur": true, "au": true, "aux": true, "du": true, "qui": true,
-	"que": true, "quoi": true, "dont": true, "où": true, "ou": true, "montre": true, "moi": true,
-	"est": true, "sont": true, "ce": true, "ces": true, "avec": true, "je": true, "cherche": true,
-	"trouve": true, "l": true, "d": true, "qu": true, "m": true, "s": true, "t": true,
+var geoCintyCountryAliases = map[string]bool{
+	"congo":    true,
+	"rdc":      true,
+	"drc":      true,
+	"kinshasa": true,
 }
 
-var synonymMap = map[string][]string{
-	"pain":       {"boulangerie", "pâtisserie", "boulanger", "baguette", "croissant"},
-	"médicament": {"pharmacie", "officine"},
-	"voiture":    {"garage", "mécanicien", "concessionnaire", "automobile"},
-	"docteur":    {"médecin", "clinique", "hôpital", "cabinet", "pédiatre"},
-	"école":      {"collège", "lycée", "institut", "université"},
-	// Vous pourrez en ajouter d'autres au fur et à mesure selon les recherches des utilisateurs
-}
-
-var geoNoise = map[string]bool{
-	"avenue":    true,
-	"rue":       true,
-	"boulevard": true,
-	"quartier":  true,
-	"commune":   true,
-}
+var removeNonSpacingMarks = runes.Remove(runes.In(unicode.Mn))
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MongoDB JSON helpers & Domain Models
@@ -196,6 +153,15 @@ type SearchResult struct {
 	Score float64 `json:"score"`
 }
 
+type ollamaEmbedRequest struct {
+	Model  string `json:"model"`
+	Prompt string `json:"prompt"`
+}
+
+type ollamaEmbedResponse struct {
+	Embedding []float32 `json:"embedding"`
+}
+
 type ollamaRequest struct {
 	Model   string                 `json:"model"`
 	Prompt  string                 `json:"prompt"`
@@ -215,6 +181,8 @@ type SitemapEntry struct {
 }
 
 type Engine struct {
+	Config *config.Config
+
 	initOnce     sync.Once
 	IndexingDone chan struct{}
 
@@ -225,15 +193,12 @@ type Engine struct {
 
 	bleveIdx    bleve.Index
 	chromemColl *chromem.Collection
-
-	vocab    []string
-	vocabMap map[string]int
+	httpClient  *http.Client
 
 	SitemapCache []byte
 	SitemapMu    sync.RWMutex
-	Config       *config.Config
 
-	encoder textencoding.Interface
+	knownCities map[string]bool
 }
 
 func NewEngine(cfg *config.Config) *Engine {
@@ -242,6 +207,7 @@ func NewEngine(cfg *config.Config) *Engine {
 		companyMap:   make(map[string]*Company),
 		slugMap:      make(map[string]*Company),
 		Config:       cfg,
+		httpClient:   &http.Client{},
 	}
 }
 
@@ -259,55 +225,56 @@ func stripHTML(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
-func normalizeForBleve(s string) string {
-	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+func normalizeForSearch(s string) string {
+	t := transform.Chain(norm.NFD, removeNonSpacingMarks, norm.NFC)
 	result, _, _ := transform.String(t, s)
-	return strings.ToLower(result)
+	return strings.ToLower(strings.TrimSpace(result))
 }
 
-func normalizeToken(tok string) string {
-	tok = normalizeForBleve(tok)
-	if strings.HasSuffix(tok, "s") && len(tok) > 4 && !strings.HasSuffix(tok, "ss") && !strings.HasSuffix(tok, "us") {
-		tok = strings.TrimSuffix(tok, "s")
-	}
-
-	return tok
-}
-
-func cleanAndSplit(s string) []string {
-	s = normalizeForBleve(s)
-	s = punctuationReplacer.Replace(s)
-
-	parts := strings.FieldsFunc(s, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
-	})
-
-	clean := make([]string, 0, len(parts))
-	for _, w := range parts {
-		if len(w) > 2 && !frStopWords[w] {
-			clean = append(clean, w)
-		}
-	}
-	return clean
-}
-
-func tokenize(s string) []string {
-	return cleanAndSplit(s)
-}
-func extractKeywords(q string) []string {
-	rawTokens := cleanAndSplit(q)
-	keywords := make([]string, 0, len(rawTokens))
-	seen := make(map[string]struct{}, len(rawTokens))
-
-	for _, token := range rawTokens {
-		token = normalizeToken(token)
-		if _, exists := seen[token]; exists {
+func extractGeoTokens(q string, knownCities map[string]bool) (geoTokens []string, activityQ string) {
+	words := strings.Fields(normalizeForSearch(q))
+	var activity []string
+	for _, w := range words {
+		if len([]rune(w)) <= 2 {
 			continue
 		}
-		seen[token] = struct{}{}
-		keywords = append(keywords, token)
+		if knownCities[w] {
+			geoTokens = append(geoTokens, w)
+		} else {
+			activity = append(activity, w)
+		}
 	}
-	return keywords
+	return geoTokens, strings.Join(activity, " ")
+}
+
+func reciprocalRankFusion(rankings ...map[string]int) map[string]float64 {
+	const k = 60
+	scores := make(map[string]float64)
+	for _, ranking := range rankings {
+		for id, rank := range ranking {
+			scores[id] += 1.0 / float64(k+rank)
+		}
+	}
+	return scores
+}
+
+func hitsToRanking(hits map[string]float64) map[string]int {
+	type kv struct {
+		id    string
+		score float64
+	}
+	sorted := make([]kv, 0, len(hits))
+	for id, s := range hits {
+		sorted = append(sorted, kv{id, s})
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].score > sorted[j].score
+	})
+	ranking := make(map[string]int, len(sorted))
+	for i, kv := range sorted {
+		ranking[kv.id] = i + 1
+	}
+	return ranking
 }
 
 func (e *Engine) LoadAndIndex() error {
@@ -332,7 +299,6 @@ func (e *Engine) loadAndIndexOnce() error {
 
 	companies := make([]Company, 0, len(raws))
 	seenIDs := make(map[string]struct{}, len(raws))
-	dupCount := 0
 
 	for i, r := range raws {
 		id := r.ID.Value
@@ -340,7 +306,6 @@ func (e *Engine) loadAndIndexOnce() error {
 			id = fmt.Sprintf("gen-%d", i)
 		}
 		if _, exists := seenIDs[id]; exists {
-			dupCount++
 			continue
 		}
 		seenIDs[id] = struct{}{}
@@ -370,6 +335,7 @@ func (e *Engine) loadAndIndexOnce() error {
 
 	companyMap := make(map[string]*Company, len(companies))
 	slugMap := make(map[string]*Company, len(companies))
+	knownCities := make(map[string]bool, 100)
 	for i := range companies {
 		ptr := &companies[i]
 		companyMap[ptr.ID] = ptr
@@ -378,26 +344,30 @@ func (e *Engine) loadAndIndexOnce() error {
 				slugMap[ptr.NameSeo] = ptr
 			}
 		}
+
+		if ptr.City != "" {
+			knownCities[normalizeForSearch(ptr.City)] = true
+		}
+		if ptr.Country != "" {
+			knownCities[normalizeForSearch(ptr.Country)] = true
+		}
+	}
+
+	for k, v := range geoCintyCountryAliases {
+		knownCities[k] = v
 	}
 
 	e.mu.Lock()
 	e.companies = companies
 	e.companyMap = companyMap
 	e.slugMap = slugMap
+	e.knownCities = knownCities
 	e.mu.Unlock()
 
 	raws = nil
 	runtime.GC()
 
-	log.Info().Msg("[load] loading semantic embedding model (first boot may download ~118MB)...")
-	encoder, err := tasks.Load[textencoding.Interface](&tasks.Config{
-		ModelsDir: e.Config.ModelsDir,
-		ModelName: textencoding.DefaultModelMulti,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to load cybertron model: %w", err)
-	}
-	e.encoder = encoder
+	log.Info().Msgf("[load] connecting to Ollama embedding model: %s", e.Config.EmbeddingModel)
 
 	indexPath := filepath.Join(e.Config.ModelsDir, "bleve.idx")
 
@@ -424,8 +394,12 @@ func (e *Engine) loadAndIndexOnce() error {
 		e.bleveIdx = idx
 	}
 
+	if err := e.pingOllama(); err != nil {
+		return fmt.Errorf("ollama not reachable: %w", err)
+	}
+
 	chromemPath := filepath.Join(e.Config.ModelsDir, "chromem.db")
-	if err := e.indexChromem(chromemPath); err != nil {
+	if err := e.indexSem(chromemPath); err != nil {
 		return err
 	}
 
@@ -436,33 +410,29 @@ func (e *Engine) loadAndIndexOnce() error {
 }
 
 func buildBleveMapping() (*mapping.IndexMappingImpl, error) {
-	mapping := bleve.NewIndexMapping()
+	m := bleve.NewIndexMapping()
 	docMap := bleve.NewDocumentMapping()
 
-	frAnalyzer := fr.AnalyzerName
-	if frAnalyzer == "" {
-		frAnalyzer = "standard"
-	}
+	stdText := bleve.NewTextFieldMapping()
+	stdText.Analyzer = "standard"
 
-	frText := bleve.NewTextFieldMapping()
-	frText.Analyzer = frAnalyzer
 	keyword := bleve.NewKeywordFieldMapping()
+	keyword.Analyzer = "keyword"
 	geo := bleve.NewGeoPointFieldMapping()
 
-	docMap.AddFieldMappingsAt(fieldName, frText)
-	docMap.AddFieldMappingsAt(fieldActivity, frText)
-	docMap.AddFieldMappingsAt(fieldAddress, frText)
-	docMap.AddFieldMappingsAt(fieldAddressLine2, frText)
+	docMap.AddFieldMappingsAt(fieldName, stdText)
+	docMap.AddFieldMappingsAt(fieldActivity, stdText)
+	docMap.AddFieldMappingsAt(fieldAddress, stdText)
+	docMap.AddFieldMappingsAt(fieldAddressLine2, stdText)
 	docMap.AddFieldMappingsAt(fieldCity, keyword)
 	docMap.AddFieldMappingsAt(fieldCountry, keyword)
-	docMap.AddFieldMappingsAt(fieldDescription, frText)
-	docMap.AddFieldMappingsAt(fieldSlogan, frText)
+	docMap.AddFieldMappingsAt(fieldDescription, stdText)
+	docMap.AddFieldMappingsAt(fieldSlogan, stdText)
 	docMap.AddFieldMappingsAt(fieldLocation, geo)
 
-	mapping.DefaultMapping = docMap
-	mapping.DefaultAnalyzer = frAnalyzer
-
-	return mapping, nil
+	m.DefaultMapping = docMap
+	m.DefaultAnalyzer = "standard"
+	return m, nil
 }
 
 func (e *Engine) indexBleve() error {
@@ -476,8 +446,8 @@ func (e *Engine) indexBleve() error {
 			fieldActivity:     c.Activity,
 			fieldAddress:      c.Address,
 			fieldAddressLine2: c.AddressLine2,
-			fieldCity:         c.City,
-			fieldCountry:      c.Country,
+			fieldCity:         normalizeForSearch(c.City),
+			fieldCountry:      normalizeForSearch(c.Country),
 			fieldDescription:  c.Description,
 			fieldSlogan:       c.Slogan,
 		}
@@ -499,37 +469,52 @@ func (e *Engine) indexBleve() error {
 	return nil
 }
 
-func (e *Engine) indexChromem(chromemPath string) error {
+func (e *Engine) indexSem(chromemPath string) error {
 	db, err := chromem.NewPersistentDB(chromemPath, false)
 	if err != nil {
 		return err
 	}
 
 	embFn := chromem.EmbeddingFunc(func(ctx context.Context, text string) ([]float32, error) {
-		result, err := e.encoder.Encode(ctx, text, int(bert.MeanPooling))
-		if err != nil {
-			return nil, err
-		}
-
-		f64Data := result.Vector.Data().F64()
-		vec32 := make([]float32, len(f64Data))
-		for i, v := range f64Data {
-			vec32[i] = float32(v)
-		}
-
-		return vec32, nil
+		return e.embed(ctx, text)
 	})
+
+	modelMarker := chromemPath + ".model"
+	needsRebuild := false
+
+	if stored, err := os.ReadFile(modelMarker); err != nil {
+		needsRebuild = true
+	} else if strings.TrimSpace(string(stored)) != e.Config.EmbeddingModel {
+		log.Warn().Msgf("[load] embedding model changed (%s → %s), rebuilding semantic index...",
+			strings.TrimSpace(string(stored)), e.Config.EmbeddingModel)
+		needsRebuild = true
+	}
 
 	coll := db.GetCollection("companies", embFn)
 
-	if coll == nil {
-		log.Info().Msg("[load] building Chromem semantic index from scratch (this takes a few minutes)...")
+	if coll != nil && needsRebuild {
+		if err := os.RemoveAll(chromemPath); err != nil {
+			return fmt.Errorf("remove stale chromem index: %w", err)
+		}
 
-		coll, err = db.CreateCollection("companies", nil, embFn)
+		db, err = chromem.NewPersistentDB(chromemPath, false)
+		if err != nil {
+			return err
+		}
+		coll = nil
+	}
+
+	if coll == nil {
+		log.Info().Msg("[load] building Chromem semantic index from scratch...")
+
+		coll, err = db.CreateCollection("companies", map[string]string{}, embFn)
 		if err != nil {
 			return err
 		}
 		e.chromemColl = coll
+
+		indexCtx, indexCancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer indexCancel()
 
 		total := len(e.companies)
 		for start := 0; start < total; start += chromemBatch {
@@ -541,18 +526,12 @@ func (e *Engine) indexChromem(chromemPath string) error {
 			docs := make([]chromem.Document, 0, end-start)
 			for _, c := range e.companies[start:end] {
 				text := strings.Join([]string{
-					c.Name,
-					c.Activity,
-					c.Slogan,
-					c.Address,
-					c.AddressLine2,
-					c.City,
-					c.Country,
-					c.Description,
+					c.Name, c.Activity, c.Slogan,
+					c.Address, c.AddressLine2,
+					c.City, c.Country, c.Description,
 				}, " ")
 
-				textRunes := []rune(text)
-				if len(textRunes) > 1800 {
+				if textRunes := []rune(text); len(textRunes) > 1800 {
 					text = string(textRunes[:1800])
 				}
 
@@ -568,22 +547,81 @@ func (e *Engine) indexChromem(chromemPath string) error {
 				})
 			}
 
-			if err := coll.AddDocuments(context.Background(), docs, 4); err != nil {
+			if err := coll.AddDocuments(indexCtx, docs, 4); err != nil {
 				return err
 			}
+
+			log.Info().Msgf("[load] chromem indexed %d/%d companies",
+				min(start+chromemBatch, total), total)
+		}
+
+		if err := os.WriteFile(modelMarker, []byte(e.Config.EmbeddingModel), 0644); err != nil {
+			log.Warn().Msgf("[load] could not write model marker: %v", err)
 		}
 	} else {
-		log.Info().Msg("[load] loading existing Chromem semantic index from disk (fast)...")
+		log.Info().Msgf("[load] loading existing Chromem index (model: %s)",
+			e.Config.EmbeddingModel)
 		e.chromemColl = coll
 	}
 
 	return nil
 }
 
+func (e *Engine) pingOllama() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	url := strings.TrimSuffix(e.Config.OllamaURL, "/") + "/api/tags"
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := e.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("ollama ping returned %s", resp.Status)
+	}
+	return nil
+}
+
+func (e *Engine) embed(ctx context.Context, text string) ([]float32, error) {
+	body, _ := json.Marshal(ollamaEmbedRequest{
+		Model:  e.Config.EmbeddingModel,
+		Prompt: text,
+	})
+
+	embedCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(embedCtx, "POST",
+		strings.TrimSuffix(e.Config.OllamaURL, "/")+"/api/embeddings",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := e.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ollama embed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var out ollamaEmbedResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, fmt.Errorf("decode embed response: %w", err)
+	}
+	return out.Embedding, nil
+}
+
 func (e *Engine) HybridSearch(q string) ([]SearchResult, error) {
 	e.mu.RLock()
 	bleveIdx := e.bleveIdx
 	chromemColl := e.chromemColl
+	knownCities := e.knownCities
 	e.mu.RUnlock()
 
 	if bleveIdx == nil || chromemColl == nil {
@@ -610,61 +648,61 @@ func (e *Engine) HybridSearch(q string) ([]SearchResult, error) {
 		hits map[string]float64
 		err  error
 	}
-
 	bleveCh := make(chan result, 1)
 	semCh := make(chan result, 1)
 
 	go func() {
-		h, err := e.runBleveSearch(q)
-		bleveCh <- result{hits: h, err: err}
+		h, err := e.runBleveSearch(q, knownCities)
+		bleveCh <- result{h, err}
 	}()
-
 	go func() {
 		h, err := e.runChromemSearch(q)
-		semCh <- result{hits: h, err: err}
+		semCh <- result{h, err}
 	}()
 
 	br := <-bleveCh
-	sr := <-semCh
-
 	if br.err != nil {
-		return nil, fmt.Errorf("bleve search: %w", br.err)
+		return nil, fmt.Errorf("bleve: %w", br.err)
 	}
 
-	merged := make(map[string]float64, len(br.hits)+len(sr.hits))
-	for id, s := range br.hits {
-		merged[id] += bleveWeight * s
-	}
-	for id, s := range sr.hits {
-		merged[id] += semanticWeight * s
+	sr := <-semCh
+	if sr.err != nil {
+		log.Warn().Err(sr.err).Msg("[search] semantic fallback to bleve-only")
+		sr.hits = map[string]float64{}
 	}
 
-	normQ := normalizeForBleve(q)
-	e.mu.RLock()
-	for id := range merged {
-		if c, ok := e.companyMap[id]; ok {
-			if normalizeForBleve(c.Name) == normQ {
-				merged[id] += 0.35
+	merged := reciprocalRankFusion(
+		hitsToRanking(br.hits),
+		hitsToRanking(sr.hits),
+	)
+
+	geoTokens, _ := extractGeoTokens(q, knownCities)
+	if len(geoTokens) > 0 {
+		for id := range merged {
+			if _, ok := br.hits[id]; !ok {
+				delete(merged, id)
 			}
 		}
 	}
-	e.mu.RUnlock()
 
 	type idScore struct {
 		id    string
 		score float64
 	}
 	ranked := make([]idScore, 0, len(merged))
-
 	for id, s := range merged {
-		if s >= scoreFloor {
-			ranked = append(ranked, idScore{id: id, score: s})
-		}
+		ranked = append(ranked, idScore{id, s})
 	}
-
 	sort.Slice(ranked, func(i, j int) bool {
 		return ranked[i].score > ranked[j].score
 	})
+
+	if len(ranked) > 0 {
+		maxScore := ranked[0].score
+		for i := range ranked {
+			ranked[i].score = ranked[i].score / maxScore
+		}
+	}
 
 	e.mu.RLock()
 	defer e.mu.RUnlock()
@@ -685,85 +723,53 @@ func (e *Engine) HybridSearch(q string) ([]SearchResult, error) {
 	return results, nil
 }
 
-func fieldQuery(token, field string, boost float64) query.Query {
-	cleanToken := normalizeToken(token)
-
-	mq := bleve.NewMatchQuery(cleanToken)
-	mq.SetField(field)
-	mq.SetBoost(boost)
-
-	combined := bleve.NewBooleanQuery()
-	combined.AddShould(mq)
-
-	if len(cleanToken) >= 3 {
-		pq := bleve.NewPrefixQuery(cleanToken)
-		pq.SetField(field)
-		pq.SetBoost(boost * 0.7)
-		combined.AddShould(pq)
-	}
-
-	if len(cleanToken) > fuzzyMinLen {
-		fq := bleve.NewFuzzyQuery(cleanToken)
-		fq.SetField(field)
-		fq.SetFuzziness(1)
-		fq.SetBoost(boost * 0.4)
-		combined.AddShould(fq)
-	}
-
-	return combined
-}
-
-func (e *Engine) runBleveSearch(q string) (map[string]float64, error) {
-	tokens := extractKeywords(q)
-	if len(tokens) == 0 {
-		return map[string]float64{}, nil
-	}
+func (e *Engine) runBleveSearch(q string, knownCities map[string]bool) (map[string]float64, error) {
+	geoTokens, activityQ := extractGeoTokens(q, knownCities)
 
 	topQ := bleve.NewBooleanQuery()
 
-	for _, token := range tokens {
-		tokenQ := bleve.NewBooleanQuery()
-		tokenQ.AddShould(fieldQuery(token, fieldName, boostName))
-		tokenQ.AddShould(fieldQuery(token, fieldActivity, boostActivity))
-		tokenQ.AddShould(fieldQuery(token, fieldAddressLine2, boostAddressLine2))
-		tokenQ.AddShould(fieldQuery(token, fieldCity, boostCity))
-		tokenQ.AddShould(fieldQuery(token, fieldDescription, boostDescription))
-		tokenQ.AddShould(fieldQuery(token, fieldCountry, boostCity))
-		tokenQ.AddShould(fieldQuery(token, fieldSlogan, boostSlogan))
+	if activityQ != "" {
+		actQ := bleve.NewBooleanQuery()
 
-		addressBoost := boostAddress
-		if geoNoise[token] {
-			addressBoost *= 0.3
-		}
-		tokenQ.AddShould(fieldQuery(token, fieldAddress, addressBoost))
+		mq := bleve.NewMatchQuery(activityQ)
+		mq.SetField(fieldName)
+		mq.SetBoost(3.0)
+		actQ.AddShould(mq)
 
-		if syns, ok := synonymMap[token]; ok {
-			for _, syn := range syns {
-				tokenQ.AddShould(fieldQuery(syn, fieldName, boostName*0.8))
-				tokenQ.AddShould(fieldQuery(syn, fieldActivity, boostActivity*0.8))
-				tokenQ.AddShould(fieldQuery(syn, fieldDescription, boostDescription*0.5))
-			}
-		}
+		aq := bleve.NewMatchQuery(activityQ)
+		aq.SetField(fieldActivity)
+		aq.SetBoost(3.0)
+		actQ.AddShould(aq)
 
-		tokenQ.SetMinShould(1)
-		topQ.AddShould(tokenQ)
+		dq := bleve.NewMatchQuery(activityQ)
+		dq.SetField(fieldDescription)
+		dq.SetBoost(1.0)
+		actQ.AddShould(dq)
+
+		actQ.SetMinShould(1)
+		topQ.AddMust(actQ)
 	}
 
-	minShould := len(tokens)
-	if len(tokens) >= 4 {
-		minShould = len(tokens) - 1
+	for _, tok := range geoTokens {
+		geoQ := bleve.NewBooleanQuery()
+
+		cq := bleve.NewTermQuery(tok)
+		cq.SetField(fieldCity)
+		geoQ.AddShould(cq)
+
+		coq := bleve.NewTermQuery(tok)
+		coq.SetField(fieldCountry)
+		geoQ.AddShould(coq)
+
+		geoQ.SetMinShould(1)
+		topQ.AddMust(geoQ)
 	}
-	topQ.SetMinShould(float64(minShould))
 
-	cleanedPhrase := strings.Join(tokens, " ")
-	phraseQ := bleve.NewMatchPhraseQuery(cleanedPhrase)
-	phraseQ.SetField(fieldName)
-	phraseQ.SetBoost(10.0)
+	if activityQ == "" && len(geoTokens) == 0 {
+		return map[string]float64{}, nil
+	}
 
-	finalQuery := bleve.NewDisjunctionQuery(topQ, phraseQ)
-	finalQuery.SetMin(1)
-
-	req := bleve.NewSearchRequestOptions(finalQuery, MaxResults*2, 0, false)
+	req := bleve.NewSearchRequestOptions(topQ, MaxResults*2, 0, false)
 	res, err := e.bleveIdx.Search(req)
 	if err != nil {
 		return nil, err
@@ -775,12 +781,10 @@ func (e *Engine) runBleveSearch(q string) (map[string]float64, error) {
 			maxScore = hit.Score
 		}
 	}
-
 	hits := make(map[string]float64, len(res.Hits))
 	if maxScore <= 0 {
 		return hits, nil
 	}
-
 	inv := 1.0 / maxScore
 	for _, hit := range res.Hits {
 		hits[hit.ID] = hit.Score * inv
@@ -789,10 +793,9 @@ func (e *Engine) runBleveSearch(q string) (map[string]float64, error) {
 }
 
 func (e *Engine) runChromemSearch(q string) (map[string]float64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	q = normalizeForBleve(q)
 	res, err := e.chromemColl.Query(ctx, q, MaxResults*2, nil, nil)
 	if err != nil {
 		return nil, err
@@ -804,12 +807,10 @@ func (e *Engine) runChromemSearch(q string) (map[string]float64, error) {
 			maxSim = r.Similarity
 		}
 	}
-
 	hits := make(map[string]float64, len(res))
 	if maxSim <= 0 {
 		return hits, nil
 	}
-
 	inv := 1.0 / float64(maxSim)
 	for _, r := range res {
 		score := float64(r.Similarity) * inv
@@ -826,7 +827,7 @@ func (e *Engine) GenerateAnswer(userQuery string, topResults []SearchResult) (st
 		return "Désolé, je n'ai trouvé aucune entreprise pertinente pour répondre à votre question.", nil
 	}
 
-	limit := 5
+	limit := 15
 	if len(topResults) < limit {
 		limit = len(topResults)
 	}
@@ -870,15 +871,33 @@ CONTEXTE (Entreprises trouvées) :
 		},
 	})
 
-	client := &http.Client{Timeout: 45 * time.Second}
-	resp, err := client.Post(e.Config.OllamaURL, "application/json", bytes.NewBuffer(body))
+	ollamaGenerateURL := strings.TrimSuffix(e.Config.OllamaURL, "/") + "/api/generate"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "POST", ollamaGenerateURL, bytes.NewBuffer(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := e.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("Ollama connection: %w", err)
 	}
 	defer resp.Body.Close()
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read Ollama response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Ollama returned %s: %s", resp.Status, string(respBody))
+	}
+
 	var out ollamaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := json.Unmarshal(respBody, &out); err != nil {
 		return "", fmt.Errorf("decode Ollama response: %w", err)
 	}
 	return out.Response, nil

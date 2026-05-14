@@ -228,8 +228,8 @@
       "$oid": "5001fe2bd96468020000030c"
     },
     "activity": "Immobilier, agences",
-    "address_line_1": "KINSHASA",
-    "address_line_2": "BP. 1588",
+    "address_line_1": "",
+    "address_line_2": "",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
@@ -1359,7 +1359,8 @@
     },
     "activity": "Associations",
     "address_line_1": "25, avenue Kindona",
-    "city": "Ngaliema",
+    "address_line_2": "Ngaliema",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2012-07-14T23:18:26.008Z"
@@ -2333,8 +2334,8 @@
       "$oid": "5001feedd964680200000419"
     },
     "activity": "Courriers express",
-    "address_line_1": "KINSHASA",
-    "address_line_2": "BP. 8834",
+    "address_line_1": "",
+    "address_line_2": "",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
@@ -4237,7 +4238,7 @@
     },
     "activity": "Ambassades, consulats",
     "address_line_1": "5 Rue Massabi",
-    "city": "Pointe-noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2013-06-01T00:21:25.207Z"
@@ -5877,7 +5878,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "AFRIMA / CFAO à LUBUMBASHI",
+    "name": "AFRIMA / CFAO",
     "name_seo": "afrima-cfao-a-lubumbashi",
     "published": true,
     "stats_show": 3102,
@@ -7611,7 +7612,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "BATA KINSHASA SARL",
+    "name": "Bata Kinshasa SARL",
     "name_seo": "bata-kinshasa-sarl",
     "published": true,
     "stats_show": 2375,
@@ -10333,7 +10334,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "OPTICAL CENTER KINSHASA",
+    "name": "Optical Center Kinshasa",
     "name_seo": "optical-center-kinshasa",
     "published": true,
     "stats_show": 2057,
@@ -10643,7 +10644,7 @@
     "modifier_id": {
       "$oid": "513c99e4e4e8821b90000001"
     },
-    "name": "CAK - CENTRE D'AFFAIRES DE KINSHASA",
+    "name": "CAK - Centre d'Affaires de Kinshasa",
     "name_seo": "cak-centre-d-affaires-de-kinshasa",
     "published": true,
     "stats_show": 1251,
@@ -10691,7 +10692,7 @@
     },
     "activity": "Consulting, Web Design, Construction, E-commerce",
     "address_line_1": "Centre ville",
-    "city": "Pointe-noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2012-07-14T23:14:02.335Z"
@@ -13186,8 +13187,8 @@
       "$oid": "5001fddcd964680200000278"
     },
     "activity": "Cabinets medicaux et medecins",
-    "address_line_1": "KINSHASA",
-    "address_line_2": "BP. 3756",
+    "address_line_1": "",
+    "address_line_2": "",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
@@ -14799,7 +14800,7 @@
       "$oid": "5001fe0fd9646802000002d8"
     },
     "activity": "Ecoles et universites",
-    "address_line_1": "KINSHASA",
+    "address_line_1": "",
     "alt_phone": "+243 999 935 303",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
@@ -16655,7 +16656,7 @@
     },
     "activity": "Ambassades, consulats",
     "address_line_1": "Centre ville",
-    "city": "Pointe-noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2013-05-20T21:02:03.811Z"
@@ -18405,9 +18406,9 @@
       "$oid": "54a4aa3073cee8247b000005"
     },
     "activity": "Service Batiment et Tout corps d'etat",
-    "address_line_1": "Port autonome de pointe noire",
+    "address_line_1": "Port autonome de Pointe-Noire",
     "alt_phone": "+242 69 765 321",
-    "city": "Pointe Noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2015-01-01T02:00:17.045Z"
@@ -22513,7 +22514,7 @@
     },
     "name": "BRACONGO",
     "name_seo": "bracongo",
-    "po_box": "7600 KINSHASA 1",
+    "po_box": "7600 Kinshasa 1",
     "published": true,
     "stats_show": 4124,
     "twitter": "",
@@ -23838,7 +23839,7 @@
       "$oid": "5001fdf3d9646802000002a1"
     },
     "activity": "Casinos et jeux",
-    "address_line_1": "KINSHASA",
+    "address_line_1": "",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
@@ -24170,7 +24171,8 @@
     },
     "activity": "Librairies, papeteries, maisons de la presse",
     "address_line_1": "10, avenue Force Nationale",
-    "city": "Masina",
+    "address_line_2": "Masina",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2012-07-14T23:17:12.321Z"
@@ -26833,9 +26835,9 @@
     },
     "activity": "Banques et organismes financiers",
     "address_line_1": "18 place Commerciale",
-    "address_line_2": "Ma campagne",
+    "address_line_2": "Ngaliema",
     "alt_phone": "+243 818 302 624",
-    "city": "Ngaliema",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2012-07-14T23:20:29.822Z"
@@ -30065,10 +30067,10 @@
       "$oid": "52c87966297d398baa000003"
     },
     "activity": "Ingénieurie et Management",
-    "address_line_1": "Immeuble victor augagneur base industriel pointe noire",
+    "address_line_1": "Immeuble victor augagneur base industriel Pointe-Noire",
     "address_line_2": "Marché plateau centre ville brazzaville",
     "alt_phone": "+242 69 090 906",
-    "city": "Pointe Noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2014-01-04T21:13:10.159Z"
@@ -30114,7 +30116,7 @@
     "created_at": {
       "$date": "2014-01-09T19:58:33.973Z"
     },
-    "description": "\u003cp\u003e\u003cem\u003e\u003cstrong\u003eSpécialiste de la logistique « door to door », SAH Africa Logistics vous propose un savoir-faire unique en matière de gestion de corridors et assure des livraisons locales et des transports transfrontaliers de pointe noire à Brazzaville et de \u003c/strong\u003e\u003c/em\u003e\u003cstrong\u003ePort pointe noire au Cap.\u003c/strong\u003e\u003c/p\u003e",
+    "description": "\u003cp\u003e\u003cem\u003e\u003cstrong\u003eSpécialiste de la logistique « door to door », SAH Africa Logistics vous propose un savoir-faire unique en matière de gestion de corridors et assure des livraisons locales et des transports transfrontaliers de Pointe-Noire à Brazzaville et de \u003c/strong\u003e\u003c/em\u003e\u003cstrong\u003ePort Pointe-Noire au Cap.\u003c/strong\u003e\u003c/p\u003e",
     "email": "mpindou@aol.fr",
     "geo": [
       11.8503297,
@@ -30213,7 +30215,7 @@
     "modifier_id": null,
     "name": "REGIDESO",
     "name_seo": "regideso",
-    "po_box": "12 599 KINSHASA I",
+    "po_box": "12 599 Kinshasa I",
     "published": true,
     "slogan": "L'eau, c'est la vie",
     "stats_show": 3898,
@@ -30680,7 +30682,7 @@
     "created_at": {
       "$date": "2014-09-09T16:18:13.966Z"
     },
-    "description": "\u003cp\u003eCréé en 2012 sous l'impulsion d'un jeune ingénieur, le Bureau d'Etudes Elioth \u0026amp; Smith-CONGO sprl réalise des études techniques dans le domaine de l'industrie, du génie civil, du bâtiment et des infrastructures. Il se distingue par son dynamisme, son savoir-faire et ses compétences.\u003cbr\u003e\n\u003cbr\u003e\nVouant une passion à la construction et à l'architecture, Amour M'PINDOU a choisi sa vocation d'ingénieur civil des constructions.un ancien eleve du lycée technique poaty bernard de POINTE NOIRE  il parfait son expérience, en tant que chef de projet au sein d'une societé  de BTP DE la région Brazzaviloise.\u003cbr\u003e\n\u003cbr\u003e\nEt c'est donc en 2012 qu'il  lance son propre projet de création d'un bureau d'ingénieurs conseils conforme à ses valeurs et à ses méthodes de travail. Il s'entoure d'une équipe solide composée de jeunes ingénieurs et dessinateurs DAO.\u003cbr\u003e\n\u003cbr\u003e\nAfin d'offrir un service pluridisciplinaire, Amour MPINDOU s'associe en 2013 à Mac Hervé AKOULA, ingénieur en génie civil diplômé de l'Université des beaux arts de Brazzavile. Ce dernier, fort de son expérience de plus de dix ans à la direction d'un bureau d'études, devient Directeur du Département Techniques Spéciales du Bureau d'Etudes  Elioth \u0026amp; Smith-CONGO sprl.\u003cbr\u003e\nEn 2014, le Bureau d'Etudes Elioth \u0026amp; Smith-CONGO sprl se rapproche du bureau d'études SAH consulting.ltd et devient SAH GROUP INGENIERIE Ensemble, ils forment un bureau d'études pluridisciplinaire majeur actif au CONGO et à l'étranger.\u003cbr\u003e\n\u003cbr\u003e\nSAH GROUP INGENIERIE opèrent depuis trois sites d'exploitation : Brazzaville, Pointe Noire et Owando . Les équipes sont constituées de 60 collaborateurs : ingénieurs, consultants, projeteurs et dessinateurs DAO hautement qualifiés, partageant les valeurs de la société et participant activement à la conception, au développement et à la réalisation des projets.\u003cbr\u003e\n\u003cbr\u003e\nDès la naissance d'un projet, SAH GROUP INGENIERIE s'efforce de dégager des solutions techniques créatives, originales, conformes à la dimension architecturale souhaitée et respectueuses de l'environnement. Avec des outils informatiques performants et à la pointe de la technologie, SAH GROUP INGENIERIE offre à sa clientèle un service moderne, innovant et d'excellente qualité.\u003cbr\u003e\n\u003cbr\u003e\nAujourd'hui, la société est active dans des secteurs variés tels que l'industrie, la logistique, le tertiaire, les collectivités, les institutions publiques, les infrastructures et l'environnement.\u003cbr\u003e\n\u003cbr\u003e\nEn assurant leur confiance en SAH GROUP INGENIERIE les clients s'associent à un partenaire fiable et soucieux de défendre leurs intérêts et objectifs.\u003cbr\u003e\n\u003cbr\u003e\n\u003cbr\u003e\nElioth \u0026amp; Smith-CONGO\u003cbr\u003e\nImmeuble city center-Centre Ville \u003cbr\u003e\nBP 2553 Brazzaville CONGO \u003cbr\u003e\n\u003cbr\u003e\nTél. +242 (0) 5 595 66 88\u003cbr\u003e\nFax + 242 (0)1 333 01 33 \u003cbr\u003e\n\u003cbr\u003e\nelioth\u0026amp;smith-congo@sahgroup.com \u003cbr\u003e\n\u003cbr\u003e\n Filiale de SAH GROUP Company\u003c/p\u003e\n",
+    "description": "\u003cp\u003eCréé en 2012 sous l'impulsion d'un jeune ingénieur, le Bureau d'Etudes Elioth \u0026amp; Smith-CONGO sprl réalise des études techniques dans le domaine de l'industrie, du génie civil, du bâtiment et des infrastructures. Il se distingue par son dynamisme, son savoir-faire et ses compétences.\u003cbr\u003e\n\u003cbr\u003e\nVouant une passion à la construction et à l'architecture, Amour M'PINDOU a choisi sa vocation d'ingénieur civil des constructions.un ancien eleve du lycée technique poaty bernard de POINTE-NOIRE  il parfait son expérience, en tant que chef de projet au sein d'une societé  de BTP DE la région Brazzaviloise.\u003cbr\u003e\n\u003cbr\u003e\nEt c'est donc en 2012 qu'il  lance son propre projet de création d'un bureau d'ingénieurs conseils conforme à ses valeurs et à ses méthodes de travail. Il s'entoure d'une équipe solide composée de jeunes ingénieurs et dessinateurs DAO.\u003cbr\u003e\n\u003cbr\u003e\nAfin d'offrir un service pluridisciplinaire, Amour MPINDOU s'associe en 2013 à Mac Hervé AKOULA, ingénieur en génie civil diplômé de l'Université des beaux arts de Brazzavile. Ce dernier, fort de son expérience de plus de dix ans à la direction d'un bureau d'études, devient Directeur du Département Techniques Spéciales du Bureau d'Etudes  Elioth \u0026amp; Smith-CONGO sprl.\u003cbr\u003e\nEn 2014, le Bureau d'Etudes Elioth \u0026amp; Smith-CONGO sprl se rapproche du bureau d'études SAH consulting.ltd et devient SAH GROUP INGENIERIE Ensemble, ils forment un bureau d'études pluridisciplinaire majeur actif au CONGO et à l'étranger.\u003cbr\u003e\n\u003cbr\u003e\nSAH GROUP INGENIERIE opèrent depuis trois sites d'exploitation : Brazzaville, Pointe-Noire et Owando . Les équipes sont constituées de 60 collaborateurs : ingénieurs, consultants, projeteurs et dessinateurs DAO hautement qualifiés, partageant les valeurs de la société et participant activement à la conception, au développement et à la réalisation des projets.\u003cbr\u003e\n\u003cbr\u003e\nDès la naissance d'un projet, SAH GROUP INGENIERIE s'efforce de dégager des solutions techniques créatives, originales, conformes à la dimension architecturale souhaitée et respectueuses de l'environnement. Avec des outils informatiques performants et à la pointe de la technologie, SAH GROUP INGENIERIE offre à sa clientèle un service moderne, innovant et d'excellente qualité.\u003cbr\u003e\n\u003cbr\u003e\nAujourd'hui, la société est active dans des secteurs variés tels que l'industrie, la logistique, le tertiaire, les collectivités, les institutions publiques, les infrastructures et l'environnement.\u003cbr\u003e\n\u003cbr\u003e\nEn assurant leur confiance en SAH GROUP INGENIERIE les clients s'associent à un partenaire fiable et soucieux de défendre leurs intérêts et objectifs.\u003cbr\u003e\n\u003cbr\u003e\n\u003cbr\u003e\nElioth \u0026amp; Smith-CONGO\u003cbr\u003e\nImmeuble city center-Centre Ville \u003cbr\u003e\nBP 2553 Brazzaville CONGO \u003cbr\u003e\n\u003cbr\u003e\nTél. +242 (0) 5 595 66 88\u003cbr\u003e\nFax + 242 (0)1 333 01 33 \u003cbr\u003e\n\u003cbr\u003e\nelioth\u0026amp;smith-congo@sahgroup.com \u003cbr\u003e\n\u003cbr\u003e\n Filiale de SAH GROUP Company\u003c/p\u003e\n",
     "email": "julia.nguesso@outlook.com",
     "geo": [
       15.2712256,
@@ -30851,7 +30853,7 @@
     "created_at": {
       "$date": "2014-11-13T10:46:59.081Z"
     },
-    "description": "\u003cp\u003eRéservation en ligne  sur \u003ca href=\"https://www.sagasuite.com\" rel=\"nofollow\"\u003ewww.sagasuite.com\u003c/a\u003e : Hôtel, Flathotel, Guesthouse, Location de vacances ....au Congo.\u003cbr\u003e\nVous cherchez un hôtel à ...\u003ca href=\"https://sagasuite.com/reservations/hotels-boma\" rel=\"nofollow\"\u003eHôtel Boma\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-brazzaville\" rel=\"nofollow\"\u003eHôtel Brazzaville\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-bukavu\" rel=\"nofollow\"\u003eHôtel Bukavu\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-goma\" rel=\"nofollow\"\u003eHôtel Goma;\u003c/a\u003e \u003ca href=\"https://sagasuite.com/reservations/hotels-kinshasa\" rel=\"nofollow\"\u003eHôtel Kinshasa\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-kisangani\" rel=\"nofollow\"\u003eHôtel Kisangani\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-lubumbashi\" rel=\"nofollow\"\u003eHôtel Lubumbashi\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-matadi\" rel=\"nofollow\"\u003eHôtel Matadi\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-mbandaka\" rel=\"nofollow\"\u003eHôtel Mbandaka \u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-pointe-noire-congo-republique-populaire/\" rel=\"nofollow\"\u003eHôtel Pointe Noire\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-kananga\" rel=\"nofollow\"\u003eHôtel Kananga\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-boende\" rel=\"nofollow\"\u003eHôtel Boende\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-butembo\" rel=\"nofollow\"\u003eHôtel Butembo\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-kolwezi\" rel=\"nofollow\"\u003eHôtel Kolwezi\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-mbuji-mayi\" rel=\"nofollow\"\u003eHôtel Mbuji-Mayi\u003c/a\u003e;\u003ca href=\"https://sagasuite.com/reservations/hotels-uvira\" rel=\"nofollow\"\u003e Hôtel Uvira\u003c/a\u003e\u003cbr\u003e\n \u003c/p\u003e\n",
+    "description": "\u003cp\u003eRéservation en ligne  sur \u003ca href=\"https://www.sagasuite.com\" rel=\"nofollow\"\u003ewww.sagasuite.com\u003c/a\u003e : Hôtel, Flathotel, Guesthouse, Location de vacances ....au Congo.\u003cbr\u003e\nVous cherchez un hôtel à ...\u003ca href=\"https://sagasuite.com/reservations/hotels-boma\" rel=\"nofollow\"\u003eHôtel Boma\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-brazzaville\" rel=\"nofollow\"\u003eHôtel Brazzaville\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-bukavu\" rel=\"nofollow\"\u003eHôtel Bukavu\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-goma\" rel=\"nofollow\"\u003eHôtel Goma;\u003c/a\u003e \u003ca href=\"https://sagasuite.com/reservations/hotels-kinshasa\" rel=\"nofollow\"\u003eHôtel Kinshasa\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-kisangani\" rel=\"nofollow\"\u003eHôtel Kisangani\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-lubumbashi\" rel=\"nofollow\"\u003eHôtel Lubumbashi\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-matadi\" rel=\"nofollow\"\u003eHôtel Matadi\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-mbandaka\" rel=\"nofollow\"\u003eHôtel Mbandaka \u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-pointe-noire-congo-republique-populaire/\" rel=\"nofollow\"\u003eHôtel Pointe-Noire\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-kananga\" rel=\"nofollow\"\u003eHôtel Kananga\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-boende\" rel=\"nofollow\"\u003eHôtel Boende\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-butembo\" rel=\"nofollow\"\u003eHôtel Butembo\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-kolwezi\" rel=\"nofollow\"\u003eHôtel Kolwezi\u003c/a\u003e; \u003ca href=\"https://sagasuite.com/reservations/hotels-mbuji-mayi\" rel=\"nofollow\"\u003eHôtel Mbuji-Mayi\u003c/a\u003e;\u003ca href=\"https://sagasuite.com/reservations/hotels-uvira\" rel=\"nofollow\"\u003e Hôtel Uvira\u003c/a\u003e\u003cbr\u003e\n \u003c/p\u003e\n",
     "email": "info@sagasuite.com",
     "geo": [
       15.3424196,
@@ -32575,7 +32577,7 @@
     },
     "activity": "Transformation des matières plastiques par injection",
     "address_line_1": "16 avenue du Pont",
-    "city": "Barumbu",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2012-07-14T23:11:20.179Z"
@@ -39569,8 +39571,8 @@
       "$oid": "5001fe26d964680200000302"
     },
     "activity": "Electricite generale et industrielle, Electricite, materiels, Electronique",
-    "address_line_1": "KINSHASA",
-    "address_line_2": "BP. 8537",
+    "address_line_1": "",
+    "address_line_2": "",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
@@ -40214,7 +40216,7 @@
     },
     "name": "RECOPAD",
     "name_seo": "recopad",
-    "po_box": "KINSHASA",
+    "po_box": "",
     "published": true,
     "stats_show": 1101,
     "updated_at": {
@@ -41676,8 +41678,8 @@
       "$oid": "5001fe9ed9646802000003c1"
     },
     "activity": "Compagnies aeriennes, Transports aeriens",
-    "address_line_1": "KINSHASA",
-    "address_line_2": "BP. 12027",
+    "address_line_1": "",
+    "address_line_2": "",
     "alt_phone": "+243 999 925 121",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
@@ -42237,9 +42239,10 @@
       "$oid": "5001fefbd964680200000428"
     },
     "activity": "Hotels",
-    "address_line_1": "Avenue KABILA",
+    "address_line_1": "Avenue Kabila",
+    "address_line_2": "Lingwala",
     "alt_phone": "+243 98 237 477",
-    "city": "Lingwala",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2012-07-14T23:21:31.439Z"
@@ -45238,7 +45241,7 @@
     },
     "activity": "Agriculture, Café ",
     "address_line_1": "+243 812424419",
-    "city": "Butembo ",
+    "city": "Butembo",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2013-04-17T12:24:35.212Z"
@@ -45830,7 +45833,7 @@
     "created_at": {
       "$date": "2013-05-09T13:29:55.554Z"
     },
-    "description": "\u003cp\u003e\u003cb\u003eAutre adresse :\u003c/b\u003e\u003c/p\u003e\n\u003cp\u003e\nAv Stephane Tchitechele\u003cbr\u003e\nPointe Noire\u003cbr\u003e\nPhone: +242-22-294-1912\n\u003c/p\u003e",
+    "description": "\u003cp\u003e\u003cb\u003eAutre adresse :\u003c/b\u003e\u003c/p\u003e\n\u003cp\u003e\nAv Stephane Tchitechele\u003cbr\u003e\nPointe-Noire\u003cbr\u003e\nPhone: +242-22-294-1912\n\u003c/p\u003e",
     "email": "midangolacg@yahoo.fr",
     "facebook": "",
     "geo": [
@@ -45870,7 +45873,7 @@
     "activity": "Ambassades, consulats",
     "address_line_1": "Centre ville",
     "alt_phone": "+242 55 535 584",
-    "city": "Pointe-noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2013-05-10T10:20:09.364Z"
@@ -46543,8 +46546,8 @@
     },
     "activity": "Monrespro",
     "address_line_1": "18 Av. de l'école",
-    "address_line_2": "Mfinda",
-    "city": "Ngaliema",
+    "address_line_2": "Ngaliema",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2015-01-06T15:31:38.734Z"
@@ -48164,7 +48167,8 @@
       "$oid": "5808b72243e5153904a657d5"
     },
     "activity": "JURIDIQUE,FISCAL,AUDIT et COMPTABILITE",
-    "address_line_1": "25,OUA,NGALIEMA/KINSHASA",
+    "address_line_1": "25, OUA",
+    "address_line_2": "Ngaliema",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
@@ -48343,7 +48347,7 @@
       "$oid": "58cf5d5243e5156b0320ca46"
     },
     "activity": "FRET AERIEN ET MARITIME  , TOURISM , FINANCE ",
-    "address_line_1": "KALEMBELEMBE, 57 COMMUNE KINSHASA ",
+    "address_line_1": "KALEMBELEMBE, 57",
     "address_line_2": "ROSSING BOKASA-KABAMBARE /TOTAL STATION.",
     "alt_phone": "+243 897 519 418",
     "city": "Kinshasa",
@@ -49679,7 +49683,7 @@
     },
     "activity": "BÂTIMENT \u0026 TRAVAUX PUBLICS",
     "address_line_1": "Centre ville, rond point  ex bata, derrière le ministère des eaux et forêts",
-    "city": "Pointe Noire ",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2019-03-29T11:08:15.498Z"
@@ -49716,7 +49720,7 @@
     },
     "activity": "Agence de communication ",
     "address_line_1": "N°24BIS ALLÉE VERTE  C/MACAMPAGNE",
-    "city": "Kinshasa ",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2019-05-02T10:02:54.885Z"
@@ -49875,7 +49879,8 @@
       "$oid": "5dc97c1443e515092d7530ca"
     },
     "activity": "GROUPE ELECTROGENE",
-    "address_line_1": "4. Avenue du Marche, Quartier, Revolution, Commune Gombe/ kinshasa ",
+    "address_line_1": "4 Avenue du Marche",
+    "address_line_2": "Gombe",
     "alt_phone": "+243 999 050 555",
     "city": "Kinshasa",
     "country": "République démocratique du Congo",
@@ -50602,7 +50607,7 @@
     },
     "activity": "Restaurant",
     "address_line_1": "Centre ville Derrière l'immeuble C.N.S.S",
-    "city": "Pointe Noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2020-07-27T03:30:00.591Z"
@@ -50852,7 +50857,7 @@
     },
     "activity": "Courtier en travaux",
     "address_line_1": "Siafoumou",
-    "city": "Pointe noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2021-04-07T20:51:37.046Z"
@@ -50983,7 +50988,7 @@
     "activity": "une entreprise générale du bâtiment tous corps d'état (TCE)",
     "address_line_1": "12 Rue du Mayombe",
     "address_line_2": "Zone Garage Municipal",
-    "city": "Pointe Noire",
+    "city": "Pointe-Noire",
     "country": "République du Congo",
     "created_at": {
       "$date": "2022-06-20T20:43:02.332Z"
@@ -51653,7 +51658,7 @@
     "address_line_1": "112C Laïc Q12",
     "address_line_2": "Ndjili",
     "alt_phone": "+243 816 419 158",
-    "city": "Kinshasa ",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2023-02-24T16:20:59.239Z"
@@ -51847,7 +51852,7 @@
     "address_line_1": "1674, solongo ",
     "address_line_2": "",
     "alt_phone": "+243 993 255 666",
-    "city": "Kolwezi ",
+    "city": "Kolwezi",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2023-03-01T16:06:11.129Z"
@@ -51893,10 +51898,10 @@
       "$oid": "6400513f43e5153a127d2164"
     },
     "activity": "Mines",
-    "address_line_1": "Avenue Guesthouse 12, Kolwezi ",
+    "address_line_1": "Avenue Guesthouse 12",
     "address_line_2": "",
     "alt_phone": "+243993255666",
-    "city": "Kolwezi ",
+    "city": "Kolwezi",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2023-03-02T07:33:22.112Z"
@@ -51938,7 +51943,7 @@
     "address_line_1": "Centre-ville",
     "address_line_2": "",
     "alt_phone": "+243899530200",
-    "city": "Kinshasa ",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2023-03-02T08:01:21.972Z"
@@ -52036,7 +52041,7 @@
     "address_line_1": "juner.omega@gmail.com",
     "address_line_2": "",
     "alt_phone": "",
-    "city": "Brazzaville ",
+    "city": "Brazzaville",
     "country": "République du Congo",
     "created_at": {
       "$date": "2023-03-04T18:16:36.290Z"
@@ -52205,7 +52210,7 @@
     "po_box": "",
     "postal_code": "",
     "published": true,
-    "slogan": "TO TONGA KINSHASA",
+    "slogan": "To Tonga Kinshasa",
     "stats_show": 1380,
     "twitter": "",
     "updated_at": {
@@ -52796,7 +52801,7 @@
     "address_line_1": "49, rue MAYAMA/ AV.Maya-Maya/ Moungalie",
     "address_line_2": "",
     "alt_phone": "",
-    "city": "BRAZZAVLLE",
+    "city": "Brazzaville",
     "country": "République du Congo",
     "created_at": {
       "$date": "2024-01-18T10:17:15.993Z"
@@ -52894,7 +52899,7 @@
     "address_line_1": "GALARIE SUPERLUXE 595 ",
     "address_line_2": "AVENUE KASAVUBU COIN CHAUSSE LAURENT DESIRE KABILA",
     "alt_phone": "",
-    "city": "lubumbashi",
+    "city": "Lubumbashi",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2024-09-07T00:08:22.898Z"
@@ -52943,7 +52948,7 @@
     "address_line_1": "Avenue tilipie  coin de bamboo",
     "address_line_2": "belair",
     "alt_phone": "",
-    "city": "lubumbashi",
+    "city": "Lubumbashi",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2024-09-09T12:00:41.476Z"
@@ -53038,10 +53043,10 @@
       "$oid": "67407716b8ec3c24af4aa6bc"
     },
     "activity": "Vente et location des biens immobiliers",
-    "address_line_1": "Gombe/Kinshasa ",
+    "address_line_1": "Gombe",
     "address_line_2": "",
     "alt_phone": "",
-    "city": "Kinshasa ",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2024-11-22T12:20:41.692Z"
@@ -53182,7 +53187,7 @@
     "address_line_1": "Ancienne Galerie Présidentielle, 8e Niv B1 Blvd du 30 Juin, Kinshasa-Gombe",
     "address_line_2": "",
     "alt_phone": "",
-    "city": "KINSHASA",
+    "city": "Kinshasa",
     "country": "République démocratique du Congo",
     "created_at": {
       "$date": "2025-03-18T23:23:35.138Z"
@@ -53276,7 +53281,7 @@
     "address_line_1": "30 Rue de la Piscine Quartier Diata Arr 1 MAKELEKELE",
     "address_line_2": "",
     "alt_phone": "",
-    "city": "Brazzaville ",
+    "city": "Brazzaville",
     "country": "République du Congo",
     "created_at": {
       "$date": "2025-06-06T13:53:52.477Z"
@@ -53675,10 +53680,10 @@
       "$oid": "698faadfb8ec3c7177915409"
     },
     "activity": "Logistique et transport biomédical",
-    "address_line_1": "Franceville, Moungali / Brazzaville",
-    "address_line_2": "Mpita, vers canal Olympia, Lumumba / Pointe-Noire",
+    "address_line_1": "1, rue Moussala",
+    "address_line_2": "Moungali",
     "alt_phone": "+242 05 506 14 12",
-    "city": "Brazzaville et Pointe-Noire, République du Congo",
+    "city": "Brazzaville",
     "country": "République du Congo",
     "created_at": {
       "$date": "2026-02-13T22:51:15.046Z"

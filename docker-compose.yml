@@ -1,0 +1,52 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    volumes:
+      - ./models:/app/models
+    env_file:
+      - ./.env
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+
+  ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # ports:
+    #   - "11434:11434"
+
+  ollama-init:
+    image: ollama/ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    env_file:
+      - ./.env
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Ollama service..."
+        while ! ollama list > /dev/null; do sleep 2; done
+        echo "Pulling ${GENERATIVE_MODEL}..."
+        ollama pull ${GENERATIVE_MODEL}
+        ollama pull ${EMBEDDING_MODEL}
+        echo "Done."
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama_data:

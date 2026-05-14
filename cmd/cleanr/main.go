@@ -14,7 +14,6 @@ import (
 	"congopro-bridge/internal/logger"
 )
 
-// extractID safely extracts the ID, regardless of flat or nested MongoDB format.
 func extractID(record map[string]interface{}) string {
 	if id, ok := record["_id"].(string); ok {
 		return id
@@ -108,7 +107,7 @@ func main() {
 							log.Info().Msg("    -> Record flagged for complete deletion.")
 						}
 						shouldDeleteRecord = true
-						break // Exit the match loop, record is already doomed
+						break
 					} else if autoMode == "" {
 						log.Warn().Msg("    -> Could not extract ID. Cannot delete record.")
 					}

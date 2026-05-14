@@ -78,7 +78,7 @@ func LoadAds() {
 		AdsConfig.MaxPerPage = 2
 	}
 	if AdsConfig.MaxPerPage > 3 {
-		AdsConfig.MaxPerPage = 3 // hard cap — don't overwhelm users
+		AdsConfig.MaxPerPage = 3 // hard cap
 	}
 
 	active := 0

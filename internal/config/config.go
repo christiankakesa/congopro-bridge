@@ -1,12 +1,15 @@
 package config
 
-import "os"
+import (
+	"os"
+)
 
 type Config struct {
-	OllamaURL     string
-	AiModel       string
-	AllowedOrigin string
-	ModelsDir     string
+	OllamaURL      string
+	AiModel        string
+	EmbeddingModel string
+	AllowedOrigin  string
+	ModelsDir      string
 }
 
 func Load() *Config {
@@ -14,8 +17,11 @@ func Load() *Config {
 	if ou := os.Getenv("OLLAMA_URL"); ou != "" {
 		cfg.OllamaURL = ou
 	}
-	if am := os.Getenv("AI_MODEL"); am != "" {
+	if am := os.Getenv("GENERATIVE_MODEL"); am != "" {
 		cfg.AiModel = am
+	}
+	if em := os.Getenv("EMBEDDING_MODEL"); em != "" {
+		cfg.EmbeddingModel = em
 	}
 	if ao := os.Getenv("ALLOWED_ORIGIN"); ao != "" {
 		cfg.AllowedOrigin = ao
@@ -29,9 +35,10 @@ func Load() *Config {
 
 func defaults() *Config {
 	return &Config{
-		OllamaURL:     "http://localhost:11434/api/generate",
-		AiModel:       "gemma:2b",
-		AllowedOrigin: "*",
-		ModelsDir:     "models",
+		OllamaURL:      "http://localhost:11434",
+		AiModel:        "gemma3:1b",
+		EmbeddingModel: "nomic-embed-text",
+		AllowedOrigin:  "*",
+		ModelsDir:      "models",
 	}
 }

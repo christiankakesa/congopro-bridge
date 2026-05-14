@@ -13,6 +13,8 @@ CMD_PATH     := ./cmd/congopro-bridge
 BINARY       := congopro-bridge
 BUILD_DIR    := ./build
 MODELS_DIR   := models
+GENERATIVE_MODEL ?= gemma3:1b
+EMBEDDING_MODEL ?= nomic-embed-text
 SERVICE      := congopro-bridge
 TAILWIND_CLI := $(shell which tailwindcss)
 
@@ -107,11 +109,18 @@ deploy-binary: build
 	@echo "✓ binary uploaded"
 
 deploy-models:
-	@echo "▶ Syncing ML models (Cybertron)…"
+	@echo "▶ Syncing ML models (Bleve + Chromem)…"
 	@mkdir -p $(MODELS_DIR)
 	@$(SSH) "sudo mkdir -p $(REMOTE_DIR)/$(MODELS_DIR) && sudo chown -R $(DEPLOY_USER): $(REMOTE_DIR)/$(MODELS_DIR)"
 	@$(RSYNC) $(MODELS_DIR)/ $(DEPLOY_USER)@$(DEPLOY_HOST):$(REMOTE_DIR)/$(MODELS_DIR)/
 	@echo "✓ ML models synced"
+
+deploy-reset-indexes:
+	@echo "▶ Resetting ML indexes on remote (forces rebuild)…"
+	@$(SSH) "rm -rf $(REMOTE_DIR)/$(MODELS_DIR)/bleve.idx \
+	                $(REMOTE_DIR)/$(MODELS_DIR)/chromem.db \
+	                $(REMOTE_DIR)/$(MODELS_DIR)/chromem.db.model"
+	@echo "✓ indexes cleared — will rebuild on next start"
 
 deploy-config:
 	@echo "▶ Uploading Traefik dynamic config…"
@@ -159,7 +168,7 @@ traefik-reload:
 traefik-logs:
 	$(SSH) "sudo journalctl -u traefik -f --no-pager 2>/dev/null || sudo docker logs -f \$$(sudo docker ps -qf name=traefik)"
 
-OLLAMA_MODELS ?= nomic-embed-text gemma:2b phi4-mini llama3.2:3b
+OLLAMA_MODELS ?= $(GENERATIVE_MODEL) $(EMBEDDING_MODEL)
 OLLAMA_NUM_THREADS ?= 2
 
 ollama-install:
@@ -182,13 +191,21 @@ ollama-pull-models:
 	@$(SSH) "for model in $(OLLAMA_MODELS); do echo \"Pulling \$$model...\"; ollama pull \$$model; done"
 	@echo "✓ All models pulled"
 
+ollama-clean-models:
+	@echo "▶ Removing all Ollama models on $(DEPLOY_HOST)…"
+	@$(SSH) "ollama list | tail -n +2 | awk '{print \$$1}' | xargs -I {} ollama rm {}"
+	@echo "✓ All models removed"
+
+ollama-reset: ollama-clean-models ollama-pull-models
+	@echo "✓ Models reset to: $(OLLAMA_MODELS)"
+
 ollama-status:
 	@$(SSH) "sudo systemctl status ollama --no-pager -l || true"
 	@$(SSH) "ollama list"
 
 ollama-setup: ollama-install ollama-configure-limit ollama-pull-models
 	@echo "╔═════════════════════════════════════════════════════════════════════════════╗"
-	@echo "║  Ollama is ready with nomic-embed-text, gemma:2b, phi4-mini & llama3.2:3b   ║"
+	@echo "║  Ollama is ready with $(OLLAMA_MODELS)   ║"
 	@echo "╚═════════════════════════════════════════════════════════════════════════════╝"
 
 ollama-logs:

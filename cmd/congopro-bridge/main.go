@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	golog "log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -67,14 +68,15 @@ func main() {
 		port = "8080"
 	}
 	addr := ":" + port
-
+	handler := logger.AccessLogMiddleware(mux)
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      45 * time.Second,
 		IdleTimeout:       120 * time.Second,
+		ErrorLog:          golog.New(log.Logger.With().Str("component", "net/http").Logger(), "", 0),
 	}
 
 	stop := make(chan os.Signal, 1)
