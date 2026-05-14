@@ -212,11 +212,6 @@ func FrontendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.URL.Path != "/" && !strings.HasPrefix(r.URL.Path, "/company/") && r.URL.Path != "/help" && r.URL.Path != "/privacy" && r.URL.Path != "/terms" {
-		http.NotFound(w, r)
-		return
-	}
-
 	if matches := langCompanyPathRegex.FindStringSubmatch(r.URL.Path); matches != nil {
 		companySlug := matches[3]
 		http.Redirect(w, r, "/company/"+companySlug, http.StatusPermanentRedirect)
@@ -232,6 +227,11 @@ func FrontendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if langTermsPathRegex.MatchString(r.URL.Path) {
 		http.Redirect(w, r, "/terms", http.StatusPermanentRedirect)
+		return
+	}
+
+	if r.URL.Path != "/" && !strings.HasPrefix(r.URL.Path, "/company/") && r.URL.Path != "/help" && r.URL.Path != "/privacy" && r.URL.Path != "/terms" {
+		http.NotFound(w, r)
 		return
 	}
 
