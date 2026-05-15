@@ -14,6 +14,8 @@ Environment=GENERATIVE_MODEL=gemma3:1b
 Environment=EMBEDDING_MODEL=nomic-embed-text
 Environment=MODELS_DIR=/opt/congopro-bridge/models
 Environment=ALLOWED_ORIGIN=https://congopro.com
+Environment=OLLAMA_ALLOW_PUBLIC_IP=false
+Environment=OLLAMA_ALLOWED_HOSTS=
 
 WorkingDirectory=/opt/congopro-bridge
 ExecStart=/opt/congopro-bridge/congopro-bridge
