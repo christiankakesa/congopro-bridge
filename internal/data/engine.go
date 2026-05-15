@@ -264,7 +264,8 @@ func normalizeForSearch(s string) string {
 
 func extractGeoTokens(q string, knownCities map[string]bool) (geoTokens []string, activityQ string) {
 	words := strings.Fields(normalizeForSearch(q))
-	var activity []string
+	var activities []string
+
 	for _, w := range words {
 		if len([]rune(w)) <= 2 {
 			continue
@@ -272,10 +273,20 @@ func extractGeoTokens(q string, knownCities map[string]bool) (geoTokens []string
 		if knownCities[w] {
 			geoTokens = append(geoTokens, w)
 		} else {
-			activity = append(activity, w)
+			activities = append(activities, w)
 		}
 	}
-	return geoTokens, strings.Join(activity, " ")
+
+	//TODO
+	// The real long-term fix is to move away from word-level geo detection entirely and
+	// use a dedicated location field in the search UI, a separate city/country dropdown alongside the text input.
+	// That way the query text is always treated as a name or activity, and location filtering is unambiguous.
+	// But that's a larger change involving the frontend.
+	if len(activities) <= len(geoTokens) {
+		return nil, strings.Join(append(activities, geoTokens...), " ")
+	}
+
+	return geoTokens, strings.Join(activities, " ")
 }
 
 func reciprocalRankFusion(rankings ...map[string]int) map[string]float64 {
