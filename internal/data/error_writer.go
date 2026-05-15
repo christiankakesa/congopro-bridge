@@ -31,5 +31,10 @@ func closeIfNotNil(name string, c io.Closer) error {
 	if c == nil {
 		return nil
 	}
-	return fmt.Errorf("%s: %w", name, c.Close())
+
+	if err := c.Close(); err != nil {
+		return fmt.Errorf("%s close error: %w", name, err)
+	}
+
+	return nil
 }

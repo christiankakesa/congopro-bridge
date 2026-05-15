@@ -255,7 +255,10 @@ func stripHTML(s string) string {
 
 func normalizeForSearch(s string) string {
 	t := transform.Chain(norm.NFD, removeNonSpacingMarks, norm.NFC)
-	result, _, _ := transform.String(t, s)
+	result, _, err := transform.String(t, s)
+	if err != nil {
+		return strings.ToLower(strings.TrimSpace(s))
+	}
 	return strings.ToLower(strings.TrimSpace(result))
 }
 
@@ -370,7 +373,7 @@ func (e *Engine) loadAndIndexOnce() error {
 
 	companies := make([]Company, 0, len(raws))
 	seenIDs := make(map[string]struct{}, len(raws))
-
+	const descriptionLimit = 150 // ~description limit for the semantic search
 	for i, r := range raws {
 		id := r.ID.Value
 		if id == "" {
@@ -383,14 +386,14 @@ func (e *Engine) loadAndIndexOnce() error {
 
 		rDescription := stripHTML(r.Description)
 		var rDescriptionForPrompt string
-		if utf8.RuneCountInString(rDescription) > 150 {
+		if utf8.RuneCountInString(rDescription) > descriptionLimit {
 			runes := []rune(rDescription)
-			cutAt := 150
+			cutAt := descriptionLimit
 			for cutAt > 0 && runes[cutAt] != ' ' {
 				cutAt--
 			}
 			if cutAt == 0 {
-				cutAt = 150
+				cutAt = descriptionLimit
 			}
 			rDescriptionForPrompt = string(runes[:cutAt]) + "..."
 		} else {
@@ -429,6 +432,8 @@ func (e *Engine) loadAndIndexOnce() error {
 		if ptr.NameSeo != "" {
 			if _, collision := slugMap[ptr.NameSeo]; !collision {
 				slugMap[ptr.NameSeo] = ptr
+			} else {
+				log.Warn().Msgf("slug collision: [ID:%s]%s already mapped", ptr.ID, ptr.NameSeo)
 			}
 		}
 
@@ -460,7 +465,7 @@ func (e *Engine) loadAndIndexOnce() error {
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
 		log.Info().Msg("[load] building Bleve text index from scratch (this will take a moment)...")
 
-		mapping, _ := buildBleveMapping()
+		mapping := buildBleveMapping()
 		idx, err := bleve.New(indexPath, mapping)
 		if err != nil {
 			return err
@@ -495,7 +500,7 @@ func (e *Engine) loadAndIndexOnce() error {
 	return nil
 }
 
-func buildBleveMapping() (*mapping.IndexMappingImpl, error) {
+func buildBleveMapping() *mapping.IndexMappingImpl {
 	m := bleve.NewIndexMapping()
 	docMap := bleve.NewDocumentMapping()
 
@@ -518,7 +523,7 @@ func buildBleveMapping() (*mapping.IndexMappingImpl, error) {
 
 	m.DefaultMapping = docMap
 	m.DefaultAnalyzer = "standard"
-	return m, nil
+	return m
 }
 
 func (e *Engine) indexBleve() error {
@@ -556,6 +561,7 @@ func (e *Engine) indexBleve() error {
 }
 
 func (e *Engine) indexSem(chromemPath string) error {
+	// /!\ chromemDB doesn't have a Close method, it's handled internally
 	db, err := chromem.NewPersistentDB(chromemPath, false)
 	if err != nil {
 		return err
@@ -602,6 +608,7 @@ func (e *Engine) indexSem(chromemPath string) error {
 		indexCtx, indexCancel := context.WithTimeout(context.Background(), 30*time.Minute)
 		defer indexCancel()
 
+		const promptLengthLimit = 1800 // ~context window for embedding model
 		total := len(e.companies)
 		for start := 0; start < total; start += chromemBatch {
 			end := start + chromemBatch
@@ -619,8 +626,8 @@ func (e *Engine) indexSem(chromemPath string) error {
 				}
 				text := strings.Join(parts, " ")
 
-				if textRunes := []rune(text); len(textRunes) > 1800 {
-					text = string(textRunes[:1800])
+				if textRunes := []rune(text); len(textRunes) > promptLengthLimit {
+					text = string(textRunes[:promptLengthLimit])
 				}
 
 				docs = append(docs, chromem.Document{
@@ -741,6 +748,7 @@ func (e *Engine) HybridSearch(q string) ([]SearchResult, error) {
 	bleveCh := make(chan result, 1)
 	semCh := make(chan result, 1)
 
+	start := time.Now() // for search duration
 	go func() {
 		h, err := e.runBleveSearch(q, knownCities)
 		bleveCh <- result{h, err}
@@ -760,6 +768,8 @@ func (e *Engine) HybridSearch(q string) ([]SearchResult, error) {
 		log.Warn().Err(sr.err).Msg("[search] semantic fallback to bleve-only")
 		sr.hits = map[string]float64{}
 	}
+
+	log.Debug().Msgf("Hybrid search took: %d ms", time.Since(start).Milliseconds())
 
 	merged := reciprocalRankFusion(
 		hitsToRanking(br.hits),
