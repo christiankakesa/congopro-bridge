@@ -427,6 +427,7 @@
         const safe = esc(text);
         if (!q) return safe;
 
+        return safe; //TODO intetionally disactivated
         const tokens = q
           .trim()
           .split(/\s+/)
