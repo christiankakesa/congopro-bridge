@@ -118,6 +118,20 @@ ads:
       end: "2026-05-31"
     weight: 10
     keywords: []
+  
+  - id: "heritier-vietcongobridge"
+    active: true
+    title: "VietCongo Bridge : Fret Vietnam - RDC"
+    description: "Votre partenaire logistique de confiance pour l'expédition et le suivi en temps réel de vos colis du Vietnam vers la RDC."
+    url: "https://vietcongobridge-web.vercel.app"
+    display_url: "vietcongobridge-web.vercel.app"
+    label: *top_choice_label
+    color: *top_choice_color
+    period:
+      start: "2026-05-14"
+      end: "2026-05-31"
+    weight: 10
+    keywords: []
 
   - id: "congopro-business-discovery"
     active: true
