@@ -26,7 +26,7 @@ RSYNC        := rsync -az --progress --delete \
                 -e "ssh $(_ssh_opts)"
 
 .PHONY: all build build-local clean test \
-        docker-build docker-push docker-save docker-run \
+        docker-build docker-push docker-save docker-run docker-up docker-down docker-own-v\
         deploy deploy-binary deploy-config deploy-service deploy-full \
         service-start service-stop service-restart service-status service-logs \
         traefik-reload traefik-logs \
@@ -86,6 +86,21 @@ docker-save: docker-build
 docker-run: docker-build
 	@mkdir -p $(MODELS_DIR)
 	docker run -p 8080:8080 -v $(shell pwd)/$(MODELS_DIR):/app/$(MODELS_DIR) $(IMAGE):$(TAG)
+
+docker-up:
+	@echo "▶ Starting services…"
+	docker compose up -d --build
+	@echo "✓ Services running"
+
+docker-down:
+	@echo "▶ Stopping services…"
+	docker compose down
+	@echo "✓ Services stopped"
+
+docker-down-v:
+	@echo "▶ Stopping services…"
+	docker compose down -v
+	@echo "✓ Services stopped"
 
 ping:
 	@echo "▶ pinging $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PORT)…"
