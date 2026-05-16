@@ -6,13 +6,14 @@ DEPLOY_HOST  ?= xxx.xxx.xxx.xxx
 DEPLOY_PORT  ?= 4242
 SSH_KEY      ?= $(HOME)/.ssh/id_ed25519
 REMOTE_DIR   ?= /opt/congopro-bridge
+MEILI_DIR    ?= /opt/meilisearch
+MEILI_VERSION ?= v1.43.1
 IMAGE        ?= congopro-bridge
 TAG          ?= latest
 DOMAIN       ?= congopro.com
 CMD_PATH     := ./cmd/congopro-bridge
 BINARY       := congopro-bridge
 BUILD_DIR    := ./build
-MODELS_DIR   := models
 GENERATIVE_MODEL ?= gemma3:1b
 EMBEDDING_MODEL ?= nomic-embed-text
 SERVICE      := congopro-bridge
@@ -26,19 +27,18 @@ RSYNC        := rsync -az --progress --delete \
                 -e "ssh $(_ssh_opts)"
 
 .PHONY: all build build-local clean test \
-        docker-build docker-push docker-save docker-run docker-up docker-down docker-own-v\
-        deploy deploy-binary deploy-config deploy-service deploy-full \
+        docker-build docker-push docker-save docker-run docker-up docker-down docker-down-v meili-reset \
+        deploy deploy-binary deploy-config deploy-service deploy-full deploy-all \
         service-start service-stop service-restart service-status service-logs \
         traefik-reload traefik-logs \
-        ollama-install ollama-configure-limit ollama-pull-models ollama-status ollama-setup ollama-logs deploy-with-ai \
-        ssh ping \
-        help
+        ollama-install ollama-configure-limit ollama-pull-models ollama-clean-models ollama-reset ollama-status ollama-setup ollama-logs \
+        meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik meili-setup meili-start meili-stop meili-restart meili-status meili-logs meili-index-reset \
+        ssh ping help
 
 all: build
 
 css:
 	@echo "▶ Compiling Tailwind CSS using local binary…"
-	@# We check whether the file exists before running
 	@if [ ! -f $(TAILWIND_CLI) ]; then \
 		echo "❌ Error: ./tailwindcss not found at root."; \
 		echo "Download it via: curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && mv tailwindcss-linux-x64 tailwindcss && chmod +x tailwindcss"; \
@@ -63,6 +63,7 @@ build: css
 build-local:
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY) $(CMD_PATH)
+
 clean:
 	@rm -rf $(BUILD_DIR)
 	@echo "✓ clean"
@@ -84,8 +85,7 @@ docker-save: docker-build
 	@echo "✓ $(BUILD_DIR)/$(IMAGE)-$(TAG).tar.gz"
 
 docker-run: docker-build
-	@mkdir -p $(MODELS_DIR)
-	docker run -p 8080:8080 -v $(shell pwd)/$(MODELS_DIR):/app/$(MODELS_DIR) $(IMAGE):$(TAG)
+	docker run -p 8080:8080 $(IMAGE):$(TAG)
 
 docker-up:
 	@echo "▶ Starting services…"
@@ -98,9 +98,17 @@ docker-down:
 	@echo "✓ Services stopped"
 
 docker-down-v:
-	@echo "▶ Stopping services…"
-	docker compose down -v
-	@echo "✓ Services stopped"
+	@echo "▶ Stopping services (keeping ollama_data volume)…"
+	docker compose down
+	docker volume rm congopro-bridge_meili_data 2>/dev/null || true
+	@echo "✓ Services stopped, meili_data removed, ollama_data preserved"
+
+meili-reset:
+	@echo "▶ Resetting Meilisearch index (keeping Ollama models)…"
+	docker compose stop meilisearch
+	docker volume rm congopro-bridge_meili_data 2>/dev/null || true
+	docker compose up -d meilisearch
+	@echo "✓ Meilisearch volume wiped and restarted — app will re-index on next boot"
 
 ping:
 	@echo "▶ pinging $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PORT)…"
@@ -109,7 +117,11 @@ ping:
 ssh:
 	ssh $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST)
 
-deploy: deploy-binary deploy-models deploy-config service-restart
+# ──────────────────────────────────────────────────────────────────────────────
+# App deployment
+# ──────────────────────────────────────────────────────────────────────────────
+
+deploy: deploy-binary deploy-config service-restart
 	@echo ""
 	@echo "╔══════════════════════════════════════╗"
 	@echo "║  ✓ Deployment complete               ║"
@@ -123,20 +135,6 @@ deploy-binary: build
 	@$(SSH) "chmod +x $(REMOTE_DIR)/$(BINARY)"
 	@echo "✓ binary uploaded"
 
-deploy-models:
-	@echo "▶ Syncing ML models (Bleve + Chromem)…"
-	@mkdir -p $(MODELS_DIR)
-	@$(SSH) "sudo mkdir -p $(REMOTE_DIR)/$(MODELS_DIR) && sudo chown -R $(DEPLOY_USER): $(REMOTE_DIR)/$(MODELS_DIR)"
-	@$(RSYNC) $(MODELS_DIR)/ $(DEPLOY_USER)@$(DEPLOY_HOST):$(REMOTE_DIR)/$(MODELS_DIR)/
-	@echo "✓ ML models synced"
-
-deploy-reset-indexes:
-	@echo "▶ Resetting ML indexes on remote (forces rebuild)…"
-	@$(SSH) "rm -rf $(REMOTE_DIR)/$(MODELS_DIR)/bleve.idx \
-	                $(REMOTE_DIR)/$(MODELS_DIR)/chromem.db \
-	                $(REMOTE_DIR)/$(MODELS_DIR)/chromem.db.model"
-	@echo "✓ indexes cleared — will rebuild on next start"
-
 deploy-config:
 	@echo "▶ Uploading Traefik dynamic config…"
 	@$(SSH) "sudo mkdir -p /srv/traefik/dynamic"
@@ -146,14 +144,27 @@ deploy-config:
 	@$(MAKE) traefik-reload
 
 deploy-service:
-	@echo "▶ Installing systemd unit…"
+	@echo "▶ Installing $(SERVICE) systemd unit…"
 	@$(RSYNC) deploy/systemd/$(SERVICE).service $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/$(SERVICE).service
 	@$(SSH) "sudo mv /tmp/$(SERVICE).service /etc/systemd/system/$(SERVICE).service && sudo systemctl daemon-reload"
 	@echo "✓ unit installed — run 'make service-start' to enable"
 
+# First-time app setup: installs systemd unit, deploys binary, enables on boot.
 deploy-full: deploy-service deploy
 	@$(SSH) "sudo systemctl enable $(SERVICE)"
-	@echo "✓ service enabled on boot"
+	@echo "✓ $(SERVICE) enabled on boot"
+
+# Full server bootstrap: Ollama + Meilisearch + app. Run once on a fresh server.
+deploy-all: ollama-setup meili-setup deploy-full
+	@echo ""
+	@echo "╔══════════════════════════════════════╗"
+	@echo "║  ✓ Full stack ready                  ║"
+	@echo "║  https://$(DOMAIN)                ║"
+	@echo "╚══════════════════════════════════════╝"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# App service
+# ──────────────────────────────────────────────────────────────────────────────
 
 service-start:
 	@$(SSH) "sudo systemctl enable --now $(SERVICE)"
@@ -175,13 +186,21 @@ service-status:
 service-logs:
 	$(SSH) "sudo journalctl -u $(SERVICE) -f --no-pager"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Traefik
+# ──────────────────────────────────────────────────────────────────────────────
+
 traefik-reload:
 	@echo "▶ Triggering Traefik dynamic config reload…"
 	@$(SSH) "sudo touch /srv/traefik/dynamic/congopro-bridge.yml"
 	@echo "✓ Traefik will pick up changes within a few seconds"
 
 traefik-logs:
-	$(SSH) "sudo journalctl -u traefik -f --no-pager 2>/dev/null || sudo docker logs -f \$$(sudo docker ps -qf name=traefik)"
+	$(SSH) "sudo journalctl -u traefik -f --no-pager 2>/dev/null || sudo docker logs -f $$(sudo docker ps -qf name=traefik)"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Ollama
+# ──────────────────────────────────────────────────────────────────────────────
 
 OLLAMA_MODELS ?= $(GENERATIVE_MODEL) $(EMBEDDING_MODEL)
 OLLAMA_NUM_THREADS ?= 2
@@ -220,24 +239,97 @@ ollama-status:
 
 ollama-setup: ollama-install ollama-configure-limit ollama-pull-models
 	@echo "╔═════════════════════════════════════════════════════════════════════════════╗"
-	@echo "║  Ollama is ready with $(OLLAMA_MODELS)   ║"
+	@echo "║  Ollama is ready with $(OLLAMA_MODELS)                            ║"
 	@echo "╚═════════════════════════════════════════════════════════════════════════════╝"
 
 ollama-logs:
 	$(SSH) "sudo journalctl -u ollama -f --no-pager"
 
-deploy-with-ai: ollama-setup deploy
-	@echo "✓ Application + AI search backend ready"
+# ──────────────────────────────────────────────────────────────────────────────
+# Meilisearch (production — systemd)
+# ──────────────────────────────────────────────────────────────────────────────
+
+meili-install:
+	@echo "▶ Installing Meilisearch $(MEILI_VERSION) on $(DEPLOY_HOST)…"
+	@$(SSH) "sudo useradd -r -s /bin/false meilisearch 2>/dev/null || true"
+	@$(SSH) "sudo mkdir -p $(MEILI_DIR)/bin $(MEILI_DIR)/data/db $(MEILI_DIR)/data/dumps $(MEILI_DIR)/etc"
+	@$(SSH) "sudo chown -R meilisearch:meilisearch $(MEILI_DIR)"
+	@$(SSH) "curl -L https://github.com/meilisearch/meilisearch/releases/download/$(MEILI_VERSION)/meilisearch-linux-amd64 -o /tmp/meilisearch && sudo mv /tmp/meilisearch $(MEILI_DIR)/bin/meilisearch"
+	@$(SSH) "sudo chmod +x $(MEILI_DIR)/bin/meilisearch"
+	@echo "✓ Meilisearch $(MEILI_VERSION) installed at $(MEILI_DIR)/bin/meilisearch"
+
+meili-deploy-config:
+	@echo "▶ Uploading meilisearch.toml…"
+	@$(RSYNC) deploy/meilisearch/meilisearch.toml $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/meilisearch.toml
+	@$(SSH) "sudo mv /tmp/meilisearch.toml $(MEILI_DIR)/etc/meilisearch.toml && sudo chown meilisearch:meilisearch $(MEILI_DIR)/etc/meilisearch.toml"
+	@echo "✓ meilisearch.toml deployed"
+
+meili-deploy-service:
+	@echo "▶ Installing meilisearch systemd unit…"
+	@$(RSYNC) deploy/meilisearch/meilisearch.service $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/meilisearch.service
+	@$(SSH) "sudo mv /tmp/meilisearch.service /etc/systemd/system/meilisearch.service && sudo systemctl daemon-reload"
+	@echo "✓ systemd unit installed"
+
+meili-deploy-traefik:
+	@echo "▶ Uploading Meilisearch Traefik config…"
+	@$(RSYNC) deploy/meilisearch/meilisearch.yml $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/meilisearch.yml
+	@$(SSH) "sudo mkdir -p /srv/traefik/dynamic && sudo mv /tmp/meilisearch.yml /srv/traefik/dynamic/meilisearch.yml"
+	@$(MAKE) traefik-reload
+	@echo "✓ Traefik config deployed"
+
+# First-time Meilisearch setup: installs binary, config, systemd unit, Traefik, enables service.
+meili-setup: meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik
+	@$(SSH) "sudo systemctl enable --now meilisearch"
+	@echo ""
+	@echo "╔══════════════════════════════════════╗"
+	@echo "║  ✓ Meilisearch ready                 ║"
+	@echo "║  https://meili.$(DOMAIN)          ║"
+	@echo "╚══════════════════════════════════════╝"
+
+meili-start:
+	@$(SSH) "sudo systemctl enable --now meilisearch"
+	@echo "✓ meilisearch started"
+
+meili-stop:
+	@$(SSH) "sudo systemctl stop meilisearch"
+	@echo "✓ meilisearch stopped"
+
+meili-restart:
+	@echo "▶ Restarting meilisearch…"
+	@$(SSH) "sudo systemctl restart meilisearch"
+	@sleep 2
+	@$(MAKE) meili-status
+
+meili-status:
+	@$(SSH) "sudo systemctl status meilisearch --no-pager -l || true"
+
+meili-logs:
+	$(SSH) "sudo journalctl -u meilisearch -f --no-pager"
+
+# Wipes the index on the remote server; app re-indexes automatically on next start.
+meili-index-reset:
+	@echo "▶ Wiping Meilisearch data on $(DEPLOY_HOST) (index will rebuild on next app start)…"
+	@$(MAKE) meili-stop
+	@$(SSH) "sudo rm -rf $(MEILI_DIR)/data/db && sudo mkdir -p $(MEILI_DIR)/data/db && sudo chown meilisearch:meilisearch $(MEILI_DIR)/data/db"
+	@$(MAKE) meili-start
+	@echo "✓ Meilisearch index wiped"
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 help:
 	@echo ""
 	@echo "  Congopro Bridge — available make targets"
 	@echo "  ────────────────────────────────────────────────────────"
-	@grep -E '^## ' $(MAKEFILE_LIST) \
-	  | sed 's/^## //' \
-	  | awk -F': ' '{printf "  \033[36m%-26s\033[0m %s\n", $$1, $$2}'
-	@echo ""
+	@echo "  Bootstrap:  deploy-all          Fresh server: Ollama + Meilisearch + app"
+	@echo "  App:        deploy              Rebuild and deploy binary"
+	@echo "              deploy-full         First-time: installs systemd unit + deploy"
+	@echo "  Dev:        docker-up/down      Start/stop local stack"
+	@echo "              meili-reset         Wipe local Meilisearch index"
+	@echo "  Meili:      meili-setup         First-time remote Meilisearch install"
+	@echo "              meili-index-reset   Wipe remote index (rebuilds on next start)"
+	@echo "  Ollama:     ollama-setup        Install + configure + pull models"
+	@echo "  ────────────────────────────────────────────────────────"
 	@echo "  Key variables (set in .env or as env overrides):"
 	@echo "    DEPLOY_HOST, DEPLOY_USER, DEPLOY_PORT, SSH_KEY"
-	@echo "    REMOTE_DIR, DOMAIN, IMAGE, TAG"
+	@echo "    REMOTE_DIR, MEILI_DIR, MEILI_VERSION, DOMAIN"
 	@echo ""

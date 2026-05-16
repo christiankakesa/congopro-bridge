@@ -9,13 +9,15 @@ User=ops
 Group=ops
 
 Environment=PORT=8110
-Environment=OLLAMA_URL=http://localhost:11434
+Environment=OLLAMA_URL=http://127.0.0.1:11434
 Environment=GENERATIVE_MODEL=gemma3:1b
 Environment=EMBEDDING_MODEL=nomic-embed-text
-Environment=MODELS_DIR=/opt/congopro-bridge/models
 Environment=ALLOWED_ORIGIN=https://congopro.com
 Environment=OLLAMA_ALLOW_PUBLIC_IP=false
 Environment=OLLAMA_ALLOWED_HOSTS=
+Environment=MEILI_URL=http://127.0.0.1:7700
+Environment=MEILI_MASTER_KEY=REDACTED
+Environment=MEILI_INDEX_NAME=companies
 
 WorkingDirectory=/opt/congopro-bridge
 ExecStart=/opt/congopro-bridge/congopro-bridge

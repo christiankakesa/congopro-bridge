@@ -25,11 +25,6 @@ func main() {
 	ads.LoadAds()
 
 	engine := data.NewEngine(cfg)
-	defer func() {
-		if err := engine.Close(); err != nil {
-			log.Error().Err(err).Msg("[shutdown] failed to close bleve index")
-		}
-	}()
 
 	go func() {
 		start := time.Now()

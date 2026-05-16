@@ -1,0 +1,23 @@
+---
+http:
+  services:
+    meilisearch-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:7700"
+
+  # middlewares:
+  #   meilisearch-header-mdw:
+  #     headers:
+  #       customRequestHeaders:
+  #         X-Forwarded-Proto: "https"
+
+  routers:
+    meilisearch-router:
+      rule: "Host(`meili.congopro.com`)"
+      service: meilisearch-service
+      entryPoints: [websecure]
+      # middlewares:
+      #   - meilisearch-header-mdw
+      tls:
+        certResolver: letsencrypt

@@ -94,7 +94,7 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := a.Engine.HybridSearch(q)
+	results, err := a.Engine.Search(q)
 	if err != nil {
 		log.Error().Msgf("[search] error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -138,7 +138,7 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := a.Engine.HybridSearch(q)
+	results, err := a.Engine.Search(q)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(ErrorResponse{Error: "search error"})
