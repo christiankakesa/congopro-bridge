@@ -3,13 +3,11 @@ services:
     build: .
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
-    volumes:
-      - ./models:/app/models
     env_file:
       - ./.env
     environment:
       - OLLAMA_URL=http://ollama:11434
-      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILI_URL=http://meilisearch:7700
     depends_on:
       ollama:
         condition: service_healthy
@@ -27,8 +25,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # ports:
-    #   - "11434:11434"
+    ports:
+      - "11434:11434"
 
   ollama-init:
     image: ollama/ollama
@@ -45,6 +43,7 @@ services:
         while ! ollama list > /dev/null; do sleep 2; done
         echo "Pulling ${GENERATIVE_MODEL}..."
         ollama pull ${GENERATIVE_MODEL}
+        echo "Pulling ${EMBEDDING_MODEL}..."
         ollama pull ${EMBEDDING_MODEL}
         echo "Done."
     depends_on:
@@ -59,10 +58,11 @@ services:
       - MEILI_ENV=${MEILI_ENV:-development}
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-}
       - MEILI_NO_ANALYTICS=true
+      - MEILI_EXPERIMENTAL_ALLOWED_IP_NETWORKS=any
     volumes:
       - meili_data:/meili_data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      test: ["CMD", "/bin/sh", "-c", "cat /proc/net/tcp6 /proc/net/tcp 2>/dev/null | grep -q 1E14"]
       interval: 10s
       timeout: 5s
       retries: 5

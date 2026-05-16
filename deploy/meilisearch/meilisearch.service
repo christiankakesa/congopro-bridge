@@ -1,0 +1,14 @@
+[Unit]
+Description=Meilisearch
+After=systemd-user-sessions.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/meilisearch
+ExecStart=/opt/meilisearch/bin/meilisearch --config-file-path /opt/meilisearch/etc/meilisearch.toml
+User=meilisearch
+Group=meilisearch
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

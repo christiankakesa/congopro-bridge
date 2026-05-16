@@ -10,9 +10,11 @@ type Config struct {
 	GenerativeModel     string
 	EmbeddingModel      string
 	AllowedOrigin       string
-	ModelsDir           string
 	OllamaAllowPublicIP bool
 	OllamaAllowedHosts  []string
+	MeiliURL            string
+	MeiliMasterKey      string
+	MeiliIndexName      string
 }
 
 func Load() *Config {
@@ -29,14 +31,20 @@ func Load() *Config {
 	if ao := os.Getenv("ALLOWED_ORIGIN"); ao != "" {
 		cfg.AllowedOrigin = ao
 	}
-	if md := os.Getenv("MODELS_DIR"); md != "" {
-		cfg.ModelsDir = md
-	}
 	if os.Getenv("OLLAMA_ALLOW_PUBLIC_IP") == "true" {
 		cfg.OllamaAllowPublicIP = true
 	}
 	if ah := os.Getenv("OLLAMA_ALLOWED_HOSTS"); ah != "" {
 		cfg.OllamaAllowedHosts = splitTrimmed(ah, ",")
+	}
+	if mu := os.Getenv("MEILI_URL"); mu != "" {
+		cfg.MeiliURL = mu
+	}
+	if mk := os.Getenv("MEILI_MASTER_KEY"); mk != "" {
+		cfg.MeiliMasterKey = mk
+	}
+	if mi := os.Getenv("MEILI_INDEX_NAME"); mi != "" {
+		cfg.MeiliIndexName = mi
 	}
 
 	return cfg
@@ -44,13 +52,15 @@ func Load() *Config {
 
 func defaults() *Config {
 	return &Config{
-		OllamaURL:           "http://localhost:11434",
+		OllamaURL:           "http://127.0.0.1:11434",
 		GenerativeModel:     "gemma3:1b",
 		EmbeddingModel:      "nomic-embed-text",
 		AllowedOrigin:       "*",
-		ModelsDir:           "models",
 		OllamaAllowPublicIP: false,
 		OllamaAllowedHosts:  nil,
+		MeiliURL:            "http://127.0.0.1:7700",
+		MeiliMasterKey:      "",
+		MeiliIndexName:      "companies",
 	}
 }
 
