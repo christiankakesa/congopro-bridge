@@ -4,9 +4,9 @@ go 1.25.0
 
 require (
 	github.com/blevesearch/bleve/v2 v2.6.0
-	github.com/nlpodyssey/cybertron v0.2.1
 	github.com/philippgille/chromem-go v0.7.0
 	github.com/rs/zerolog v1.35.1
+	github.com/urfave/cli/v2 v2.27.7
 	golang.org/x/text v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -32,20 +32,19 @@ require (
 	github.com/blevesearch/zapx/v15 v15.4.3 // indirect
 	github.com/blevesearch/zapx/v16 v16.3.4 // indirect
 	github.com/blevesearch/zapx/v17 v17.1.2 // indirect
-	github.com/dlclark/regexp2 v1.4.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/json-iterator/go v0.0.0-20171115153421-f7279a603ede // indirect
-	github.com/kr/text v0.2.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mschoch/smat v0.2.0 // indirect
-	github.com/nlpodyssey/gopickle v0.2.0 // indirect
-	github.com/nlpodyssey/gotokenizers v0.2.0 // indirect
-	github.com/nlpodyssey/spago v1.1.0 // indirect
+	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.etcd.io/bbolt v1.4.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
