@@ -427,7 +427,7 @@
         const safe = esc(text);
         if (!q) return safe;
 
-        return safe; //TODO intetionally disactivated
+        return safe; //TODO Intentionally disactivated for now!
         const tokens = q
           .trim()
           .split(/\s+/)
@@ -473,6 +473,9 @@
         if (window.location.pathname !== "/" || window.location.search !== "") {
           history.pushState(null, "", "/");
         }
+
+        // cleaning
+        document.getElementById("aiContent").innerHTML = '';
 
         window.scrollTo(0, 0);
         resultsPage.classList.add("hidden");
@@ -565,9 +568,9 @@
         // Generate Google Maps URL
         let mapsLink = "";
         if (c.location && c.location.lat && c.location.lon) {
-          mapsLink = `https://www.google.com/maps/search/?api=1&query=${c.location.lat},${c.location.lon}`;
+          mapsLink = `https://google.com/maps/search/?api=1&query=${c.location.lat},${c.location.lon}`;
         } else if (fullLocation) {
-          mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullLocation)}`;
+          mapsLink = `https://google.com/maps/search/?api=1&query=${encodeURIComponent(fullLocation)}`;
         }
 
         return `
