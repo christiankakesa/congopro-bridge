@@ -22,9 +22,10 @@ services:
       - ollama_data:/root/.ollama
     healthcheck:
       test: ["CMD", "ollama", "list"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
+      start_period: 5s
     ports:
       - "11434:11434"
 
@@ -63,9 +64,10 @@ services:
       - meili_data:/meili_data
     healthcheck:
       test: ["CMD", "/bin/sh", "-c", "cat /proc/net/tcp6 /proc/net/tcp 2>/dev/null | grep -q 1E14"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
+      start_period: 5s
 
 volumes:
   ollama_data:

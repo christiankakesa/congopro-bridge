@@ -29,7 +29,7 @@ type Config struct {
 }
 
 func main() {
-	logger.Init(true)
+	logger.InitAuto()
 	cfg := parseFlags()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -39,19 +39,19 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		log.Info().Msg("\nArrêt demandé par l'utilisateur. Clôture propre du fichier en cours...")
+		log.Info().Msg("\nShutdown requested by user. Closing file gracefully...")
 		cancel()
 	}()
 
 	inFile, err := os.Open(cfg.InputFile)
 	if err != nil {
-		log.Fatal().Msgf("Échec de l'ouverture du fichier source: %v", err)
+		log.Fatal().Msgf("Failed to open source file: %v", err)
 	}
 	defer inFile.Close()
 
 	outFile, err := os.Create(cfg.OutputFile)
 	if err != nil {
-		log.Fatal().Msgf("Échec de la création du fichier de destination: %v", err)
+		log.Fatal().Msgf("Failed to create destination file: %v", err)
 	}
 	defer outFile.Close()
 
@@ -60,7 +60,7 @@ func main() {
 
 	t, err := decoder.Token()
 	if err != nil || t != json.Delim('[') {
-		log.Fatal().Msgf("Le fichier JSON doit commencer par un tableau '['")
+		log.Fatal().Msgf("JSON file must start with an array '['")
 	}
 
 	if cfg.Minify {
@@ -74,22 +74,22 @@ func main() {
 	skipped := 0
 	isFirst := true
 
-	log.Info().Msg("Début du traitement...")
+	log.Info().Msg("Starting processing...")
 	if cfg.DelayMs < 1000 {
-		log.Warn().Msgf("⚠️ Attention: Un délai de %dms peut entraîner un bannissement sur les serveurs publics OSM Nominatim.", cfg.DelayMs)
+		log.Warn().Msgf("⚠️  Warning: A delay of %dms may result in a ban on public OSM Nominatim servers.", cfg.DelayMs)
 	}
 
 	for decoder.More() {
 		select {
 		case <-ctx.Done():
-			log.Info().Msg("Arrêt de la boucle de traitement.")
+			log.Info().Msg("Processing loop stopped.")
 			goto Cleanup
 		default:
 		}
 
 		var rec map[string]interface{}
 		if err := decoder.Decode(&rec); err != nil {
-			log.Error().Msgf("Erreur de décodage à l'index %d: %v", count, err)
+			log.Error().Msgf("Decode error at index %d: %v", count, err)
 			continue
 		}
 		count++
@@ -100,13 +100,13 @@ func main() {
 			continue
 		}
 
-		log.Info().Msgf("[%d] Traitement: %v", count, rec["name"])
+		log.Info().Msgf("[%d] Processing: %v", count, rec["name"])
 
 		lon, lat, err := resolveCoordinates(client, rec)
 		if err != nil {
-			log.Error().Msgf("  -> Échec géocodage: %v", err)
+			log.Error().Msgf("  -> Geocoding failed: %v", err)
 		} else {
-			log.Info().Msgf("  -> Succès: lon=%.6f, lat=%.6f", lon, lat)
+			log.Info().Msgf("  -> Success: lon=%.6f, lat=%.6f", lon, lat)
 			rec["geo"] = []interface{}{lon, lat}
 			updated++
 		}
@@ -122,16 +122,16 @@ Cleanup:
 	} else {
 		outFile.WriteString("\n]\n")
 	}
-	log.Info().Msgf("Terminé ! Traités: %d | Mis à jour: %d | Ignorés (déjà ok): %d", count, updated, skipped)
+	log.Info().Msgf("Done! Processed: %d | Updated: %d | Skipped (already valid): %d", count, updated, skipped)
 }
 
 func parseFlags() Config {
 	var cfg Config
-	flag.StringVar(&cfg.InputFile, "input", "cleaned_c.json", "Chemin vers le fichier JSON source")
-	flag.StringVar(&cfg.OutputFile, "output", "updated.json", "Chemin vers le fichier JSON de destination")
-	flag.IntVar(&cfg.DelayMs, "delay", 1000, "Délai en millisecondes entre les requêtes (ex: 250 = 4 requêtes/sec)")
-	flag.BoolVar(&cfg.Force, "force", false, "Forcer le géocodage même si les coordonnées existent déjà")
-	flag.BoolVar(&cfg.Minify, "minify", false, "Minifier le JSON de sortie (désactiver l'indentation et les retours à la ligne)")
+	flag.StringVar(&cfg.InputFile, "input", "cleaned_c.json", "Path to the source JSON file")
+	flag.StringVar(&cfg.OutputFile, "output", "updated.json", "Path to the destination JSON file")
+	flag.IntVar(&cfg.DelayMs, "delay", 1000, "Delay in milliseconds between requests (e.g. 250 = 4 requests/sec)")
+	flag.BoolVar(&cfg.Force, "force", false, "Force geocoding even if coordinates already exist")
+	flag.BoolVar(&cfg.Minify, "minify", false, "Minify the output JSON (disable indentation and newlines)")
 	flag.Parse()
 	return cfg
 }
@@ -147,7 +147,7 @@ func writeRecord(w io.Writer, rec map[string]interface{}, isFirst *bool, minify 
 	}
 
 	if err != nil {
-		log.Error().Msgf("Erreur d'encodage du record: %v", err)
+		log.Error().Msgf("Failed to encode record: %v", err)
 		return
 	}
 
@@ -188,7 +188,7 @@ func resolveCoordinates(client *http.Client, rec map[string]interface{}) (float6
 		if err == nil {
 			return lon, lat, nil
 		}
-		log.Warn().Msg("     [Info] Adresse précise introuvable, essai au niveau de la ville...")
+		log.Warn().Msg("     [Info] Precise address not found, retrying at city level...")
 	}
 
 	fallbackAddr := buildAddress(rec, false)
@@ -196,7 +196,7 @@ func resolveCoordinates(client *http.Client, rec map[string]interface{}) (float6
 		return geocodeWithRetry(client, fallbackAddr, 3)
 	}
 
-	return 0, 0, fmt.Errorf("aucune adresse valide trouvée")
+	return 0, 0, fmt.Errorf("no valid address found")
 }
 
 func buildAddress(rec map[string]interface{}, full bool) string {
@@ -227,13 +227,13 @@ func geocodeWithRetry(client *http.Client, address string, maxRetries int) (floa
 		}
 		lastErr = err
 
-		if err.Error() == "aucun résultat" {
+		if err.Error() == "no results found" {
 			return 0, 0, err
 		}
 
 		time.Sleep(time.Duration(2*i+1) * time.Second)
 	}
-	return 0, 0, fmt.Errorf("après %d tentatives: %v", maxRetries, lastErr)
+	return 0, 0, fmt.Errorf("after %d attempts: %v", maxRetries, lastErr)
 }
 
 func geocode(client *http.Client, address string) (float64, float64, error) {
@@ -252,12 +252,12 @@ func geocode(client *http.Client, address string) (float64, float64, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0, 0, fmt.Errorf("erreur réseau: %v", err)
+		return 0, 0, fmt.Errorf("network error: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return 0, 0, fmt.Errorf("statut API invalide: %d", resp.StatusCode)
+		return 0, 0, fmt.Errorf("unexpected API status: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -273,7 +273,7 @@ func geocode(client *http.Client, address string) (float64, float64, error) {
 		return 0, 0, err
 	}
 	if len(results) == 0 {
-		return 0, 0, fmt.Errorf("aucun résultat")
+		return 0, 0, fmt.Errorf("no results found")
 	}
 
 	lat, err := strconv.ParseFloat(results[0].Lat, 64)

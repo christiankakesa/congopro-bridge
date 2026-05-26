@@ -1,0 +1,86 @@
+pipeline:
+  # 1. Trim invisible trailing spaces before anything else
+  - type: whitespace_trimmer
+    fields: 
+      - city
+      - name
+      - activity
+      - slogan
+
+  # 2. Fix casing on all text fields
+  - type: capitalization
+    fields: 
+      - name
+      - city
+
+  # 3. Standardize addresses (St, Ave, Blvd)
+  - type: address_normalizer
+    fields:
+      - address_line_1
+      - address_line_2
+
+  # 4. Remove HTML tags from descriptions
+  - type: html_stripper
+    fields:
+      - description
+      - name
+      - slogan
+      - activity
+
+  # 5. Format phone numbers uniformly
+  - type: phone_normalizer
+    fields:
+      - main_phone
+      - alt_phone
+      - mobile_phone
+
+  # 6. Verify and clean URLs concurrently
+  - type: link_validator
+    fields:
+      - website
+      - twitter
+      - facebook
+      - linkedin
+      - instagram
+    workers: 50
+
+  # 7. Remove completely deprecated fields (Google+)
+  - type: field_dropper
+    fields:
+      - message_send_gplus
+      - logo_content_type
+      - logo_file_name
+      - logo_file_size
+      - logo_fingerprint
+      - logo_updated_at
+      - message_send_fb
+      - message_send_twitter
+      - modifier_id
+      - version
+
+  # 8. Empty string converter for useless meta-data
+  - type: empty_remover
+    fields:
+      - po_box
+      - postal_code
+      - address_line_2
+    action: "empty_field"
+
+  - type: email_remover
+    fields:
+      - address_line_1
+      - address_line_2
+      - main_phone
+      - alt_phone
+      - mobile_phone
+      - website
+      - twitter
+      - facebook
+      - linkedin
+      - instagram
+      - city
+      - name
+      - activity
+      - slogan
+
+  - type: city_normalizer

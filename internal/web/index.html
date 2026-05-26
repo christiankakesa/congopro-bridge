@@ -3,12 +3,116 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ========================================== -->
+    <!-- SEO Standard -->
+    <!-- ========================================== -->
+    <title>
+      {{ if .Title }}{{ .Title }}{{ else }}Congopro | Moteur de recherche le plus intelligent boosté à l'IA{{ end }}
+    </title>
     <meta
       name="description"
+      content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA."
+    />
+    <meta
+      name="keywords"
+      content="Congopro, moteur de recherche RDC, annuaire entreprises Congo, professionnels RDC, services Kinshasa, intelligence artificielle Congo, trouver entreprise RDC, business RDC, IA Congo"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Congopro" />
+    <link rel="canonical" href="https://www.congopro.com/" />
+
+    <!-- ========================================== -->
+    <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+    <!-- ========================================== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.congopro.com/" />
+    <meta
+      property="og:title"
+      content="Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
+    />
+    <meta
+      property="og:description"
+      content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA."
+    />
+    <meta
+      property="og:image"
+      content="https://www.congopro.com/images/og-image.jpg"
+    />
+    <meta property="og:site_name" content="Congopro" />
+    <meta property="og:locale" content="fr_FR" />
+
+    <!-- ========================================== -->
+    <!-- Twitter Card -->
+    <!-- ========================================== -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://www.congopro.com/" />
+    <meta
+      name="twitter:title"
+      content="Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
+    />
+    <meta
+      name="twitter:description"
       content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance en RDC grâce à l'IA."
     />
-    <title>Congopro Bridge</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta
+      name="twitter:image"
+      content="https://www.congopro.com/images/twitter-image.jpg"
+    />
+    <meta name="twitter:site" content="@Congopro" />
+
+    <!-- ========================================== -->
+    <!-- Favicons & App Icons -->
+    <!-- ========================================== -->
+    <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+    
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/images/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/images/favicon-16x16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="/images/android-chrome-192x192.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="512x512"
+      href="/images/android-chrome-512x512.png"
+    />
+    <link rel="icon" href="/favicon.ico">
+
+    <!-- Favicon standard (Anciens navigateurs) -->
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+
+    <!-- Apple Touch Icon (iOS) -->
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/images/apple-touch-icon.png"
+    />
+
+    <!-- Android / Web App Manifest (Chrome, Firefox, etc.) -->
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#be0203" />
+    <!-- Remplacez par la couleur principale de votre charte graphique -->
+
+    <!-- Microsoft / Windows Tiles -->
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    <!-- Couleur de fond de la tuile Windows -->
+    <meta name="msapplication-TileImage" content="/images/mstile-150x150.png" />
+    <meta name="application-name" content="Congopro" />
+
     <link
       rel="preload"
       href="/css/style.min.css?h={{.CSSVersion}}"
@@ -47,14 +151,14 @@
     >
       <div class="mb-8 select-none text-center">
         <span
-          class="font-google font-normal text-4xl sm:text-[52px] md:text-[64px] tracking-tight leading-none flex items-center justify-center gap-2 sm:gap-3"
+          class="font-sora font-normal text-4xl sm:text-[52px] md:text-[64px] tracking-tight leading-none flex items-center justify-center gap-2 sm:gap-3"
         >
           <span>
-            <span class="g-redx">C</span><span class="g-redx">o</span
-            ><span class="g-redx">n</span><span class="g-redx">g</span
-            ><span class="g-redx">o</span><span class="g-redx">p</span
-            ><span class="g-redx">r</span><span class="g-redx">o</span>
-            <span class="text-gray-700"> Bridge</span>
+            <span class="font-sora g-redx">C</span><span class="font-sora g-redx">o</span
+            ><span class="font-sora g-redx">n</span><span class="font-sora g-redx">g</span
+            ><span class="font-sora g-redx">o</span><span class="font-sora g-redx">p</span
+            ><span class="font-sora g-redx">r</span><span class="font-sora g-redx">o</span>
+            <span class="font-sora text-gray-700"> Bridge.</span>
           </span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -148,7 +252,7 @@
     >
       <h1
         id="staticTitle"
-        class="text-3xl font-google font-normal text-gray-900 mb-6"
+        class="text-3xl font-sora font-normal text-gray-900 mb-6"
       ></h1>
       <div
         id="staticContent"
@@ -164,15 +268,15 @@
           <a
             id="logoLink"
             href="#"
-            class="font-google text-[24px] sm:text-[26px] tracking-tight shrink-0 select-none leading-none flex items-center gap-1.5"
+            class="font-sora text-[24px] sm:text-[26px] tracking-tight shrink-0 select-none leading-none flex items-center gap-1.5"
           >
             <span>
-              <span class="g-blue">C</span><span class="g-red">o</span
-              ><span class="g-yellow">n</span><span class="g-green">g</span
-              ><span class="g-blue">o</span><span class="g-red">p</span
-              ><span class="g-yellow">r</span><span class="g-green">o</span>
-              <span class="text-gray-600 text-[20px] sm:text-[22px]">
-                Bridge</span
+              <span class="font-sora g-blue">C</span><span class="font-sora g-red">o</span
+              ><span class="font-sora g-yellow">n</span><span class="font-sora g-green">g</span
+              ><span class="font-sora g-blue">o</span><span class="font-sora g-red">p</span
+              ><span class="font-sora g-yellow">r</span><span class="font-sora g-green">o</span>
+              <span class="font-sora text-gray-600 text-[20px] sm:text-[22px]">
+                Bridge.</span
               >
             </span>
             <svg
@@ -405,10 +509,13 @@
         };
       }
       function esc(s) {
+        if (!s) return "";
         return String(s)
-          .replace(/&/g, "&")
-          .replace(/</g, "<")
-          .replace(/>/g, ">");
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
       }
       function excerpt(text, max) {
         if (!text) return "";
@@ -475,7 +582,7 @@
         }
 
         // cleaning
-        document.getElementById("aiContent").innerHTML = '';
+        document.getElementById("aiContent").innerHTML = "";
 
         window.scrollTo(0, 0);
         resultsPage.classList.add("hidden");
@@ -533,22 +640,6 @@
         const addr2 = c.address_line_2 || "";
         const city = c.city || "";
         const country = c.country || "";
-
-        // Metadata (Freshness & Popularity)
-        const views = ""; // c.stats_show > 0 ? `${c.stats_show.toLocaleString()} views` : "";
-        let dateStr = "";
-        // if (c.updated_at && !c.updated_at.startsWith("0001-01-01")) {
-        //   const d = new Date(c.updated_at);
-        //   if (!isNaN(d)) {
-        //     // Formats to something like "Oct 12, 2023"
-        //     dateStr = d.toLocaleDateString(undefined, {
-        //       year: "numeric",
-        //       month: "short",
-        //       day: "numeric",
-        //     });
-        //   }
-        // }
-
         const domain =
           website?.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?#]+)/)?.[1] ?? null;
 
@@ -638,11 +729,6 @@
           </div>
 
           <p class="result-desc mt-1.5">
-            ${
-              dateStr || views
-                ? `<span class="text-gray-500 font-medium mr-1 whitespace-nowrap">${[dateStr, views].filter(Boolean).join(" · ")} —</span>`
-                : ""
-            }
             ${desc ? highlight(desc, q) : ""}
           </p>
         </div>
@@ -806,11 +892,11 @@
             showHome();
           }
         } else if (path === "/help") {
-          fetchStaticContent("Help & Support", "help");
+          fetchStaticContent("Aide et Assistance", "help");
         } else if (path === "/privacy") {
-          fetchStaticContent("Privacy Policy", "privacy");
+          fetchStaticContent("Politique de Confidentialité", "privacy");
         } else if (path === "/terms") {
-          fetchStaticContent("Terms of Service", "terms");
+          fetchStaticContent("Conditions d'Utilisation", "terms");
         } else {
           // Route: Home OR a Shared Search Link
           const urlParams = new URLSearchParams(window.location.search);
@@ -1081,18 +1167,20 @@
         }
         const slots = [],
           seen = new Set();
+        let itemsExamined = 0;
         for (
           let i = 0;
           i < pool.length && slots.length < adState.maxPerPage;
           i++
         ) {
+          ++itemsExamined;
           const ad = pool[(adState.cursor + i) % pool.length];
           if (!seen.has(ad.id)) {
             seen.add(ad.id);
             slots.push(ad);
           }
         }
-        adState.cursor = (adState.cursor + 1) % pool.length;
+        adState.cursor = (adState.cursor + itemsExamined) % pool.length;
         adContainer.innerHTML = slots.map(renderAdSlot).join("");
         adContainer.classList.remove("hidden");
         resultsLabel.classList.toggle("hidden", !slots.length);

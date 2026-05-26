@@ -1,10 +1,12 @@
 package main
 
 import (
-	"bufio"
+	"context"
 	"encoding/json"
+	"fmt"
 	"html"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"unicode"
@@ -12,391 +14,424 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 
+	"gopkg.in/yaml.v3"
+
 	"congopro-bridge/internal/logger"
 )
 
-// --- ID extraction (unchanged) ---
+// =============================================================================
+// 1. CORE INTERFACES & CONFIGURATION TYPES
+// =============================================================================
 
-func extractID(record map[string]interface{}) string {
-	if id, ok := record["_id"].(string); ok {
-		return id
-	}
-	if id, ok := record["id"].(string); ok {
-		return id
-	}
-	if idObj, ok := record["_id"].(map[string]interface{}); ok {
-		if oid, ok := idObj["$oid"].(string); ok {
-			return oid
-		}
-	}
-	return ""
+type PipelineStep interface {
+	Name() string
+	Process(ctx context.Context, records []map[string]interface{}) ([]map[string]interface{}, error)
 }
 
-// --- Feature: spam detection ---
-
-var spamPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`),              // Emails
-	regexp.MustCompile(`(?i)(https?://|www\.)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/[^\s]*)?`), // URLs
-	regexp.MustCompile(`(?i)<[a-z/][^>]*>`),                                           // HTML tags
-	regexp.MustCompile(`(?i)hs=[a-f0-9]{20,}`),                                        // Spam hashes
-	regexp.MustCompile(`(?i)\$\d+(?:,\d+)?\s+deposit`),                                // Money spam
+// PipelineConfig represents the top-level YAML structure.
+type PipelineConfig struct {
+	Pipeline []StepConfig `yaml:"pipeline"`
 }
 
-func runSpamFeature(
-	records []map[string]interface{},
-	fields []string,
-	autoMode string,
-	scanner *bufio.Scanner,
-) ([]map[string]interface{}, int) {
-	idsToDelete := make(map[string]bool)
+// StepConfig represents a single step configuration from the YAML file.
+type StepConfig struct {
+	Type    string   `yaml:"type"`
+	Fields  []string `yaml:"fields"`
+	Workers int      `yaml:"workers,omitempty"`
+	Action  string   `yaml:"action,omitempty"`
+}
 
-	for i, record := range records {
-		recordName := "Unknown"
-		if n, ok := record["name"].(string); ok {
-			recordName = n
-		}
-		recordID := extractID(record)
-		shouldDeleteRecord := false
+// =============================================================================
+// 2. CONFIGURATION LOADER & PIPELINE FACTORY
+// =============================================================================
 
-		for _, field := range fields {
-			val, ok := record[field].(string)
-			if !ok || val == "" {
-				continue
+func LoadConfig(filename string) ([]PipelineStep, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var config PipelineConfig
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
+	return buildPipeline(config)
+}
+
+func buildPipeline(config PipelineConfig) ([]PipelineStep, error) {
+	var pipeline []PipelineStep
+
+	for _, stepCfg := range config.Pipeline {
+		switch stepCfg.Type {
+		case "capitalization":
+			pipeline = append(pipeline, &CapStep{
+				Fields: stepCfg.Fields,
+			})
+
+		case "address_normalizer":
+			pipeline = append(pipeline, &AddressCleanStep{
+				Fields: stepCfg.Fields,
+			})
+
+		case "link_validator":
+			workers := stepCfg.Workers
+			if workers <= 0 {
+				workers = 10
 			}
+			pipeline = append(pipeline, &LinkValidatorStep{
+				Fields:     stepCfg.Fields,
+				MaxWorkers: workers,
+			})
 
-			decodedStr := html.UnescapeString(val)
-			var matches []string
-			for _, pattern := range spamPatterns {
-				matches = append(matches, pattern.FindAllString(decodedStr, -1)...)
+		case "empty_remover":
+			action := stepCfg.Action
+			if action == "" {
+				action = "empty_field"
 			}
-			if len(matches) == 0 {
-				continue
-			}
+			pipeline = append(pipeline, &EmptyRemoverStep{
+				Fields: stepCfg.Fields,
+				Action: action,
+			})
 
-			for _, match := range matches {
-				answer := autoMode
-				if answer == "" {
-					log.Warn().Msgf("\n[!] Suspicious data in %q (field: %s)", recordName, field)
-					log.Info().Msgf("    Match: %s", match)
-					log.Info().Msg("    Action: (d)elete record  (c)lear field  (k)eep: ")
-					scanner.Scan()
-					answer = strings.ToLower(strings.TrimSpace(scanner.Text()))
-				}
+		case "html_stripper":
+			pipeline = append(pipeline, &HtmlStripStep{
+				Fields: stepCfg.Fields,
+			})
 
-				switch {
-				case answer == "d" || answer == "delete":
-					if recordID != "" {
-						idsToDelete[recordID] = true
-						shouldDeleteRecord = true
-						if autoMode == "" {
-							log.Info().Msg("    -> Record flagged for deletion.")
-						}
-					} else if autoMode == "" {
-						log.Warn().Msg("    -> No ID found; cannot delete record.")
-					}
-				case answer == "c" || answer == "clear":
-					decodedStr = strings.ReplaceAll(decodedStr, match, "")
-					if autoMode == "" {
-						log.Info().Msg("    -> Field cleared.")
-					}
-				default:
-					if autoMode == "" {
-						log.Info().Msg("    -> Kept.")
-					}
-				}
+		case "phone_normalizer":
+			pipeline = append(pipeline, &PhoneNormalizeStep{
+				Fields: stepCfg.Fields,
+			})
 
-				if shouldDeleteRecord {
-					break
-				}
-			}
+		case "field_dropper":
+			pipeline = append(pipeline, &FieldDropStep{
+				Fields: stepCfg.Fields,
+			})
 
-			if !shouldDeleteRecord {
-				record[field] = strings.TrimSpace(decodedStr)
-				records[i] = record
-			}
+		case "whitespace_trimmer":
+			pipeline = append(pipeline, &WhitespaceTrimStep{
+				Fields: stepCfg.Fields,
+			})
+
+		case "email_remover":
+			pipeline = append(pipeline, &EmailRemoveStep{
+				Fields: stepCfg.Fields,
+			})
+
+		case "city_normalizer":
+			pipeline = append(pipeline, &CityNormalizeStep{})
+
+		default:
+			return nil, fmt.Errorf("unknown pipeline step type: %q", stepCfg.Type)
 		}
 	}
 
-	final := make([]map[string]interface{}, 0, len(records))
+	return pipeline, nil
+}
+
+// =============================================================================
+// 3. PIPELINE STEP IMPLEMENTATIONS
+// =============================================================================
+
+// --- Feature: Capitalization ---
+
+type CapStep struct {
+	Fields []string
+}
+
+func (s *CapStep) Name() string { return "Capitalization" }
+
+func (s *CapStep) Process(_ context.Context, records []map[string]interface{}) ([]map[string]interface{}, error) {
 	for _, record := range records {
-		if !idsToDelete[extractID(record)] {
-			final = append(final, record)
+		for _, field := range s.Fields {
+			if val, ok := record[field].(string); ok && val != "" {
+				record[field] = customTitle(val)
+			}
 		}
 	}
-	return final, len(idsToDelete)
+	return records, nil
 }
 
-// --- Feature: capitalization ---
-
-// titleCase applies context-aware title casing. Rules applied in order:
-//
-//  1. First word all-lowercase → capitalize it ("hello" → "Hello").
-//  2. First word all-uppercase with ≤2 letters → recase ("DA" → "Da").
-//     Short all-caps tokens are unlikely to be intentional brand names.
-//  3. First word anything else (mixed-case or long all-caps) → preserve
-//     ("iPhone", "CHOLA", "McGee" kept verbatim).
-//  4. Subsequent words: recase to Title Case unless already correct OR the
-//     first word was mixed-case (signals intentional casing on the whole
-//     string, e.g. "iPhone accessories" — "accessories" is kept lowercase).
-//
-// Examples:
-//
-//	"DA SAFI DECOR"      → "Da Safi Decor"
-//	"iPhone accessories" → "iPhone accessories"
-//	"McGee & Sons"       → "McGee & Sons"
-//	"hello world"        → "Hello World"
-//	"Groupe CHOLA"       → "Groupe Chola"
-//	"CHOLA Groupe"       → "CHOLA Groupe"
-//	"CHOLA GROUPE"       → "CHOLA Groupe"
-//	"CHOLA GrOupe"       → "CHOLA Groupe"
-func titleCase(s string) string {
+func customTitle(s string) string {
 	words := strings.Fields(s)
 	if len(words) == 0 {
 		return s
 	}
-
-	firstAllLower := wordAllLower(words[0])
-	firstAllUpper := wordAllUpper(words[0])
-	firstMixed := !firstAllLower && !firstAllUpper
-
+	var b strings.Builder
 	for i, w := range words {
-		if i == 0 {
-			switch {
-			case firstAllLower:
-				words[i] = recaseWord(w)
-			case firstAllUpper && letterCount(w) <= 2:
-				// Short all-caps first word ("DA"): not a brand, recase.
-				words[i] = recaseWord(w)
-			default:
-				// Mixed-case or long all-caps first word: preserve verbatim.
-			}
-			continue
+		if i > 0 {
+			b.WriteByte(' ')
 		}
-
-		// Subsequent words.
-		if firstMixed {
-			// Mixed-case first word: only fix wrongly-cased words; leave
-			// all-lowercase words alone (they are intentionally lowercase).
-			if !isTitleCased(w) && !wordAllLower(w) {
-				words[i] = recaseWord(w)
-			}
-		} else {
-			// Uniform first word (all-lower or all-upper): normalize every
-			// subsequent word that is not already title-cased.
-			if !isTitleCased(w) {
-				words[i] = recaseWord(w)
-			}
-		}
+		b.WriteString(processWord(w))
 	}
-	return strings.Join(words, " ")
+	return b.String()
 }
 
-// recaseWord returns w with its first letter uppercased and the rest lowercased.
-func recaseWord(w string) string {
-	runes := []rune(w)
-	if len(runes) == 0 {
-		return w
+func processWord(w string) string {
+	idx := strings.IndexAny(w, "'")
+	if idx == -1 {
+		return titleCase(w)
 	}
+
+	prefix := w[:idx]
+	suffix := w[idx+1:]
+	prefix = strings.ToLower(prefix)
+	suffix = titleCase(suffix)
+
+	return prefix + "'" + suffix
+}
+
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	runes := []rune(s)
 	runes[0] = unicode.ToUpper(runes[0])
-	for j := 1; j < len(runes); j++ {
-		runes[j] = unicode.ToLower(runes[j])
+	for i := 1; i < len(runes); i++ {
+		runes[i] = unicode.ToLower(runes[i])
 	}
 	return string(runes)
 }
 
-// isTitleCased returns true if w's first letter is uppercase and all
-// subsequent letters are lowercase (non-letter runes are ignored).
-func isTitleCased(w string) bool {
-	letters := make([]rune, 0, len(w))
-	for _, r := range w {
-		if unicode.IsLetter(r) {
-			letters = append(letters, r)
-		}
-	}
-	if len(letters) == 0 {
-		return true
-	}
-	if !unicode.IsUpper(letters[0]) {
-		return false
-	}
-	for _, r := range letters[1:] {
-		if unicode.IsUpper(r) {
-			return false
-		}
-	}
-	return true
+// --- Feature: Address Normalizer ---
+
+type AddressCleanStep struct {
+	Fields []string
 }
 
-// wordAllUpper returns true if w has at least one letter and every letter is uppercase.
-func wordAllUpper(w string) bool {
-	hasLetter := false
-	for _, r := range w {
-		if unicode.IsLetter(r) {
-			hasLetter = true
-			if unicode.IsLower(r) {
-				return false
-			}
-		}
-	}
-	return hasLetter
+var addressReplacements = []struct {
+	re          *regexp.Regexp
+	replacement string
+}{
+	{regexp.MustCompile(`(?i)\b(ave|avenue)\b`), "avenue"},
+	{regexp.MustCompile(`(?i)\b(r\.|rue)\b`), "rue"},
+	{regexp.MustCompile(`(?i)\b(blvd|boulevard)\b`), "boulevard"},
 }
 
-// wordAllLower returns true if w has at least one letter and every letter is lowercase.
-func wordAllLower(w string) bool {
-	hasLetter := false
-	for _, r := range w {
-		if unicode.IsLetter(r) {
-			hasLetter = true
-			if unicode.IsUpper(r) {
-				return false
-			}
-		}
-	}
-	return hasLetter
-}
+func (s *AddressCleanStep) Name() string { return "Address Normalizer" }
 
-// letterCount returns the number of Unicode letters in w.
-func letterCount(w string) int {
-	n := 0
-	for _, r := range w {
-		if unicode.IsLetter(r) {
-			n++
-		}
-	}
-	return n
-}
-
-func runCapFeature(records []map[string]interface{}, fields []string) []map[string]interface{} {
+func (s *AddressCleanStep) Process(_ context.Context, records []map[string]interface{}) ([]map[string]interface{}, error) {
 	for _, record := range records {
-		for _, field := range fields {
-			val, ok := record[field].(string)
-			if !ok || val == "" {
-				log.Debug().Msgf("[cap] field %q missing or not a string, skipping", field)
-				continue
+		for _, field := range s.Fields {
+			if val, ok := record[field].(string); ok && val != "" {
+				cleanVal := strings.Join(strings.Fields(val), " ")
+				for _, r := range addressReplacements {
+					cleanVal = r.re.ReplaceAllString(cleanVal, r.replacement)
+				}
+				record[field] = cleanVal
 			}
-			capped := titleCase(val)
-			log.Debug().Msgf("[cap] %q: %q -> %q", field, val, capped)
-			record[field] = capped
 		}
 	}
-	return records
+	return records, nil
 }
 
-// --- Main ---
+// --- Feature: Empty Field Handler ---
+
+type EmptyRemoverStep struct {
+	Fields []string
+	Action string // "delete_record" or "empty_field"
+}
+
+func (s *EmptyRemoverStep) Name() string { return "Empty Field Handler" }
+
+func (s *EmptyRemoverStep) Process(_ context.Context, records []map[string]interface{}) ([]map[string]interface{}, error) {
+	var finalRecords []map[string]interface{}
+
+	for _, record := range records {
+		shouldDelete := false
+
+		for _, field := range s.Fields {
+			val, exists := record[field]
+			isEmpty := !exists || val == nil
+			if !isEmpty {
+				strVal, isStr := val.(string)
+				if isStr && strings.TrimSpace(strVal) == "" {
+					isEmpty = true
+				}
+			}
+
+			if isEmpty {
+				if s.Action == "delete_record" {
+					shouldDelete = true
+					break
+				} else if s.Action == "empty_field" {
+					record[field] = ""
+				}
+			} else {
+				record[field] = ""
+			}
+		}
+
+		if !shouldDelete {
+			finalRecords = append(finalRecords, record)
+		}
+	}
+
+	return finalRecords, nil
+}
+
+// --- Feature: HTML Stripper ---
+
+type HtmlStripStep struct {
+	Fields []string
+}
+
+func (s *HtmlStripStep) Name() string { return "HTML Stripper" }
+
+var htmlTagRe = regexp.MustCompile(`<[^>]+>`)
+
+func (s *HtmlStripStep) Process(_ context.Context, records []map[string]interface{}) ([]map[string]interface{}, error) {
+	for _, record := range records {
+		for _, field := range s.Fields {
+			if val, ok := record[field].(string); ok && val != "" {
+				stripped := htmlTagRe.ReplaceAllString(val, "")
+				unescaped := html.UnescapeString(stripped)
+				record[field] = strings.Join(strings.Fields(unescaped), " ")
+			}
+		}
+	}
+	return records, nil
+}
+
+// --- Feature: Phone Normalizer ---
+
+type PhoneNormalizeStep struct {
+	Fields []string
+}
+
+func (s *PhoneNormalizeStep) Name() string { return "Phone Normalizer" }
+
+func (s *PhoneNormalizeStep) Process(_ context.Context, records []map[string]interface{}) ([]map[string]interface{}, error) {
+	for _, record := range records {
+		for _, field := range s.Fields {
+			if val, ok := record[field].(string); ok && val != "" {
+				clean := strings.ReplaceAll(val, " ", "")
+				clean = strings.ReplaceAll(clean, "-", "")
+				record[field] = clean
+			}
+		}
+	}
+	return records, nil
+}
+
+// --- Feature: Field Dropper ---
+
+type FieldDropStep struct {
+	Fields []string
+}
+
+func (s *FieldDropStep) Name() string { return "Field Dropper" }
+
+func (s *FieldDropStep) Process(_ context.Context, records []map[string]interface{}) ([]map[string]interface{}, error) {
+	for _, record := range records {
+		for _, field := range s.Fields {
+			delete(record, field)
+		}
+	}
+	return records, nil
+}
+
+// --- Feature: Whitespace Trimmer ---
+
+type WhitespaceTrimStep struct {
+	Fields []string
+}
+
+func (s *WhitespaceTrimStep) Name() string { return "Whitespace Trimmer" }
+
+func (s *WhitespaceTrimStep) Process(_ context.Context, records []map[string]interface{}) ([]map[string]interface{}, error) {
+	for _, record := range records {
+		for _, field := range s.Fields {
+			if val, ok := record[field].(string); ok {
+				record[field] = strings.TrimSpace(val)
+			}
+		}
+	}
+	return records, nil
+}
+
+// --- Feature: Email Remover ---
+
+type EmailRemoveStep struct {
+	Fields []string
+}
+
+var emailRegex = regexp.MustCompile(`(?i)[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
+
+func (s *EmailRemoveStep) Name() string { return "Email Remover" }
+
+func (s *EmailRemoveStep) Process(_ context.Context, records []map[string]interface{}) ([]map[string]interface{}, error) {
+	for _, record := range records {
+		for _, field := range s.Fields {
+			if val, ok := record[field].(string); ok && val != "" {
+				cleanVal := emailRegex.ReplaceAllString(val, "")
+				cleanVal = strings.Join(strings.Fields(cleanVal), " ")
+				record[field] = cleanVal
+			}
+		}
+	}
+	return records, nil
+}
+
+// =============================================================================
+// 4. MAIN APPLICATION ENTRY POINT
+// =============================================================================
 
 func main() {
-	logger.Init(true)
-
+	logger.Init(logger.Application)
 	app := &cli.App{
-		Name:  "data-cleaner",
-		Usage: "Clean and normalize JSON record files",
+		Name:  filepath.Base(os.Args[0]),
+		Usage: "Config-driven JSON data normalization pipeline",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "in",
-				Aliases: []string{"i"},
-				Value:   "data.json",
-				Usage:   "Input JSON file path",
-				EnvVars: []string{},
-			},
-			&cli.StringFlag{
-				Name:    "out",
-				Aliases: []string{"o"},
-				Value:   "cleaned_data.json",
-				Usage:   "Output JSON file path",
-			},
-			// Shared fields default — overridden per-feature when set explicitly.
-			&cli.StringFlag{
-				Name:  "fields",
-				Value: "name,slogan",
-				Usage: "Default comma-separated fields applied to all enabled features",
-			},
-
-			// --- Spam feature ---
-			&cli.BoolFlag{
-				Name:  "feature-spam",
-				Usage: "Enable spam detection and removal",
-			},
-			&cli.StringFlag{
-				Name:  "spam-fields",
-				Usage: "Fields to scan for spam (overrides --fields for this feature)",
-			},
-			&cli.StringFlag{
-				Name:  "spam-auto",
-				Usage: "Auto action for spam: 'clear', 'delete', or 'keep' (leave empty for interactive)",
-			},
-
-			// --- Capitalize feature ---
-			&cli.BoolFlag{
-				Name:  "feature-cap",
-				Usage: "Enable title-case capitalization of fields",
-			},
-			&cli.StringFlag{
-				Name:  "cap-fields",
-				Usage: "Fields to capitalize (overrides --fields for this feature)",
-			},
+			&cli.StringFlag{Name: "in", Aliases: []string{"i"}, Value: "data.json", Usage: "Input JSON file"},
+			&cli.StringFlag{Name: "out", Aliases: []string{"o"}, Value: "cleaned.json", Usage: "Output JSON file"},
+			&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Value: "cleanr-rules.yml", Usage: "Pipeline config YAML file"},
+			&cli.BoolFlag{Name: "continue-on-error", Usage: "Continue pipeline execution if a step fails (default: abort)"},
 		},
-
 		Action: func(c *cli.Context) error {
+			ctx := context.Background()
+
+			pipeline, err := LoadConfig(c.String("config"))
+			if err != nil {
+				return fmt.Errorf("failed to load pipeline configuration: %w", err)
+			}
+
 			inFile := c.String("in")
 			outFile := c.String("out")
-			defaultFields := splitFields(c.String("fields"))
+			continueOnError := c.Bool("continue-on-error")
 
-			featureSpam := c.Bool("feature-spam")
-			featureCap := c.Bool("feature-cap")
-
-			if !featureSpam && !featureCap {
-				log.Warn().Msg("No features enabled. Use --feature-spam and/or --feature-cap.")
-				return nil
-			}
-
-			// Load records
 			data, err := os.ReadFile(inFile)
 			if err != nil {
-				log.Error().Msgf("Can't read %q: %v", inFile, err)
-				os.Exit(1)
+				return fmt.Errorf("read failed: %w", err)
 			}
+
 			var records []map[string]interface{}
 			if err := json.Unmarshal(data, &records); err != nil {
-				log.Error().Msgf("Can't parse JSON: %v", err)
-				os.Exit(1)
-			}
-			originalCount := len(records)
-
-			deletedCount := 0
-			scanner := bufio.NewScanner(os.Stdin)
-
-			// Run spam feature
-			if featureSpam {
-				fields := resolveFields(c.String("spam-fields"), defaultFields)
-				autoMode := strings.ToLower(strings.TrimSpace(c.String("spam-auto")))
-				records, deletedCount = runSpamFeature(records, fields, autoMode, scanner)
-				log.Info().Msgf("[spam] Deleted %d record(s).", deletedCount)
+				return fmt.Errorf("parse failed: %w", err)
 			}
 
-			// Run capitalize feature
-			if featureCap {
-				fields := resolveFields(c.String("cap-fields"), defaultFields)
-				records = runCapFeature(records, fields)
-				log.Info().Msgf("[cap] Capitalized fields: %s", strings.Join(fields, ", "))
+			for _, step := range pipeline {
+				log.Info().Msgf("Running step: %s", step.Name())
+				records, err = step.Process(ctx, records)
+				if err != nil {
+					if continueOnError {
+						log.Warn().Err(err).Msgf("Step %q failed, continuing (data may be incomplete)", step.Name())
+					} else {
+						return fmt.Errorf("step %q failed: %w", step.Name(), err)
+					}
+				}
 			}
 
-			// Summary
-			log.Info().Msg("--- Cleanup Summary ---")
-			log.Info().Msgf("Original : %d", originalCount)
-			log.Info().Msgf("Deleted  : %d", deletedCount)
-			log.Info().Msgf("Final    : %d", len(records))
-
-			// Write output
 			cleanedJSON, err := json.MarshalIndent(records, "", "  ")
 			if err != nil {
-				log.Error().Msgf("Error marshaling JSON: %v", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to marshal output JSON: %w", err)
 			}
 			if err := os.WriteFile(outFile, cleanedJSON, 0644); err != nil {
-				log.Error().Msgf("Error writing %q: %v", outFile, err)
-				os.Exit(1)
+				return fmt.Errorf("write failed: %w", err)
 			}
-			log.Info().Msgf("✅ Saved to %s", outFile)
+
+			log.Info().Msgf("Successfully wrote cleaned data to %s", outFile)
 			return nil
 		},
 	}
@@ -404,22 +439,4 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal().Err(err).Send()
 	}
-}
-
-// resolveFields returns the feature-specific fields if set, otherwise the default.
-func resolveFields(featureFields string, defaultFields []string) []string {
-	if featureFields != "" {
-		return splitFields(featureFields)
-	}
-	return defaultFields
-}
-
-func splitFields(s string) []string {
-	var out []string
-	for _, f := range strings.Split(s, ",") {
-		if f = strings.TrimSpace(f); f != "" {
-			out = append(out, f)
-		}
-	}
-	return out
 }

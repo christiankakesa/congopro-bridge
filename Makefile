@@ -103,6 +103,14 @@ docker-down-v:
 	docker volume rm congopro-bridge_meili_data 2>/dev/null || true
 	@echo "✓ Services stopped, meili_data removed, ollama_data preserved"
 
+docker-logs:
+	@echo "▶ Starting docker logs…"
+	docker compose logs -f
+
+docker-logs-app:
+	@echo "▶ Starting docker logs…"
+	docker compose logs -f app
+
 meili-reset:
 	@echo "▶ Resetting Meilisearch index (keeping Ollama models)…"
 	docker compose stop meilisearch

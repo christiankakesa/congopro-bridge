@@ -6,6 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -28,7 +29,8 @@ import (
 var CompaniesJSON []byte
 
 const (
-	MaxResults = 30
+	MaxResults        = 30
+	CompanySlugPrefix = "-company-slug:"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -525,21 +527,20 @@ func (e *Engine) indexMeili(companies []Company) error {
 func (e *Engine) Search(q string) ([]SearchResult, error) {
 	e.mu.RLock()
 	companyMap := e.companyMap
-	slugMap := e.slugMap
 	e.mu.RUnlock()
 
 	q = strings.TrimSpace(q)
 	if q == "" {
-		return []SearchResult{}, nil
+		return []SearchResult{}, errors.New("Empty query")
 	}
 
-	const slugPrefix = "-company-slug:"
-	if strings.HasPrefix(q, slugPrefix) {
-		slug := strings.TrimSpace(strings.TrimPrefix(q, slugPrefix))
-		if c, found := slugMap[slug]; found {
-			return []SearchResult{{Company: *c, Score: 1.0}}, nil
+	if strings.HasPrefix(q, CompanySlugPrefix) {
+		slug := strings.TrimSpace(strings.TrimPrefix(q, CompanySlugPrefix))
+		c, err := e.FindBySlug(slug)
+		if err != nil {
+			return []SearchResult{}, err
 		}
-		return []SearchResult{}, nil
+		return []SearchResult{{Company: *c, Score: 1.0}}, nil
 	}
 
 	start := time.Now()
@@ -582,6 +583,18 @@ func (e *Engine) Search(q string) ([]SearchResult, error) {
 	}
 
 	return results, nil
+}
+
+func (e *Engine) FindBySlug(slug string) (*Company, error) {
+	e.mu.RLock()
+	slugMap := e.slugMap
+	e.mu.RUnlock()
+
+	if c, found := slugMap[slug]; found {
+		return c, nil
+	}
+
+	return nil, fmt.Errorf("Company's slug not found: %s", slug)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
