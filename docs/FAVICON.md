@@ -45,7 +45,7 @@ convert -density 512 "/mnt/c/Users/chris/Downloads/Congopro Bridge - Logo Text -
 -resize 1200x630 \
 -extent 1200x630 \
 -quality 92 \
-./images/og-image.jpg
+./images/og-image.png
 
 convert -density 512 "/mnt/c/Users/chris/Downloads/Congopro Bridge - Logo Text - Horizontal.svg" \
 -background white \
@@ -53,7 +53,7 @@ convert -density 512 "/mnt/c/Users/chris/Downloads/Congopro Bridge - Logo Text -
 -resize 1200x630 \
 -extent 1200x630 \
 -quality 92 \
-./images/twitter-image.jpg
+./images/twitter-image.png
 
 convert -density 512 "./favicon.svg" \
 -background none \
