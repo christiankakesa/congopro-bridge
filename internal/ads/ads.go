@@ -1,6 +1,7 @@
 package ads
 
 import (
+	"congopro-bridge/internal/util"
 	_ "embed"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ type AdConfig struct {
 	Color       string   `yaml:"color"`
 	Period      AdPeriod `yaml:"period"`
 	Weight      int      `yaml:"weight"`
+	Placement   string   `yaml:"placement"`
 	Keywords    []string `yaml:"keywords"`
 
 	parsedStart   time.Time `yaml:"-"`
@@ -109,7 +111,7 @@ func LoadAds() {
 
 		ad.lowerKeywords = make([]string, len(ad.Keywords))
 		for j, kw := range ad.Keywords {
-			ad.lowerKeywords[j] = strings.ToLower(strings.TrimSpace(kw))
+			ad.lowerKeywords[j] = util.TextNormalize(kw)
 		}
 	}
 
@@ -128,17 +130,31 @@ func adInPeriod(ad *AdConfig, now time.Time) bool {
 
 func adMatchesQuery(ad *AdConfig, q string) bool {
 	if len(ad.lowerKeywords) == 0 {
-		return true
+		return true // Pack Notoriété
 	}
 	if q == "" {
 		return false
 	}
 
+	normalizedQuery := util.TextNormalize(q)
+	queryWords := strings.Fields(normalizedQuery)
+
 	for _, kw := range ad.lowerKeywords {
-		if strings.Contains(q, kw) {
-			return true
+		for _, word := range queryWords {
+			if word == kw || word == kw+"s" || word == kw+"x" {
+				return true
+			}
+		}
+
+		if kw != "" && strings.Contains(normalizedQuery, kw) {
+			paddedQuery := " " + normalizedQuery + " "
+			paddedKw := " " + kw + " "
+			if strings.Contains(paddedQuery, paddedKw) {
+				return true
+			}
 		}
 	}
+
 	return false
 }
 
@@ -148,18 +164,28 @@ func EligibleAds(q string, now time.Time) []AdWire {
 	}
 
 	q = strings.ToLower(strings.TrimSpace(q))
+	isHomepage := q == "" // Easy homepage detection
 
-	result := make([]AdWire, 0, 8)
+	keywordMatches := make([]AdWire, 0, 8)
+	globalMatches := make([]AdWire, 0, 8)
 
 	for i := range AdsConfig.Ads {
 		ad := &AdsConfig.Ads[i]
 
-		if !ad.Active {
+		if !ad.Active || !adInPeriod(ad, now) {
 			continue
 		}
-		if !adInPeriod(ad, now) {
-			continue
+
+		if isHomepage {
+			if ad.Placement != "homepage" {
+				continue
+			}
+		} else {
+			if ad.Placement == "homepage" {
+				continue
+			}
 		}
+
 		if !adMatchesQuery(ad, q) {
 			continue
 		}
@@ -180,10 +206,20 @@ func EligibleAds(q string, now time.Time) []AdWire {
 			Weight:      w,
 		}
 
-		for j := 0; j < w; j++ {
-			result = append(result, wire)
+		if len(ad.lowerKeywords) > 0 {
+			for j := 0; j < w; j++ {
+				keywordMatches = append(keywordMatches, wire)
+			}
+		} else {
+			for j := 0; j < w; j++ {
+				globalMatches = append(globalMatches, wire)
+			}
 		}
 	}
 
-	return result
+	if len(keywordMatches) > 0 {
+		return keywordMatches
+	}
+
+	return globalMatches
 }

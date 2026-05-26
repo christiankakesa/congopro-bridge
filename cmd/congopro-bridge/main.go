@@ -19,7 +19,13 @@ import (
 )
 
 func main() {
-	logger.Init(false)
+	logLevel := logger.DetectLogLevel()
+	logType := logger.DetectLogType()
+	if logType == logger.Terminal {
+		logType = logger.Application
+	}
+	logger.Init(logType, logger.Options{Level: logLevel})
+
 	cfg := config.Load()
 
 	ads.LoadAds()
@@ -38,31 +44,32 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// SEO
-	mux.HandleFunc("GET /robots.txt", api.RobotsTxt)
-	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
-
 	// Static
-	mux.HandleFunc("GET /fonts/", api.FontsHandler)
-	mux.HandleFunc("GET /css/style.min.css", api.TailwindCssHandler)
 	mux.HandleFunc("GET /favicon.ico", api.FaviconHandler)
+	mux.HandleFunc("GET /robots.txt", api.RobotsTxt)
+	mux.HandleFunc("GET /site.webmanifest", api.ServeManifest)
+	mux.HandleFunc("GET /fonts/", api.FontsHandler)
+	mux.HandleFunc("GET /images/", api.ImagesHandler)
+	mux.HandleFunc("GET /css/style.min.css", api.TailwindCssHandler)
 
 	// Static pages
-	mux.HandleFunc("GET /content/", apiAppEngine.WithCORS(api.ContentHandler))
-	mux.HandleFunc("GET /help", api.ServeSPAHandler)
-	mux.HandleFunc("GET /privacy", api.ServeSPAHandler)
-	mux.HandleFunc("GET /terms", api.ServeSPAHandler)
+	mux.HandleFunc("GET /help", apiAppEngine.HelpHandler)
+	mux.HandleFunc("GET /privacy", apiAppEngine.PrivacyHandler)
+	mux.HandleFunc("GET /terms", apiAppEngine.TermsHandler)
+	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
 
 	// Search API
 	mux.HandleFunc("GET /search", apiAppEngine.WithCORS(apiAppEngine.SearchHandler))
 	mux.HandleFunc("GET /ask", apiAppEngine.WithCORS(apiAppEngine.AIAnswerHandler))
-	mux.HandleFunc("GET /ads", apiAppEngine.WithCORS(api.AdsHandler))
+	mux.HandleFunc("GET /ads", apiAppEngine.WithCORS(apiAppEngine.AdsHandler))
 	mux.HandleFunc("GET /health", apiAppEngine.WithCORS(apiAppEngine.HealthHandler))
+	mux.HandleFunc("GET /content/", apiAppEngine.WithCORS(apiAppEngine.ContentHandler))
+
 	// Serves old company routes
-	mux.HandleFunc("GET /company/", api.ServeSPAHandler)
+	mux.HandleFunc("GET /company/", apiAppEngine.CompanyHandler)
 
 	// Default routes
-	mux.HandleFunc("/", api.FrontendHandler)
+	mux.HandleFunc("/", apiAppEngine.FrontendHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {

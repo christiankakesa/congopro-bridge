@@ -1,0 +1,629 @@
+<style>
+  :root {
+    --color-background: #23252b;
+    --color-text: #f2f2f2;
+    --color-text-secondary: #a8b0d5;
+    --color-border: #45495d;
+    --color-accent: #7a288a;
+    --color-success: #3b946d;
+    --color-warning: #b3721d;
+    --color-danger: #c35b5b;
+    --border-radius-md: 6px;
+    --font-mono: monospace;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: Arial, sans-serif;
+  }
+
+  .wrap {
+    padding: 1rem 0;
+    font-size: 14px;
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .sec-title {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+  }
+
+  .b-danger {
+    background: var(--color-danger);
+    color: var(--color-text);
+  }
+
+  .b-warn {
+    background: var(--color-warning);
+    color: var(--color-text);
+  }
+
+  .b-info {
+    background: var(--color-accent);
+    color: var(--color-text);
+  }
+
+  .b-success {
+    background: var(--color-success);
+    color: var(--color-text);
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .mcard {
+    background: #2c3137;
+    border-radius: var(--border-radius-md);
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+  }
+
+  .mcard .lbl {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .mcard .val {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--color-text);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    border-bottom: 0.5px solid var(--color-border);
+    padding: 6px 8px;
+    background-color: #2c3137;
+  }
+
+  td {
+    padding: 6px 8px;
+    border-bottom: 0.5px solid var(--color-border);
+    vertical-align: top;
+    color: var(--color-text);
+  }
+
+  td code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: #36393f;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .row-alt tr:nth-child(even) td {
+    background: #2c3137;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+
+  .dot-r {
+    background: #c35b5b;
+  }
+
+  .dot-o {
+    background: #b3721d;
+  }
+
+  .dot-b {
+    background: #7a288a;
+  }
+
+  .sep {
+    border-top: 0.5px solid var(--color-border);
+    margin: 1.5rem 0;
+  }
+</style>
+<h2 class="sr-only">
+  Rapport d'audit qualité — fichier companies_raw_beautyfied.json (1 534
+  entreprises)
+</h2>
+<div class="wrap">
+  <div class="cards">
+    <div class="mcard">
+      <div class="lbl">Entreprises total</div>
+      <div class="val">1 534</div>
+    </div>
+    <div class="mcard">
+      <div class="lbl">Villes uniques (brut)</div>
+      <div class="val">71</div>
+    </div>
+    <div class="mcard">
+      <div class="lbl">Anomalies relevées</div>
+      <div class="val" style="color: var(--color-text-danger)">14</div>
+    </div>
+    <div class="mcard">
+      <div class="lbl">Entrées suspectes/spam</div>
+      <div class="val" style="color: var(--color-text-warning)">~20</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">
+      <i class="ti ti-map-pin" aria-hidden="true"></i>1. Fautes d'orthographe —
+      champ <code>city</code>
+    </div>
+    <table class="row-alt">
+      <thead>
+        <tr>
+          <th>Valeur erronée</th>
+          <th>Valeur correcte</th>
+          <th>Occurrences</th>
+          <th>Gravité</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Kisnhasa</code></td>
+          <td><code>Kinshasa</code></td>
+          <td>1</td>
+          <td><span class="badge b-danger">Erreur</span></td>
+        </tr>
+        <tr>
+          <td><code>KINSHASA</code></td>
+          <td><code>Kinshasa</code></td>
+          <td>1</td>
+          <td><span class="badge b-warn">Casse</span></td>
+        </tr>
+        <tr>
+          <td><code>Kinshasa </code> (espace final)</td>
+          <td><code>Kinshasa</code></td>
+          <td>4</td>
+          <td><span class="badge b-warn">Espace</span></td>
+        </tr>
+        <tr>
+          <td><code>Lububmashi</code></td>
+          <td><code>Lubumbashi</code></td>
+          <td>1</td>
+          <td><span class="badge b-danger">Erreur</span></td>
+        </tr>
+        <tr>
+          <td><code>lubumbashi</code></td>
+          <td><code>Lubumbashi</code></td>
+          <td>2</td>
+          <td><span class="badge b-warn">Casse</span></td>
+        </tr>
+        <tr>
+          <td><code>Brazaville</code></td>
+          <td><code>Brazzaville</code></td>
+          <td>1</td>
+          <td><span class="badge b-danger">Erreur</span></td>
+        </tr>
+        <tr>
+          <td><code>BRAZZAVLLE</code></td>
+          <td><code>Brazzaville</code></td>
+          <td>1</td>
+          <td><span class="badge b-danger">Erreur + casse</span></td>
+        </tr>
+        <tr>
+          <td><code>Brazzaville </code> (espace final)</td>
+          <td><code>Brazzaville</code></td>
+          <td>2</td>
+          <td><span class="badge b-warn">Espace</span></td>
+        </tr>
+        <tr>
+          <td><code>Pointe Noire</code></td>
+          <td><code>Pointe-Noire</code></td>
+          <td>4</td>
+          <td><span class="badge b-warn">Trait d'union</span></td>
+        </tr>
+        <tr>
+          <td><code>Pointe-noire</code></td>
+          <td><code>Pointe-Noire</code></td>
+          <td>1</td>
+          <td><span class="badge b-warn">Casse</span></td>
+        </tr>
+        <tr>
+          <td><code>Pointe noire</code></td>
+          <td><code>Pointe-Noire</code></td>
+          <td>1</td>
+          <td><span class="badge b-warn">Casse + tiret</span></td>
+        </tr>
+        <tr>
+          <td><code>Pointe Noire </code> (espace final)</td>
+          <td><code>Pointe-Noire</code></td>
+          <td>2</td>
+          <td><span class="badge b-warn">Espace + tiret</span></td>
+        </tr>
+        <tr>
+          <td><code>Point-Noire</code></td>
+          <td><code>Pointe-Noire</code></td>
+          <td>1</td>
+          <td><span class="badge b-danger">Erreur</span></td>
+        </tr>
+        <tr>
+          <td><code>Kolwezi </code> (espace final)</td>
+          <td><code>Kolwezi</code></td>
+          <td>2</td>
+          <td><span class="badge b-warn">Espace</span></td>
+        </tr>
+        <tr>
+          <td><code>Butembo </code> (espace final)</td>
+          <td><code>Butembo</code></td>
+          <td>1</td>
+          <td><span class="badge b-warn">Espace</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p
+      style="
+        margin-top: 8px;
+        color: var(--color-text-secondary);
+        font-size: 12px;
+      "
+    >
+      En tout, <strong>Pointe-Noire</strong> compte 7 variantes distinctes pour
+      90 entreprises. C'est le champ le plus dégradé.
+    </p>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="section">
+    <div class="sec-title">
+      <i class="ti ti-building-community" aria-hidden="true"></i>2. Confusion
+      Ville / Commune
+    </div>
+    <table class="row-alt">
+      <thead>
+        <tr>
+          <th>Problème</th>
+          <th>Exemples</th>
+          <th>Nb</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            Commune de Kinshasa utilisée dans <code>city</code> au lieu de
+            <code>Kinshasa</code>
+          </td>
+          <td>
+            <code>Ngaliema</code>, <code>Masina</code>, <code>Barumbu</code>,
+            <code>Lingwala</code>, <code>Maluku</code>, <code>Gombe</code>
+          </td>
+          <td>8</td>
+        </tr>
+        <tr>
+          <td>
+            <code>address_line_2</code> utilisé comme champ commune (parfois
+            préfixé « Commune de »)
+          </td>
+          <td>
+            <code>Gombe</code> (143×), <code>Commune de la Gombe</code> (35×),
+            <code>Limete</code> (18×), <code>Ngaliema</code> (13×)
+          </td>
+          <td>~300</td>
+        </tr>
+        <tr>
+          <td><code>address_line_2</code> utilisé comme boîte postale (BP)</td>
+          <td>
+            <code>BP. 1588</code>, <code>BP. 8834</code>, <code>BP 2484</code>…
+          </td>
+          <td>9</td>
+        </tr>
+        <tr>
+          <td>Valeur trop longue dans <code>city</code> (phrase entière)</td>
+          <td><code>Brazzaville et Pointe-Noire, République du Congo</code></td>
+          <td>1</td>
+        </tr>
+      </tbody>
+    </table>
+    <p
+      style="
+        margin-top: 8px;
+        color: var(--color-text-secondary);
+        font-size: 12px;
+      "
+    >
+      Recommandation : créer un champ <code>commune</code> dédié et y migrer les
+      valeurs de <code>address_line_2</code> qui correspondent à des communes.
+    </p>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="section">
+    <div class="sec-title">
+      <i class="ti ti-globe" aria-hidden="true"></i>3. Incohérences Ville / Pays
+    </div>
+    <table class="row-alt">
+      <thead>
+        <tr>
+          <th>Entreprise</th>
+          <th>City</th>
+          <th>Country déclaré</th>
+          <th>Problème</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>SPHINX OILFIELD CONGO</td>
+          <td><code>Pointe-Noire</code></td>
+          <td>DRC</td>
+          <td><span class="badge b-danger">Ville ROC dans DRC</span></td>
+        </tr>
+        <tr>
+          <td>KEMA SERVICES</td>
+          <td><code>Brazzaville</code></td>
+          <td>DRC</td>
+          <td><span class="badge b-danger">Ville ROC dans DRC</span></td>
+        </tr>
+        <tr>
+          <td>Rajesh Dudhat</td>
+          <td><code>Kinshasa</code></td>
+          <td>ROC</td>
+          <td><span class="badge b-danger">Ville DRC dans ROC</span></td>
+        </tr>
+        <tr>
+          <td>Assurance et Réassurances du Congo - ARC</td>
+          <td><code>Brazzaville</code></td>
+          <td>DRC</td>
+          <td>
+            <span class="badge b-warn">Téléphone +242 ROC, pays DRC</span>
+          </td>
+        </tr>
+        <tr>
+          <td>AfriCrédit</td>
+          <td><code>Gombe</code></td>
+          <td>ROC</td>
+          <td>
+            <span class="badge b-warn">Commune KIN, pays ROC, tél +243</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="section">
+    <div class="sec-title">
+      <i class="ti ti-map-2" aria-hidden="true"></i>4. Coordonnées géographiques
+      incohérentes avec la ville
+    </div>
+    <p
+      style="
+        color: var(--color-text-secondary);
+        margin: 0 0 10px;
+        font-size: 13px;
+      "
+    >
+      23 entreprises ont des coordonnées GPS incompatibles avec leur ville
+      déclarée. Exemples :
+    </p>
+    <table class="row-alt">
+      <thead>
+        <tr>
+          <th>Entreprise</th>
+          <th>City déclarée</th>
+          <th>Coordonnées réelles</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>HÔTEL DE GOMA / HÔTEL DES GRANDS LACS</td>
+          <td><code>Kinshasa</code></td>
+          <td>Région de Goma/Kivu → city devrait être <code>Goma</code></td>
+        </tr>
+        <tr>
+          <td>CongoPetrol</td>
+          <td><code>Kinshasa</code></td>
+          <td>Coordonnées Lubumbashi</td>
+        </tr>
+        <tr>
+          <td>AHCEN TEZKRATT / PRECISION INDUSTRIES</td>
+          <td><code>Kinshasa</code></td>
+          <td>Coordonnées Dubaï (~55°E 25°N)</td>
+        </tr>
+        <tr>
+          <td>Chris Trading</td>
+          <td><code>Kinshasa</code></td>
+          <td>Coordonnées New Delhi (~77°E 28°N)</td>
+        </tr>
+        <tr>
+          <td>NEW WAVE</td>
+          <td><code>Kinshasa</code></td>
+          <td>Coordonnées N'Djaména Tchad</td>
+        </tr>
+        <tr>
+          <td>Boucherie Number One / BUSH CAMP / Number One</td>
+          <td><code>Lubumbashi</code></td>
+          <td>Zone ~26°E / -7.5°N (Kasaï ?)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="section">
+    <div class="sec-title">
+      <i class="ti ti-alert-triangle" aria-hidden="true"></i>5. Entrées spam /
+      données corrompues
+    </div>
+    <table class="row-alt">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Exemples</th>
+          <th>Nb</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>City = chaîne alphanumérique aléatoire (6 caractères)</td>
+          <td>
+            <code>0igyo0</code>, <code>tagry7</code>, <code>jq47yx</code>…
+          </td>
+          <td>10 clés × 2 = 20</td>
+        </tr>
+        <tr>
+          <td>Nom d'entreprise = lien de phishing / spam</td>
+          <td><code>* * * Claim Free iPhone 16: https://okna…</code></td>
+          <td>2</td>
+        </tr>
+        <tr>
+          <td>City = <code>VIETNAM</code> (pays, pas ville)</td>
+          <td>Entreprises « TRON » / « TRON CREATIVE »</td>
+          <td>2</td>
+        </tr>
+        <tr>
+          <td>City = <code>Democratic</code> (début de nom de pays tronqué)</td>
+          <td>China ONE Valve Manufacturer Co.</td>
+          <td>1</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="section">
+    <div class="sec-title">
+      <i class="ti ti-copy" aria-hidden="true"></i>6. Doublons
+    </div>
+    <table class="row-alt">
+      <thead>
+        <tr>
+          <th>Situation</th>
+          <th>Exemples marquants</th>
+          <th>Nb entreprises concernées</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            Même nom, même ville, adresses différentes (probables vrais
+            doublons)
+          </td>
+          <td>
+            DEMIMPEX AFRIQUE (3× Kinshasa), AUTOCENTER (3× Kinshasa), MOZAR
+            CENTER (3×), ICARE TRAVEL (2×)
+          </td>
+          <td>65 groupes</td>
+        </tr>
+        <tr>
+          <td>Même nom, villes différentes (succursales légitimes)</td>
+          <td>
+            DHL (5×), DELTA EXPRESS (6×), GENERALCO (5×), LIBRAIRIE MEDIASPAUL
+            (6 villes)
+          </td>
+          <td>~20 groupes</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="section">
+    <div class="sec-title">
+      <i class="ti ti-phone" aria-hidden="true"></i>7. Format des téléphones
+    </div>
+    <table class="row-alt">
+      <thead>
+        <tr>
+          <th>Format</th>
+          <th>Occurrences</th>
+          <th>Remarque</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>+243 … (DRC, correct)</td>
+          <td>1 124</td>
+          <td><span class="badge b-success">OK</span></td>
+        </tr>
+        <tr>
+          <td>+242 … (ROC, correct)</td>
+          <td>225</td>
+          <td><span class="badge b-success">OK</span></td>
+        </tr>
+        <tr>
+          <td>0… (numéro local sans indicatif)</td>
+          <td>10</td>
+          <td><span class="badge b-warn">Non normalisé</span></td>
+        </tr>
+        <tr>
+          <td>Autres (format inconnu)</td>
+          <td>48</td>
+          <td><span class="badge b-warn">À vérifier</span></td>
+        </tr>
+        <tr>
+          <td>+243 dans country=ROC ou +242 dans country=DRC</td>
+          <td>6</td>
+          <td><span class="badge b-danger">Incohérence pays/tél</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="section">
+    <div class="sec-title">
+      <i class="ti ti-database" aria-hidden="true"></i>8. Complétude des données
+    </div>
+    <div class="cards">
+      <div class="mcard">
+        <div class="lbl">Email vide</div>
+        <div class="val" style="color: var(--color-text-warning)">410</div>
+        <div style="font-size: 11px; color: var(--color-text-secondary)">
+          27% des entrées
+        </div>
+      </div>
+      <div class="mcard">
+        <div class="lbl">Téléphone vide</div>
+        <div class="val" style="color: var(--color-text-warning)">127</div>
+        <div style="font-size: 11px; color: var(--color-text-secondary)">
+          8% des entrées
+        </div>
+      </div>
+      <div class="mcard">
+        <div class="lbl">Geo toujours présent</div>
+        <div class="val" style="color: var(--color-text-success)">1 534</div>
+        <div style="font-size: 11px; color: var(--color-text-secondary)">
+          100% renseigné
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -18,6 +18,7 @@
 #     start : YYYY-MM-DD — inclusive start date (omit = always)
 #     end   : YYYY-MM-DD — inclusive end date   (omit = always)
 #   weight      : int    — relative rotation weight (higher = shown more)
+#   placement   : string — indicate where the ad is shown
 #   keywords    : list   — show ad only when query matches one of these
 #                          (omit or empty = show on all queries)
 # ─────────────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ ads:
     period:
       start: "2026-05-08"
       end: "2026-12-31"
-    weight: 10
+    weight: 5
     keywords:
       - entreprise
       - société
@@ -165,7 +166,7 @@ ads:
     period:
       start: "2026-05-08"
       end: "2026-12-31"
-    weight: 9
+    weight: 5
     keywords:
       - afrique
       - économie
@@ -185,7 +186,7 @@ ads:
     period:
       start: "2026-05-08"
       end: "2026-12-31"
-    weight: 8
+    weight: 5
     keywords:
       - recherche
       - annuaire
@@ -205,7 +206,7 @@ ads:
     period:
       start: "2026-05-08"
       end: "2026-12-31"
-    weight: 7
+    weight: 5
     keywords:
       - publicité
       - visibilité
@@ -225,7 +226,7 @@ ads:
     period:
       start: "2026-05-08"
       end: "2026-12-31"
-    weight: 8
+    weight: 5
     keywords:
       - réseau
       - professionnel

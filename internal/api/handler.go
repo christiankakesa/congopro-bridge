@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
+	"math/rand"
 	"net/http"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -42,6 +45,8 @@ type AIResponse struct {
 	Query  string `json:"query"`
 	Answer string `json:"answer"`
 }
+
+const defaultTitle = "Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
 
 var (
 	startupTime = time.Now()
@@ -159,13 +164,6 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func RobotsTxt(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	w.Header().Set("Content-Length", strconv.Itoa(len(web.RobotsTXT)))
-	w.Write(web.RobotsTXT)
-}
-
 func (a *AppEngine) SitemapHandler(w http.ResponseWriter, r *http.Request) {
 	a.Engine.SitemapMu.RLock()
 	data := a.Engine.SitemapCache
@@ -183,6 +181,90 @@ func (a *AppEngine) SitemapHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
+func (a *AppEngine) ServeSPAHandler(w http.ResponseWriter, r *http.Request) {
+	a.serveSPA(w, r, defaultTitle)
+}
+
+func (a *AppEngine) HelpHandler(w http.ResponseWriter, r *http.Request) {
+	a.serveSPA(w, r, "Aide | Congopro")
+}
+
+func (a *AppEngine) PrivacyHandler(w http.ResponseWriter, r *http.Request) {
+	a.serveSPA(w, r, "Confidentialité | Congopro")
+}
+
+func (a *AppEngine) TermsHandler(w http.ResponseWriter, r *http.Request) {
+	a.serveSPA(w, r, "Conditions d'utilisation | Congopro")
+}
+
+func (a *AppEngine) CompanyHandler(w http.ResponseWriter, r *http.Request) {
+	slug := strings.TrimPrefix(r.URL.Path, "/company/")
+	slug = strings.Trim(slug, "/")
+
+	title := defaultTitle
+	if slug != "" {
+		// Wait for indexing or fall back to default
+		select {
+		case <-a.Engine.IndexingDone:
+			if company, err := a.Engine.FindBySlug(slug); err != nil {
+				title = company.Name + " | Congopro"
+			}
+		default:
+			// still indexing, use default
+		}
+	}
+
+	a.serveSPA(w, r, title)
+}
+
+func (a *AppEngine) ContentHandler(w http.ResponseWriter, r *http.Request) {
+	page := strings.TrimPrefix(r.URL.Path, "/content/")
+	content, err := web.ContentFS.ReadFile("content/" + page + ".html")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600") // 1 hour
+
+	w.Write(content)
+}
+
+func (a *AppEngine) AdsHandler(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	now := time.Now()
+
+	eAds := ads.EligibleAds(q, now)
+
+	if eAds == nil {
+		eAds = []ads.AdWire{}
+	} else if len(eAds) > 1 {
+		rand.Shuffle(len(eAds), func(i, j int) {
+			eAds[i], eAds[j] = eAds[j], eAds[i]
+		})
+	}
+
+	// 75% of the time show 1 AD, 25% of the time show the configured MaxPerPage
+	var maxAdsPerPage = ads.AdsConfig.MaxPerPage
+	if maxAdsPerPage > 1 {
+		if rand.Intn(100) < 75 { // 75% (0 to 74)
+			maxAdsPerPage = 1
+		}
+	}
+
+	resp := ads.AdResponse{
+		Active:      ads.AdsConfig.Active,
+		RotationSec: ads.AdsConfig.RotationSec,
+		MaxPerPage:  maxAdsPerPage,
+		Ads:         eAds,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache") // needed
+	json.NewEncoder(w).Encode(resp)
+}
+
 var (
 	langSubscriptionsPathRegex = regexp.MustCompile(`^(/(fr|en))?/subscriptions/?$`)
 	langCompanyPathRegex       = regexp.MustCompile(`^(/(fr|en))?/company/([^/]+)/?$`)
@@ -191,19 +273,7 @@ var (
 	langTermsPathRegex         = regexp.MustCompile(`^(/(fr|en))?/terms/?$`)
 )
 
-func ServeSPAHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-
-	data := struct {
-		CSSVersion string
-	}{
-		CSSVersion: cssHash,
-	}
-	indexTmpl.Execute(w, data)
-}
-
-func FrontendHandler(w http.ResponseWriter, r *http.Request) {
+func (a *AppEngine) FrontendHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" ||
 		r.URL.Path == "/fr" || r.URL.Path == "/fr/" ||
 		r.URL.Path == "/en" || r.URL.Path == "/en/" ||
@@ -235,75 +305,133 @@ func FrontendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ServeSPAHandler(w, r)
+	a.ServeSPAHandler(w, r)
+}
+
+func (a *AppEngine) serveSPA(w http.ResponseWriter, r *http.Request, title string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	data := struct {
+		CSSVersion string
+		Title      string
+	}{
+		CSSVersion: cssHash,
+		Title:      title,
+	}
+	indexTmpl.Execute(w, data)
 }
 
 func FaviconHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/x-icon")
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("Cache-Control", "public, max-age=31536000") // 1 year
 	http.ServeContent(w, r, "favicon.ico", startupTime, bytes.NewReader(web.FaviconICO))
+}
+
+func RobotsTxt(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	w.Header().Set("Content-Length", strconv.Itoa(len(web.RobotsTXT)))
+	w.Write(web.RobotsTXT)
+}
+
+func ServeManifest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/manifest+json")
+	w.Header().Set("Cache-Control", "public, max-age=604800") // 7 days
+	http.ServeContent(w, r, "site.webmanifest", startupTime, bytes.NewReader(web.SiteManifest))
 }
 
 func FontsHandler(w http.ResponseWriter, r *http.Request) {
 	fileName := strings.TrimPrefix(r.URL.Path, "/fonts/")
-	content, err := web.FontsFS.ReadFile("fonts/" + fileName)
-	if err != nil {
+	fileName = path.Clean(fileName)
+	if fileName == "" || fileName == "." || fileName == "/" {
 		http.NotFound(w, r)
 		return
 	}
 
-	w.Header().Set("Content-Type", "font/woff2")
-	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	f, err := web.FontsFS.Open("fonts/" + fileName)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
 
-	http.ServeContent(w, r, fileName, startupTime, strings.NewReader(string(content)))
+	stat, err := f.Stat()
+	if err != nil || stat.IsDir() {
+		http.NotFound(w, r)
+		return
+	}
+
+	readSeeker, ok := f.(io.ReadSeeker)
+	if !ok {
+		data, err := io.ReadAll(f)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		readSeeker = bytes.NewReader(data)
+	}
+
+	contentType := "font/woff2"
+	switch ext := strings.ToLower(path.Ext(fileName)); ext {
+	case ".woff2":
+		contentType = "font/woff2"
+	case ".woff":
+		contentType = "font/woff"
+	case ".ttf":
+		contentType = "font/ttf"
+	case ".otf":
+		contentType = "font/otf"
+	case ".eot":
+		contentType = "application/vnd.ms-fontobject"
+	case ".svg":
+		contentType = "image/svg+xml" // SVG fonts can be served as image/svg+xml
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable") // 1 year
+
+	http.ServeContent(w, r, fileName, stat.ModTime(), readSeeker)
+}
+
+func ImagesHandler(w http.ResponseWriter, r *http.Request) {
+	fileName := strings.TrimPrefix(r.URL.Path, "/images/")
+	fileName = path.Clean(fileName)
+	if fileName == "" || fileName == "." || fileName == "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	f, err := web.ImagesFS.Open("images/" + fileName)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	modTime := stat.ModTime()
+
+	readSeeker, ok := f.(io.ReadSeeker)
+	if !ok {
+		data, err := io.ReadAll(f)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		readSeeker = bytes.NewReader(data)
+	}
+
+	w.Header().Set("Cache-Control", "public, max-age=604800") // 7 days
+	http.ServeContent(w, r, fileName, modTime, readSeeker)
 }
 
 func TailwindCssHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	http.ServeContent(w, r, "style.min.css", startupTime, bytes.NewReader(web.TailwindCSS))
-}
-
-func ContentHandler(w http.ResponseWriter, r *http.Request) {
-	page := strings.TrimPrefix(r.URL.Path, "/content/")
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
-
-	var content []byte
-	switch page {
-	case "help":
-		content = web.HelpHTML
-	case "privacy":
-		content = web.PrivacyHTML
-	case "terms":
-		content = web.TermsHTML
-	default:
-		http.NotFound(w, r)
-		return
-	}
-
-	w.Write(content)
-}
-
-func AdsHandler(w http.ResponseWriter, r *http.Request) {
-	q := strings.TrimSpace(r.URL.Query().Get("q"))
-	now := time.Now()
-
-	eAds := ads.EligibleAds(q, now)
-
-	if eAds == nil {
-		eAds = []ads.AdWire{}
-	}
-
-	resp := ads.AdResponse{
-		Active:      ads.AdsConfig.Active,
-		RotationSec: ads.AdsConfig.RotationSec,
-		MaxPerPage:  ads.AdsConfig.MaxPerPage,
-		Ads:         eAds,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "public, max-age=30")
-	json.NewEncoder(w).Encode(resp)
 }
