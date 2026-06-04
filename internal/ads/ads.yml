@@ -106,6 +106,20 @@ max_per_page: 2
 
 ads:
 
+  - id: "kiooverse-kioomonorigins"
+    active: true
+    title: "Kioomon Origins Early Access Challenge"
+    description: "Compete in two realms, climb the leaderboard, and win cash prizes."
+    url: "https://kioomonorigins.com/"
+    display_url: "kioomonorigins.com"
+    label: *top_choice_label
+    color: *top_choice_color
+    period:
+      start: "2026-05-09"
+      end: "2026-06-20"
+    weight: 10
+    keywords: []
+
   - id: "frahane-enterecommerce"
     active: true
     title: "Vendez à l'international comme à domicile"
@@ -116,7 +130,7 @@ ads:
     color: *top_choice_color
     period:
       start: "2026-05-09"
-      end: "2026-05-31"
+      end: "2026-06-30"
     weight: 10
     keywords: []
   
@@ -130,7 +144,7 @@ ads:
     color: *top_choice_color
     period:
       start: "2026-05-14"
-      end: "2026-05-31"
+      end: "2026-06-30"
     weight: 10
     keywords: []
 
