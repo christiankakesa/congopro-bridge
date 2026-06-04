@@ -16,6 +16,7 @@ import (
 	"congopro-bridge/internal/config"
 	"congopro-bridge/internal/data"
 	"congopro-bridge/internal/logger"
+	"congopro-bridge/internal/middlewares/ratelimiter"
 )
 
 func main() {
@@ -53,23 +54,27 @@ func main() {
 	mux.HandleFunc("GET /css/style.min.css", api.TailwindCssHandler)
 
 	// Static pages
-	mux.HandleFunc("GET /help", apiAppEngine.HelpHandler)
-	mux.HandleFunc("GET /privacy", apiAppEngine.PrivacyHandler)
-	mux.HandleFunc("GET /terms", apiAppEngine.TermsHandler)
+	mux.HandleFunc("GET /help", apiAppEngine.WithSecurityHeaders(apiAppEngine.HelpHandler))
+	mux.HandleFunc("GET /privacy", apiAppEngine.WithSecurityHeaders(apiAppEngine.PrivacyHandler))
+	mux.HandleFunc("GET /terms", apiAppEngine.WithSecurityHeaders(apiAppEngine.TermsHandler))
 	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
 
 	// Search API
-	mux.HandleFunc("GET /search", apiAppEngine.WithCORS(apiAppEngine.SearchHandler))
-	mux.HandleFunc("GET /ask", apiAppEngine.WithCORS(apiAppEngine.AIAnswerHandler))
-	mux.HandleFunc("GET /ads", apiAppEngine.WithCORS(apiAppEngine.AdsHandler))
+	searchRL := ratelimiter.NewRateLimiter(60)
+	askRL := ratelimiter.NewRateLimiter(10)
+	adsRL := ratelimiter.NewRateLimiter(30)
+	contentRL := ratelimiter.NewRateLimiter(20)
+	mux.HandleFunc("GET /search", apiAppEngine.WithCORS(searchRL.WithRateLimit(apiAppEngine.SearchHandler)))
+	mux.HandleFunc("GET /ask", apiAppEngine.WithCORS(askRL.WithRateLimit(apiAppEngine.AIAnswerHandler)))
+	mux.HandleFunc("GET /ads", apiAppEngine.WithCORS(adsRL.WithRateLimit(apiAppEngine.AdsHandler)))
+	mux.HandleFunc("GET /content/", apiAppEngine.WithCORS(contentRL.WithRateLimit(apiAppEngine.ContentHandler)))
 	mux.HandleFunc("GET /health", apiAppEngine.WithCORS(apiAppEngine.HealthHandler))
-	mux.HandleFunc("GET /content/", apiAppEngine.WithCORS(apiAppEngine.ContentHandler))
 
 	// Serves old company routes
-	mux.HandleFunc("GET /company/", apiAppEngine.CompanyHandler)
+	mux.HandleFunc("GET /company/", apiAppEngine.WithSecurityHeaders(apiAppEngine.CompanyHandler))
 
 	// Default routes
-	mux.HandleFunc("/", apiAppEngine.FrontendHandler)
+	mux.HandleFunc("/", apiAppEngine.WithSecurityHeaders(apiAppEngine.FrontendHandler))
 
 	port := os.Getenv("PORT")
 	if port == "" {

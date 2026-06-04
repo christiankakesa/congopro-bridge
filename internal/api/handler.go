@@ -2,7 +2,9 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -18,6 +20,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"congopro-bridge/internal/ads"
+	"congopro-bridge/internal/constants"
 	"congopro-bridge/internal/data"
 	"congopro-bridge/internal/web"
 )
@@ -73,6 +76,36 @@ func (a *AppEngine) WithCORS(h http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		h(w, r)
+	}
+}
+
+func generateNonce() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+func (a *AppEngine) WithSecurityHeaders(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		nonce := generateNonce()
+
+		// Store nonce so the template can use it
+		ctx := context.WithValue(r.Context(), constants.NonceKey, nonce)
+		w.Header().Set("Content-Security-Policy",
+			"default-src 'self'; "+
+				"script-src 'self' 'nonce-"+nonce+"' https://www.googletagmanager.com; "+
+				"connect-src 'self' "+
+				"https://www.google-analytics.com "+
+				"https://pagead2.googlesyndication.com "+
+				"https://stats.g.doubleclick.net; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data: https:; "+
+				"frame-ancestors 'none'",
+		)
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY") // older browser fallback for frame-ancestors
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		h(w, r.WithContext(ctx))
 	}
 }
 
@@ -312,12 +345,16 @@ func (a *AppEngine) serveSPA(w http.ResponseWriter, r *http.Request, title strin
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
+	nonce, _ := r.Context().Value(constants.NonceKey).(string)
+
 	data := struct {
 		CSSVersion string
 		Title      string
+		Nonce      string
 	}{
 		CSSVersion: cssHash,
 		Title:      title,
+		Nonce:      nonce,
 	}
 	indexTmpl.Execute(w, data)
 }
