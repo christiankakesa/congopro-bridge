@@ -8,7 +8,8 @@
     <!-- SEO Standard -->
     <!-- ========================================== -->
     <title>
-      {{ if .Title }}{{ .Title }}{{ else }}Congopro | Moteur de recherche le plus intelligent boosté à l'IA{{ end }}
+      {{ if .Title }}{{ .Title }}{{ else }}Congopro | Moteur de recherche le
+      plus intelligent boosté à l'IA{{ end }}
     </title>
     <meta
       name="description"
@@ -64,8 +65,8 @@
     <!-- ========================================== -->
     <!-- Favicons & App Icons -->
     <!-- ========================================== -->
-    <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
-    
+    <link rel="icon" href="/images/favicon.svg" type="image/svg+xml" />
+
     <link
       rel="icon"
       type="image/png"
@@ -90,7 +91,7 @@
       sizes="512x512"
       href="/images/android-chrome-512x512.png"
     />
-    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" href="/favicon.ico" />
 
     <!-- Favicon standard (Anciens navigateurs) -->
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
@@ -121,9 +122,10 @@
     <link rel="stylesheet" href="/css/style.min.css?h={{.CSSVersion}}" />
     <script
       async
+      nonce="{{ .Nonce }}"
       src="https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG"
     ></script>
-    <script>
+    <script nonce="{{ .Nonce }}">
       window.dataLayer = window.dataLayer || [];
       function gtag() {
         dataLayer.push(arguments);
@@ -154,10 +156,14 @@
           class="font-sora font-normal text-4xl sm:text-[52px] md:text-[64px] tracking-tight leading-none flex items-center justify-center gap-2 sm:gap-3"
         >
           <span>
-            <span class="font-sora g-redx">C</span><span class="font-sora g-redx">o</span
-            ><span class="font-sora g-redx">n</span><span class="font-sora g-redx">g</span
-            ><span class="font-sora g-redx">o</span><span class="font-sora g-redx">p</span
-            ><span class="font-sora g-redx">r</span><span class="font-sora g-redx">o</span>
+            <span class="font-sora g-redx">C</span
+            ><span class="font-sora g-redx">o</span
+            ><span class="font-sora g-redx">n</span
+            ><span class="font-sora g-redx">g</span
+            ><span class="font-sora g-redx">o</span
+            ><span class="font-sora g-redx">p</span
+            ><span class="font-sora g-redx">r</span
+            ><span class="font-sora g-redx">o</span>
             <span class="font-sora text-gray-700"> Bridge.</span>
           </span>
           <svg
@@ -216,6 +222,7 @@
           <input
             id="homeInput"
             type="text"
+            aria-label="Rechercher une entreprise, un service ou un professionnel"
             placeholder="Que recherchez-vous aujourd'hui ?"
             autocomplete="off"
             spellcheck="false"
@@ -224,6 +231,7 @@
           <button
             id="homeClear"
             class="hidden text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+            aria-label="Effacer la recherche"
           >
             <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -271,10 +279,14 @@
             class="font-sora text-[24px] sm:text-[26px] tracking-tight shrink-0 select-none leading-none flex items-center gap-1.5"
           >
             <span>
-              <span class="font-sora g-blue">C</span><span class="font-sora g-red">o</span
-              ><span class="font-sora g-yellow">n</span><span class="font-sora g-green">g</span
-              ><span class="font-sora g-blue">o</span><span class="font-sora g-red">p</span
-              ><span class="font-sora g-yellow">r</span><span class="font-sora g-green">o</span>
+              <span class="font-sora g-blue">C</span
+              ><span class="font-sora g-red">o</span
+              ><span class="font-sora g-yellow">n</span
+              ><span class="font-sora g-green">g</span
+              ><span class="font-sora g-blue">o</span
+              ><span class="font-sora g-red">p</span
+              ><span class="font-sora g-yellow">r</span
+              ><span class="font-sora g-green">o</span>
               <span class="font-sora text-gray-600 text-[20px] sm:text-[22px]">
                 Bridge.</span
               >
@@ -335,6 +347,7 @@
             <input
               id="topInput"
               type="text"
+              aria-label="Modifier votre recherche"
               autocomplete="off"
               spellcheck="false"
               class="flex-1 text-sm text-gray-800 placeholder-gray-400 bg-transparent outline-none min-w-0"
@@ -342,6 +355,7 @@
             <button
               id="topClear"
               class="hidden text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+              aria-label="Effacer la recherche et revenir à l'accueil"
             >
               <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
                 <path
@@ -426,7 +440,7 @@
           ></div>
         </div>
 
-        <div id="resultsList" class="w-full"></div>
+        <div id="resultsList" class="w-full" aria-live="polite"></div>
 
         <div id="emptyState" class="hidden pt-4 max-w-[652px]">
           <p class="no-results-title" id="emptyTitle"></p>
@@ -464,7 +478,7 @@
       </svg>
     </button>
 
-    <script>
+    <script nonce="{{ .Nonce }}">
       // ── Config ────────────────────────────────────────────
       const API_BASE = "";
       const DEBOUNCE = 260;
@@ -529,25 +543,6 @@
         return text.slice(0, lastSpace).trimEnd() + "…";
       }
 
-      function highlight(text, q) {
-        if (!text) return "";
-        const safe = esc(text);
-        if (!q) return safe;
-
-        return safe; //TODO Intentionally disactivated for now!
-        const tokens = q
-          .trim()
-          .split(/\s+/)
-          .filter((t) => t.length >= 3)
-          .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-
-        if (!tokens.length) return safe;
-        return safe.replace(
-          new RegExp(`(${tokens.join("|")})`, "gi"),
-          "<mark>$1</mark>",
-        );
-      }
-
       // Deterministic 2-letter initials + hue from company name
       function initials(name) {
         const words = (name || "?").trim().match(/[a-zA-Z0-9]+/g) || ["?"];
@@ -573,6 +568,32 @@
 
         // If no space, cut the word (strict limit)
         return activity.slice(0, max).trimEnd() + "…";
+      }
+
+      function validateURL(url) {
+        if (!url || typeof url !== "string") return null;
+
+        try {
+          const parsed = new URL(url.trim());
+          if (parsed.protocol !== "https:") return null;
+          if (!parsed.hostname || parsed.hostname === ".") return null;
+          const host = parsed.hostname.toLowerCase();
+          if (
+            host === "localhost" ||
+            host.endsWith(".local") ||
+            host.endsWith(".internal") ||
+            /^127\./.test(host) ||
+            /^10\./.test(host) ||
+            /^192\.168\./.test(host) ||
+            /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+          )
+            return null;
+          if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) return null;
+          if (!host.includes(".")) return null;
+          return parsed.href;
+        } catch {
+          return null;
+        }
       }
 
       // ── View switching ────────────────────────────────────
@@ -630,7 +651,7 @@
         const rawDesc = c.description || c.slogan || "";
         const desc = !isFullDesc ? excerpt(rawDesc, MAX_DESC) : rawDesc;
 
-        const website = c.website || "";
+        const website = validateURL(c.website);
         const score = c.score > 0 ? Math.round(c.score * 100) : null;
 
         // Contact & Real-world Data
@@ -663,6 +684,7 @@
         } else if (fullLocation) {
           mapsLink = `https://google.com/maps/search/?api=1&query=${encodeURIComponent(fullLocation)}`;
         }
+        mapsLink = validateURL(mapsLink);
 
         return `
       <div class="result-row">
@@ -674,8 +696,8 @@
           <div class="flex items-start gap-2 flex-wrap">
             ${
               website
-                ? `<a href="${esc(website)}" target="_blank" rel="noopener noreferrer" class="result-title hover:underline flex-1 min-w-0">${highlight(name, q)}</a>`
-                : `<h2 class="result-title flex-1 min-w-0">${highlight(name, q)}</h2>`
+                ? `<a href="${esc(website)}" target="_blank" rel="noopener noreferrer" class="result-title hover:underline flex-1 min-w-0">${esc(name)}</a>`
+                : `<h2 class="result-title flex-1 min-w-0">${esc(name)}</h2>`
             }
             ${
               score !== null
@@ -729,7 +751,7 @@
           </div>
 
           <p class="result-desc mt-1.5">
-            ${desc ? highlight(desc, q) : ""}
+            ${desc ? esc(desc) : ""}
           </p>
         </div>
       </div>`;
@@ -1054,14 +1076,27 @@
           if (!res.ok) throw new Error("Erreur IA");
           const data = await res.json();
 
+          const fragment = document.createDocumentFragment();
+          const lines = data.answer.split("\n");
+          lines.forEach((line, i) => {
+            const span = document.createElement("span");
+            span.textContent = line; // textContent escapes everything automatically
+            fragment.appendChild(span);
+            if (i < lines.length - 1) {
+              fragment.appendChild(document.createElement("br"));
+            }
+          });
+
           loading.classList.add("hidden");
           loading.classList.remove("flex");
+          content.innerHTML = "";
           content.classList.remove("hidden");
-          content.innerHTML = esc(data.answer).replace(/\n/g, "<br>");
+          content.appendChild(fragment);
         } catch (err) {
           if (err.name !== "AbortError") {
             loading.classList.add("hidden");
             loading.classList.remove("flex");
+            triggerBtn.textContent = "";
             triggerBtn.classList.remove("hidden");
             triggerBtn.textContent = "Re-générer";
           }
@@ -1128,10 +1163,6 @@
         }
       }
 
-      // START!!!
-      homeStatus.textContent = "⏳ Connecting…";
-      checkHealth();
-
       // ── Ad engine ─────────────────────────────────────────
       const adState = {
         pool: [],
@@ -1145,15 +1176,18 @@
         return color ? `background:${color}` : "background:#1a73e8";
       }
       function renderAdSlot(ad) {
+        const safeUrl = validateURL(ad.url);
+        if (!safeUrl) return "";
+
         const label = ad.label || "Sponsored";
         const color = ad.color || "#1a73e8";
         return `<div class="ad-slot">
         <div class="ad-accent" style="${adAccentStyle(color)}"></div>
         <div class="flex-1 min-w-0">
           <span class="ad-label" style="${adAccentStyle(color)}">${esc(label)}</span>
-          <a href="${esc(ad.url)}" target="_blank" rel="noopener sponsored"
+          <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored"
              class="ad-title" style="color:${color}">${esc(ad.title)}</a>
-          <div class="ad-display-url">${esc(ad.display_url || ad.url)}</div>
+          <div class="ad-display-url">${esc(ad.display_url || safeUrl)}</div>
           <p class="ad-desc">${esc(ad.description)}</p>
         </div>
       </div>`;
@@ -1181,7 +1215,16 @@
           }
         }
         adState.cursor = (adState.cursor + itemsExamined) % pool.length;
-        adContainer.innerHTML = slots.map(renderAdSlot).join("");
+        adContainer.innerHTML = "";
+        const fragment = document.createDocumentFragment();
+        slots.forEach((slot) => {
+          const div = document.createElement("div");
+          div.innerHTML = renderAdSlot(slot);
+          while (div.firstChild) {
+            fragment.appendChild(div.firstChild);
+          }
+        });
+        adContainer.appendChild(fragment);
         adContainer.classList.remove("hidden");
         resultsLabel.classList.toggle("hidden", !slots.length);
       }
@@ -1425,7 +1468,7 @@
       </div>
     </div>
 
-    <script>
+    <script nonce="{{ .Nonce }}">
       (function () {
         const COOKIE_KEY = "sb_cookie_consent";
         const banner = document.getElementById("cookieBanner");
