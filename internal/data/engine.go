@@ -735,7 +735,7 @@ func (e *Engine) refreshSitemapCache() {
 	entries := e.generateSitemapEntries()
 	var buf bytes.Buffer
 	buf.Grow(len(entries) * 150)
-	if err := e.WriteSitemapXML(&buf, entries); err != nil {
+	if err := e.writeSitemapXML(&buf, entries); err != nil {
 		log.Error().Msgf("[sitemap] generation error: %v", err)
 		return
 	}
@@ -749,7 +749,7 @@ func (e *Engine) refreshSitemapCache() {
 	e.SitemapMu.Unlock()
 }
 
-func (e *Engine) WriteSitemapXML(w io.Writer, entries []SitemapEntry) error {
+func (e *Engine) writeSitemapXML(w io.Writer, entries []SitemapEntry) error {
 	ew := &errWriter{w: w}
 	ew.write([]byte(`<?xml version="1.0" encoding="UTF-8"?>` + "\n"))
 	ew.write([]byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n"))

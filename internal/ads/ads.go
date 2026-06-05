@@ -38,11 +38,17 @@ type AdConfig struct {
 	lowerKeywords []string  `yaml:"-"`
 }
 
+type AdLabelDef struct {
+	Label string `yaml:"label"`
+	Color string `yaml:"color"`
+}
+
 type AdsFile struct {
-	Active      bool       `yaml:"active"`
-	RotationSec int        `yaml:"rotation_sec"`
-	MaxPerPage  int        `yaml:"max_per_page"`
-	Ads         []AdConfig `yaml:"ads"`
+	Active      bool                    `yaml:"active"`
+	RotationSec int                     `yaml:"rotation_sec"`
+	MaxPerPage  int                     `yaml:"max_per_page"`
+	Ads         []AdConfig              `yaml:"ads"`
+	LabelRefs   []map[string]AdLabelDef `yaml:"x-labels-references"`
 }
 
 type AdResponse struct {
@@ -222,4 +228,25 @@ func EligibleAds(q string, now time.Time) []AdWire {
 	}
 
 	return globalMatches
+}
+
+func GetAdPreviews() []AdWire {
+	var previews []AdWire
+
+	for _, labelMap := range AdsConfig.LabelRefs {
+		for key, def := range labelMap {
+			previews = append(previews, AdWire{
+				ID:          "preview-" + key,
+				Title:       def.Label + " Example Business",
+				Description: "This is a placeholder description to showcase the " + def.Label + " style. It demonstrates how standard body copy wraps in the ad slot.",
+				URL:         "https://congopro.com",
+				DisplayURL:  "congopro.com",
+				Label:       def.Label,
+				Color:       def.Color,
+				Weight:      1,
+			})
+		}
+	}
+
+	return previews
 }

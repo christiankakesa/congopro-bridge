@@ -59,16 +59,21 @@ func main() {
 	mux.HandleFunc("GET /terms", apiAppEngine.WithSecurityHeaders(apiAppEngine.TermsHandler))
 	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
 
+	// Ads preview
+	mux.HandleFunc("GET /ads-preview", apiAppEngine.WithSecurityHeaders(apiAppEngine.AdsPreviewPageHandler))
+
 	// Search API
 	searchRL := ratelimiter.NewRateLimiter(60)
 	askRL := ratelimiter.NewRateLimiter(10)
 	adsRL := ratelimiter.NewRateLimiter(30)
 	contentRL := ratelimiter.NewRateLimiter(20)
-	mux.HandleFunc("GET /search", apiAppEngine.WithCORS(searchRL.WithRateLimit(apiAppEngine.SearchHandler)))
-	mux.HandleFunc("GET /ask", apiAppEngine.WithCORS(askRL.WithRateLimit(apiAppEngine.AIAnswerHandler)))
-	mux.HandleFunc("GET /ads", apiAppEngine.WithCORS(adsRL.WithRateLimit(apiAppEngine.AdsHandler)))
-	mux.HandleFunc("GET /content/", apiAppEngine.WithCORS(contentRL.WithRateLimit(apiAppEngine.ContentHandler)))
-	mux.HandleFunc("GET /health", apiAppEngine.WithCORS(apiAppEngine.HealthHandler))
+	adsPreviewRL := ratelimiter.NewRateLimiter(10)
+	mux.HandleFunc("GET /api/v1/search", apiAppEngine.WithCORS(searchRL.WithRateLimit(apiAppEngine.SearchHandler)))
+	mux.HandleFunc("GET /api/v1/ask", apiAppEngine.WithCORS(askRL.WithRateLimit(apiAppEngine.AIAnswerHandler)))
+	mux.HandleFunc("GET /api/v1/ads", apiAppEngine.WithCORS(adsRL.WithRateLimit(apiAppEngine.AdsHandler)))
+	mux.HandleFunc("GET /api/v1/content/", apiAppEngine.WithCORS(contentRL.WithRateLimit(apiAppEngine.ContentHandler)))
+	mux.HandleFunc("GET /api/v1/ads-preview-data", apiAppEngine.WithCORS(adsPreviewRL.WithRateLimit(apiAppEngine.AdsPreviewDataHandler)))
+	mux.HandleFunc("GET /api/v1/health", apiAppEngine.WithCORS(apiAppEngine.HealthHandler))
 
 	// Serves old company routes
 	mux.HandleFunc("GET /company/", apiAppEngine.WithSecurityHeaders(apiAppEngine.CompanyHandler))

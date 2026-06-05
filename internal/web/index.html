@@ -819,7 +819,7 @@
 
         try {
           const res = await fetch(
-            `${API_BASE}/search?q=${encodeURIComponent(q)}`,
+            `${API_BASE}/api/v1/search?q=${encodeURIComponent(q)}`,
             { signal: abortCtrl.signal },
           );
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1084,7 +1084,7 @@
 
         try {
           const res = await fetch(
-            `${API_BASE}/ask?q=${encodeURIComponent(q)}`,
+            `${API_BASE}/api/v1/ask?q=${encodeURIComponent(q)}`,
             {
               signal: aiAbortCtrl.signal,
             },
@@ -1128,7 +1128,7 @@
         window.scrollTo(0, 0);
 
         try {
-          const res = await fetch(`${API_BASE}/content/${pageSlug}`);
+          const res = await fetch(`${API_BASE}/api/v1/content/${pageSlug}`);
           if (!res.ok) throw new Error("Failed to load content");
           const html = await res.text();
           staticContent.innerHTML = html;
@@ -1171,7 +1171,7 @@
       }
       async function checkHealth() {
         try {
-          const res = await fetch(`${API_BASE}/health`);
+          const res = await fetch(`${API_BASE}/api/v1/health`);
           const data = await res.json();
           if (data.status === "ready") {
             HEALTH_BACKOFF.attempt = 0;
@@ -1298,7 +1298,7 @@
       }
       async function fetchAds(q) {
         try {
-          const res = await fetch(`${API_BASE}/ads?q=${encodeURIComponent(q)}`);
+          const res = await fetch(`${API_BASE}/api/v1/ads?q=${encodeURIComponent(q)}`);
           if (!res.ok) return;
           const data = await res.json();
           if (!data.active) {
