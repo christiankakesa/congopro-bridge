@@ -49,7 +49,7 @@ type AIResponse struct {
 	Answer string `json:"answer"`
 }
 
-const defaultTitle = "Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
+const defaultTitle = "Congopro | Moteur de recherche boosté à l'IA"
 
 var (
 	startupTime = time.Now()
@@ -348,13 +348,15 @@ func (a *AppEngine) serveSPA(w http.ResponseWriter, r *http.Request, title strin
 	nonce, _ := r.Context().Value(constants.NonceKey).(string)
 
 	data := struct {
-		CSSVersion string
-		Title      string
-		Nonce      string
+		CSSVersion   string
+		Title        string
+		Nonce        string
+		CanonicalURL string
 	}{
-		CSSVersion: cssHash,
-		Title:      title,
-		Nonce:      nonce,
+		CSSVersion:   cssHash,
+		Title:        title,
+		Nonce:        nonce,
+		CanonicalURL: canonicalURL(r),
 	}
 	indexTmpl.Execute(w, data)
 }
@@ -471,4 +473,15 @@ func TailwindCssHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	http.ServeContent(w, r, "style.min.css", startupTime, bytes.NewReader(web.TailwindCSS))
+}
+
+func canonicalURL(r *http.Request) string {
+	const host = "https://www.congopro.com"
+
+	path := strings.TrimSuffix(r.URL.Path, "/")
+	if path == "" {
+		path = "/"
+	}
+
+	return host + path
 }

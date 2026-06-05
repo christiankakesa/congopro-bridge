@@ -19,9 +19,9 @@
       name="keywords"
       content="Congopro, moteur de recherche RDC, annuaire entreprises Congo, professionnels RDC, services Kinshasa, intelligence artificielle Congo, trouver entreprise RDC, business RDC, IA Congo"
     />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index,follow" />
     <meta name="author" content="Congopro" />
-    <link rel="canonical" href="https://www.congopro.com/" />
+    <link rel="canonical" href="{{ .CanonicalURL }}" />
 
     <!-- ========================================== -->
     <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
@@ -30,7 +30,7 @@
     <meta property="og:url" content="https://www.congopro.com/" />
     <meta
       property="og:title"
-      content="Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
+      content="Congopro | Moteur de recherche boosté à l'IA"
     />
     <meta
       property="og:description"
@@ -50,7 +50,7 @@
     <meta name="twitter:url" content="https://www.congopro.com/" />
     <meta
       name="twitter:title"
-      content="Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
+      content="Congopro | Moteur de recherche boosté à l'IA"
     />
     <meta
       name="twitter:description"
@@ -277,6 +277,7 @@
             id="logoLink"
             href="#"
             class="font-sora text-[24px] sm:text-[26px] tracking-tight shrink-0 select-none leading-none flex items-center gap-1.5"
+            aria-label="Congopro Bridge - retour à l'accueil"
           >
             <span>
               <span class="font-sora g-blue">C</span
@@ -372,7 +373,7 @@
       <main class="px-4 sm:px-6 pt-5 pb-20 sm:ml-[172px]">
         <div id="statsBar" class="hidden"></div>
         <div id="adContainer" class="hidden w-full mb-2"></div>
-        <div id="resultsLabel" class="section-label hidden">Results</div>
+        <div id="resultsLabel" class="section-label hidden">Résultats</div>
 
         <div
           id="aiOverview"
@@ -446,13 +447,13 @@
           <p class="no-results-title" id="emptyTitle"></p>
           <p class="no-results-sub" id="emptySubtitle"></p>
           <hr class="mt-6 border-[#f0f0f0]" />
-          <p class="mt-4 text-sm text-gray-500">Suggestions:</p>
+          <p class="mt-4 text-sm text-gray-500">Suggestions :</p>
           <ul
             class="mt-2 text-sm text-gray-500 list-disc list-inside space-y-1"
           >
-            <li>Make sure all words are spelled correctly.</li>
-            <li>Try different or fewer keywords.</li>
-            <li>Try more general keywords.</li>
+            <li>Vérifiez l’orthographe de tous les mots.</li>
+            <li>Essayez des mots-clés différents ou moins nombreux.</li>
+            <li>Essayez des mots-clés plus généraux.</li>
           </ul>
         </div>
       </main>
@@ -460,7 +461,7 @@
 
     <button
       id="scrollToTopBtn"
-      aria-label="Back to top"
+      aria-label="Retour en haut"
       class="fixed bottom-24 right-4 md:bottom-8 md:right-8 lg:right-auto lg:left-[920px] z-[90] p-3 bg-white text-gray-600 rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-gray-200 transition-all duration-300 transform opacity-0 translate-y-8 pointer-events-none hover:bg-gray-50 hover:text-[#1a73e8] focus:outline-none"
     >
       <svg
@@ -595,7 +596,14 @@
           return null;
         }
       }
-
+      function safePhone(p) {
+        return /^[+\d\s\-().]+$/.test((p || "").trim()) ? p.trim() : null;
+      }
+      function safeEmail(e) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((e || "").trim())
+          ? e.trim()
+          : null;
+      }
       // ── View switching ────────────────────────────────────
       function showHome() {
         if (window.location.pathname !== "/" || window.location.search !== "") {
@@ -655,8 +663,8 @@
         const score = c.score > 0 ? Math.round(c.score * 100) : null;
 
         // Contact & Real-world Data
-        const phone = c.phone || "";
-        const email = c.email || "";
+        const phone = safePhone(c.phone) || "";
+        const email = safeEmail(c.email) || "";
         const addr1 = c.address || "";
         const addr2 = c.address_line_2 || "";
         const city = c.city || "";
@@ -718,7 +726,7 @@
                 : ""
             }
             ${
-              fullLocation
+              fullLocation && mapsLink
                 ? `<a href="${mapsLink}" target="_blank" rel="noopener noreferrer" class="location-pill hover:underline text-gray-600">
                   <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
                     <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
@@ -744,7 +752,7 @@
                     <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                     <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                   </svg>
-                  Email
+                  E-mail
                 </a>`
                 : ""
             }
@@ -766,8 +774,9 @@
           statsBar.classList.add("hidden");
           resultsLabel.classList.add("hidden");
           emptyState.classList.remove("hidden");
-          emptyTitle.textContent = `No results for "${q}"`;
-          emptySubtitle.textContent = "Your search did not match any company.";
+          emptyTitle.textContent = `Aucun résultat pour "${q}"`;
+          emptySubtitle.textContent =
+            "Votre recherche ne correspond à aucune entreprise.";
           return;
         }
 
@@ -776,9 +785,10 @@
           .map((c) => renderRow(c, q, results.length === 1))
           .join("");
 
-        const total = data.total || results.length;
+        const total =
+          parseInt(data.total || results.length, 10) || results.length;
         statsBar.classList.remove("hidden");
-        statsBar.innerHTML = `About <strong>${total.toLocaleString()}</strong> result${total !== 1 ? "s" : ""}`;
+        statsBar.innerHTML = `Environ <strong>${total.toLocaleString()}</strong> résultat${total !== 1 ? "s" : ""}`;
       }
 
       // ── Search ────────────────────────────────────────────
@@ -801,7 +811,10 @@
         showResults(displayQ, fromHome);
         setLoading(true, fromHome);
 
-        if (abortCtrl) abortCtrl.abort();
+        if (abortCtrl) {
+          abortCtrl.abort();
+          abortCtrl = null;
+        }
         abortCtrl = new AbortController();
 
         try {
@@ -845,7 +858,7 @@
           resultsLabel.classList.add("hidden");
           document.getElementById("aiOverview").classList.add("hidden");
           emptyState.classList.remove("hidden");
-          emptyTitle.textContent = "Something went wrong";
+          emptyTitle.textContent = "Une erreur est survenue";
           emptySubtitle.textContent = err.message;
         } finally {
           setLoading(false, fromHome);
@@ -1063,7 +1076,10 @@
         loading.classList.add("flex");
         content.classList.add("hidden");
 
-        if (aiAbortCtrl) aiAbortCtrl.abort();
+        if (aiAbortCtrl) {
+          aiAbortCtrl.abort();
+          aiAbortCtrl = null;
+        }
         aiAbortCtrl = new AbortController();
 
         try {
@@ -1096,9 +1112,8 @@
           if (err.name !== "AbortError") {
             loading.classList.add("hidden");
             loading.classList.remove("flex");
-            triggerBtn.textContent = "";
             triggerBtn.classList.remove("hidden");
-            triggerBtn.textContent = "Re-générer";
+            triggerBtn.textContent = "Générer à nouveau";
           }
         }
       }
@@ -1108,7 +1123,7 @@
         staticTitle.textContent = title;
         staticContent.innerHTML = `<div class="flex items-center gap-2 text-gray-500">
             <svg class="spinner w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
-            Loading...
+            Chargement...
           </div>`;
         window.scrollTo(0, 0);
 
@@ -1118,7 +1133,7 @@
           const html = await res.text();
           staticContent.innerHTML = html;
         } catch (err) {
-          staticContent.innerHTML = `<p class="text-red-500">⚠️ Could not load the document. Please check your connection and try again.</p>`;
+          staticContent.innerHTML = `<p class="text-red-500">⚠️ Impossible de charger le document. Vérifiez votre connexion et réessayez.</p>`;
         }
       }
 
@@ -1139,27 +1154,57 @@
       window.addEventListener("popstate", handleRoute);
 
       // ── Health polling & Boot ─────────────────────────────
+      const HEALTH_BACKOFF = {
+        initialMs: 1000,
+        maxMs: 30000,
+        factor: 2,
+        attempt: 0,
+      };
+      function nextBackoffDelay() {
+        const delay = Math.min(
+          HEALTH_BACKOFF.initialMs *
+            Math.pow(HEALTH_BACKOFF.factor, HEALTH_BACKOFF.attempt),
+          HEALTH_BACKOFF.maxMs,
+        );
+        HEALTH_BACKOFF.attempt++;
+        return delay;
+      }
       async function checkHealth() {
         try {
           const res = await fetch(`${API_BASE}/health`);
           const data = await res.json();
           if (data.status === "ready") {
+            HEALTH_BACKOFF.attempt = 0;
             serverReady = true;
             homeFooter.innerHTML = `© ${new Date().getFullYear()} Congopro · 
-              <a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 hover:underline transition-colors">Support</a> ·
+              <a href="{validateURL('https://t.me/+yzJqliLeudNkZjY0')}" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 hover:underline transition-colors">Support</a> ·
               <a href="/help" class="hover:text-gray-600 hover:underline transition-colors">Aide</a> · 
               <a href="/privacy" class="hover:text-gray-600 hover:underline transition-colors">Confidentialité</a> · 
               <a href="/terms" class="hover:text-gray-600 hover:underline transition-colors">Conditions</a>`;
             homeStatus.textContent = "";
-
             handleRoute();
-          } else {
-            homeStatus.textContent = "⏳ Indexing in progress…";
-            setTimeout(checkHealth, 1500);
+            return;
           }
+
+          const delay = nextBackoffDelay();
+          homeStatus.textContent = "⏳ Indexation en cours…";
+          setTimeout(checkHealth, delay);
         } catch {
-          homeStatus.textContent = "⚠️ Cannot reach the server. Retrying…";
-          setTimeout(checkHealth, 3000);
+          const delay = nextBackoffDelay();
+          if (HEALTH_BACKOFF.attempt > 8) {
+            const msg = document.createTextNode("⚠️ Serveur inaccessible. ");
+            const btn = document.createElement("button");
+            btn.textContent = "Recharger la page";
+            btn.className = "underline hover:text-gray-600";
+            btn.addEventListener("click", () => location.reload());
+            homeStatus.innerHTML = "";
+            homeStatus.appendChild(msg);
+            homeStatus.appendChild(btn);
+            return;
+          }
+          homeStatus.textContent =
+            "⚠️ Impossible de joindre le serveur. Nouvelle tentative…";
+          setTimeout(checkHealth, delay);
         }
       }
 
@@ -1172,6 +1217,15 @@
         cursor: 0,
       };
 
+      function safeCSSColor(val) {
+        if (!val || typeof val !== "string") return null;
+        // allow hex, rgb(), named colors — block anything with parens except rgb/rgba/hsl
+        return /^(#[0-9a-f]{3,8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(\s*,\s*[\d.]+)?\s*\)|hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%(\s*,\s*[\d.]+)?\s*\)|[a-z]+)$/i.test(
+          val.trim(),
+        )
+          ? val.trim()
+          : null;
+      }
       function adAccentStyle(color) {
         return color ? `background:${color}` : "background:#1a73e8";
       }
@@ -1179,8 +1233,8 @@
         const safeUrl = validateURL(ad.url);
         if (!safeUrl) return "";
 
-        const label = ad.label || "Sponsored";
-        const color = ad.color || "#1a73e8";
+        const label = ad.label || "Sponsorisé";
+        const color = safeCSSColor(ad.color) || "#1a73e8";
         return `<div class="ad-slot">
         <div class="ad-accent" style="${adAccentStyle(color)}"></div>
         <div class="flex-1 min-w-0">
@@ -1289,16 +1343,18 @@
       });
 
       // ── Boot ──────────────────────────────────────────────
-      homeStatus.textContent = "⏳ Connecting…";
+      homeStatus.textContent = "⏳ Connexion en cours…";
       checkHealth();
     </script>
 
     <div
       id="cookieBanner"
       class="fixed bottom-0 inset-x-0 z-[100] hidden"
+      tabindex="-1"
       role="dialog"
       aria-live="polite"
-      aria-label="Cookie notice"
+      aria-label="Avis relatif aux cookies"
+      aria-modal="true"
     >
       <div
         class="bg-white/95 backdrop-blur border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]"
@@ -1312,19 +1368,20 @@
           <div class="flex-1 min-w-0">
             <p class="text-sm text-gray-700 leading-relaxed">
               <strong class="font-semibold text-gray-900"
-                >Your privacy matters.</strong
+                >Votre vie privée est importante.</strong
               >
-              We use essential cookies and trusted partner SDKs only for
-              security, performance, and anonymous analytics.
+              Nous utilisons uniquement des cookies essentiels et des SDK
+              partenaires de confiance pour la sécurité, les performances et les
+              statistiques anonymisées.
               <strong class="font-semibold text-gray-900"
-                >We never sell your personal data or share it with
-                advertisers.</strong
+                >Nous ne vendons jamais vos données personnelles et ne les
+                partageons pas avec des annonceurs.</strong
               >
               <button
                 id="cookieLearnMore"
                 class="ml-1 text-blue-600 hover:underline text-sm font-medium whitespace-nowrap"
               >
-                Learn more
+                En savoir plus
               </button>
             </p>
           </div>
@@ -1333,14 +1390,14 @@
               id="cookieDecline"
               class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
             >
-              Essential only
+              Uniquement les essentiels
             </button>
             <button
               id="cookieAccept"
               class="px-5 py-2 text-sm font-semibold text-white rounded-full transition-colors"
               style="background: #1a73e8"
             >
-              Accept all
+              Tout accepter
             </button>
           </div>
         </div>
@@ -1365,11 +1422,12 @@
           class="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between"
         >
           <h2 id="modalTitle" class="text-base font-semibold text-gray-900">
-            Cookie & privacy details
+            Détails sur les cookies et la confidentialité
           </h2>
           <button
             id="cookieModalClose"
             class="text-gray-400 hover:text-gray-700 transition-colors"
+            aria-label="Fermer"
           >
             <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -1384,8 +1442,8 @@
           class="px-6 py-5 space-y-5 text-sm text-gray-600 max-h-[60vh] overflow-y-auto"
         >
           <p class="text-gray-700">
-            We believe you should know exactly what runs when you use Congopro
-            Bridge.
+            Nous pensons que vous devez savoir exactement ce qui s'exécute
+            lorsque vous utilisez Congopro Bridge.
           </p>
           <div class="rounded-xl border border-gray-100 p-4 space-y-1.5">
             <div class="flex items-center justify-between">
@@ -1395,16 +1453,16 @@
                 <span
                   class="w-2 h-2 rounded-full bg-green-500 inline-block"
                 ></span
-                >Essential cookies
+                >Cookies essentiels
               </span>
               <span
                 class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full"
-                >Always on</span
+                >Toujours actifs</span
               >
             </div>
             <p>
-              Required for the site to function — session handling and security
-              tokens. No personal data is stored.
+              Nécessaires au fonctionnement du site - gestion des sessions et
+              jetons de sécurité. Aucune donnée personnelle n'est stockée.
             </p>
           </div>
           <div class="rounded-xl border border-gray-100 p-4 space-y-1.5">
@@ -1415,37 +1473,40 @@
                 <span
                   class="w-2 h-2 rounded-full bg-blue-500 inline-block"
                 ></span
-                >Anonymous analytics
+                >Statistiques anonymes
               </span>
               <span
                 class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full"
-                >Optional</span
+                >Optionnel</span
               >
             </div>
             <p>
-              Aggregated, anonymised usage stats (e.g. popular searches, error
-              rates) help us improve the product. No IP addresses or identifiers
-              are stored.
+              Les statistiques d'utilisation agrégées et anonymisées (par
+              exemple les recherches populaires ou les taux d'erreur) nous
+              aident à améliorer le produit. Aucune adresse IP ni identifiant
+              n'est conservé.
             </p>
           </div>
           <div
             class="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-2"
           >
-            <p class="font-semibold text-blue-900">What we never do</p>
+            <p class="font-semibold text-blue-900">
+              Ce que nous ne faisons pas
+            </p>
             <ul class="space-y-1 text-blue-800">
               <li class="flex items-start gap-2">
-                <span class="mt-0.5">✗</span> Sell or rent your data to third
-                parties
+                <span class="mt-0.5">✗</span> Vendre ou louer vos données à des
+                tiers
               </li>
               <li class="flex items-start gap-2">
-                <span class="mt-0.5">✗</span> Build advertising profiles
+                <span class="mt-0.5">✗</span> Créer des profils publicitaires
               </li>
               <li class="flex items-start gap-2">
-                <span class="mt-0.5">✗</span> Share search queries with external
-                ad networks
+                <span class="mt-0.5">✗</span> Partager les requêtes de recherche
+                avec des réseaux publicitaires externes
               </li>
               <li class="flex items-start gap-2">
-                <span class="mt-0.5">✗</span> Track you across other websites
+                <span class="mt-0.5">✗</span> Vous suivre sur d’autres sites web
               </li>
             </ul>
           </div>
@@ -1455,14 +1516,14 @@
             id="modalDecline"
             class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
           >
-            Essential only
+            Uniquement les essentiels
           </button>
           <button
             id="modalAccept"
             class="px-5 py-2 text-sm font-semibold text-white rounded-full transition-colors"
             style="background: #1a73e8"
           >
-            Accept all
+            Tout accepter
           </button>
         </div>
       </div>
@@ -1491,6 +1552,7 @@
         }
         function showBanner() {
           banner.classList.remove("hidden");
+          banner.focus();
         }
         function openModal() {
           modal.classList.remove("hidden");
