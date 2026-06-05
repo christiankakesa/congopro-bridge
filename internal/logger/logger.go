@@ -156,10 +156,10 @@ func DetectLogType() LogType {
 	return logType
 }
 
-var skippedPaths = []string{"/health", "/favicon.ico", "/fonts/", "/css/", "/images/"}
+var skippedPaths = []string{"/api/v1/health", "/favicon.ico", "/fonts/", "/css/", "/images/"}
 
 // AccessLogMiddleware attaches structured HTTP access logging to a handler chain.
-// Skips logging for the /health endpoint to avoid noise in monitoring dashboards.
+// Skips logging for the /api/v1/health endpoint to avoid noise in monitoring dashboards.
 func AccessLogMiddleware(next http.Handler) http.Handler {
 	h := hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
 		for _, p := range skippedPaths {

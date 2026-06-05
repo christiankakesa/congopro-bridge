@@ -7,6 +7,9 @@ import (
 //go:embed index.html
 var IndexHTML []byte
 
+//go:embed ads-preview.html
+var AdsPreviewHTML []byte
+
 //go:embed favicon.ico
 var FaviconICO []byte
 

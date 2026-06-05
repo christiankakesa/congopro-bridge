@@ -13,7 +13,7 @@ companies.json
      └──► Chromem-go (in-memory vector store)
                local TF-IDF embeddings (512 dimensions, no API key needed)
 
-GET /search?q=... → merge both engines (55% BM25 + 45% semantic) → ranked JSON
+GET /api/v1/search?q=... → merge both engines (55% BM25 + 45% semantic) → ranked JSON
 ```
 
 ## Prerequisites
@@ -37,7 +37,7 @@ Set `PORT` env var to change the listen port (default: 8080).
 
 ## API
 
-### `GET /search?q=<query>`
+### `GET /api/v1/search?q=<query>`
 
 Returns up to 30 results sorted by hybrid relevance score.
 
@@ -60,7 +60,7 @@ Returns up to 30 results sorted by hybrid relevance score.
 }
 ```
 
-### `GET /health`
+### `GET /api/v1/health`
 
 Returns `{"status":"ready","companies":1534}` once indexing is complete,
 or `{"status":"indexing"}` (HTTP 503) while warming up.

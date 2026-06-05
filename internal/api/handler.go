@@ -52,14 +52,16 @@ type AIResponse struct {
 const defaultTitle = "Congopro | Moteur de recherche boosté à l'IA"
 
 var (
-	startupTime = time.Now()
-	cssHash     string
-	indexTmpl   *template.Template
+	startupTime    = time.Now()
+	cssHash        string
+	indexTmpl      *template.Template
+	adsPreviewTmpl *template.Template
 )
 
 func init() {
 	cssHash = fmt.Sprintf("%.8x", md5.Sum(web.TailwindCSS))
 	indexTmpl = template.Must(template.New("index").Parse(string(web.IndexHTML)))
+	adsPreviewTmpl = template.Must(template.New("ads-preview").Parse(string(web.AdsPreviewHTML)))
 }
 
 func (a *AppEngine) WithCORS(h http.HandlerFunc) http.HandlerFunc {
@@ -251,7 +253,7 @@ func (a *AppEngine) CompanyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AppEngine) ContentHandler(w http.ResponseWriter, r *http.Request) {
-	page := strings.TrimPrefix(r.URL.Path, "/content/")
+	page := strings.TrimPrefix(r.URL.Path, "/api/v1/content/")
 	content, err := web.ContentFS.ReadFile("content/" + page + ".html")
 	if err != nil {
 		http.NotFound(w, r)
@@ -296,6 +298,26 @@ func (a *AppEngine) AdsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache") // needed
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (a *AppEngine) AdsPreviewDataHandler(w http.ResponseWriter, r *http.Request) {
+	previews := ads.GetAdPreviews()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(previews)
+}
+
+func (a *AppEngine) AdsPreviewPageHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	nonce, _ := r.Context().Value(constants.NonceKey).(string)
+
+	data := struct {
+		Nonce string
+	}{
+		Nonce: nonce,
+	}
+	adsPreviewTmpl.Execute(w, data)
 }
 
 var (
