@@ -87,7 +87,7 @@ docker-save: docker-build
 docker-run: docker-build
 	docker run -p 8080:8080 $(IMAGE):$(TAG)
 
-docker-up:
+docker-up: css
 	@echo "▶ Starting services…"
 	docker compose up -d --build
 	@echo "✓ Services running"
