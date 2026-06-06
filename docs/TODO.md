@@ -1,8 +1,5 @@
 # Tasks
 
-* Implement "loading active Homepage AD" with a very good and luxury or high design looking.
-* Build new logo and web SEO logo (Daffa)
-* Build a social app banner and create a ADS campaign
 * Now, I need your help to elaborate a clear, concise, and solid description of everything required to make this big project go live.
 I mainly mean the backend architecture, infrastructure, and systems needed to turn this project into a real and successful platform.
 We will iterate together while you ask me questions, and I guide the architecture, technical decisions, and overall direction.
@@ -24,6 +21,9 @@ Here are the bullet points I currently have to start with.
 
 ## DONE
 
+* Implement "loading active Homepage AD" with a very good and luxury or high design looking.
+* Build a social app banner and create a ADS campaign
+* Build new logo and web SEO logo (Daffa)
 * Make the internal ads feature print 1 ADS 75% of page load, and 2 ADS 25% of page load
 * Build /sitemap.xml.gz that adds static pages links (/, /help, /privacy; /terms) and /company/[name_seo]
 * design a new logo with Banana from Google.

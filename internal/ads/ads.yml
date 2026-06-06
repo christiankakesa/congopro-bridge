@@ -18,12 +18,16 @@
 #     start : YYYY-MM-DD — inclusive start date (omit = always)
 #     end   : YYYY-MM-DD — inclusive end date   (omit = always)
 #   weight      : int    — relative rotation weight (higher = shown more)
-#   placement   : string — indicate where the ad is shown
+#   placement   : string — indicate where the ad is shown ("homepage" value is checked for ads at homepage)
 #   keywords    : list   — show ad only when query matches one of these
 #                          (omit or empty = show on all queries)
 # ─────────────────────────────────────────────────────────────────
 
 x-labels-references:
+  - home:
+      label: &home_label "Partenaire d'excellence"
+      color: &home_color "#F59E0B"
+
   - sponsored:
       label: &sponsored_label "Sponsored"
       color: &sponsored_color "#1a73e8"   # Bleu professionnel (confiance, style Google)
@@ -112,12 +116,13 @@ ads:
     description: "Compete in two realms, climb the leaderboard, and win cash prizes."
     url: "https://kioomonorigins.com/"
     display_url: "kioomonorigins.com"
-    label: *exclusive_label
-    color: *exclusive_color
+    label: *home_label
+    color: *home_color
     period:
       start: "2026-05-09"
       end: "2026-06-20"
     weight: 10
+    # placement: "homepage"
     keywords: []
 
   - id: "frahane-enterecommerce"

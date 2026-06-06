@@ -98,6 +98,8 @@ func (a *AppEngine) WithSecurityHeaders(h http.HandlerFunc) http.HandlerFunc {
 				"script-src 'self' 'nonce-"+nonce+"' https://www.googletagmanager.com; "+
 				"connect-src 'self' "+
 				"https://www.google-analytics.com "+
+				"https://analytics.google.com "+
+				"https://www.google.com "+
 				"https://pagead2.googlesyndication.com "+
 				"https://stats.g.doubleclick.net; "+
 				"style-src 'self' 'unsafe-inline'; "+
@@ -313,9 +315,11 @@ func (a *AppEngine) AdsPreviewPageHandler(w http.ResponseWriter, r *http.Request
 	nonce, _ := r.Context().Value(constants.NonceKey).(string)
 
 	data := struct {
-		Nonce string
+		CSSVersion string
+		Nonce      string
 	}{
-		Nonce: nonce,
+		CSSVersion: cssHash,
+		Nonce:      nonce,
 	}
 	adsPreviewTmpl.Execute(w, data)
 }

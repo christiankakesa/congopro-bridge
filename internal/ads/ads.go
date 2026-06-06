@@ -67,6 +67,7 @@ type AdWire struct {
 	Label       string `json:"label"`
 	Color       string `json:"color"`
 	Weight      int    `json:"weight"`
+	Placement   string `json:"placement"`
 }
 
 var AdsConfig AdsFile
@@ -210,6 +211,7 @@ func EligibleAds(q string, now time.Time) []AdWire {
 			Label:       ad.Label,
 			Color:       ad.Color,
 			Weight:      w,
+			Placement:   ad.Placement,
 		}
 
 		if len(ad.lowerKeywords) > 0 {
