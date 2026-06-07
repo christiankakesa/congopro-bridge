@@ -122,6 +122,9 @@ func buildPipeline(config PipelineConfig) ([]PipelineStep, error) {
 		case "city_normalizer":
 			pipeline = append(pipeline, &CityNormalizeStep{})
 
+		case "activity_normalizer":
+			pipeline = append(pipeline, &ActivityNormalizeStep{})
+
 		default:
 			return nil, fmt.Errorf("unknown pipeline step type: %q", stepCfg.Type)
 		}
