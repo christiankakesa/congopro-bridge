@@ -84,3 +84,5 @@ pipeline:
       - slogan
 
   - type: city_normalizer
+
+  - type: activity_normalizer
