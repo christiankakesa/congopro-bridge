@@ -161,33 +161,58 @@
       }
 
       async function loadPreviews() {
+        const premiumContainer = document.getElementById(
+          "premium-ad-container",
+        );
+        const standardContainer = document.getElementById("ad-container");
+
         try {
           const response = await fetch("/api/v1/ads-preview-data");
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
           const ads = await response.json();
 
-          const premiumContainer = document.getElementById(
-            "premium-ad-container",
-          );
-          const standardContainer = document.getElementById("ad-container");
+          if (!Array.isArray(ads)) {
+            throw new Error("Invalid ads payload");
+          }
 
-          let premiumHtml = "";
-          let standardHtml = "";
+          premiumContainer.textContent = "";
+          standardContainer.textContent = "";
 
-          ads.forEach((ad) => {
-            if (ad.id === "preview-home" || ad.placement == "homepage") {
-              premiumHtml += renderPremiumHomepageAd(ad);
-            } else {
-              standardHtml += renderAdSlot(ad);
-            }
-          });
+          const premiumFragment = document.createDocumentFragment();
+          const standardFragment = document.createDocumentFragment();
 
-          premiumContainer.innerHTML =
-            premiumHtml ||
-            '<p class="text-gray-400 italic">Aucune annonce premium configurée.</p>';
-          standardContainer.innerHTML = standardHtml;
+          const template = document.createElement("template");
+
+          for (const ad of ads) {
+            template.innerHTML =
+              ad.id === "preview-home" || ad.placement === "homepage"
+                ? renderPremiumHomepageAd(ad)
+                : renderAdSlot(ad);
+
+            const targetFragment =
+              ad.id === "preview-home" || ad.placement === "homepage"
+                ? premiumFragment
+                : standardFragment;
+
+            targetFragment.append(...template.content.childNodes);
+          }
+
+          if (premiumFragment.hasChildNodes()) {
+            premiumContainer.appendChild(premiumFragment);
+          } else {
+            premiumContainer.innerHTML =
+              '<p class="text-gray-400 italic">Aucune annonce premium configurée.</p>';
+          }
+
+          standardContainer.appendChild(standardFragment);
         } catch (error) {
           console.error("Erreur lors du chargement des annonces :", error);
-          document.getElementById("ad-container").innerHTML =
+
+          standardContainer.innerHTML =
             '<p class="text-red-500">Impossible de charger les données de prévisualisation.</p>';
         }
       }
