@@ -625,6 +625,7 @@
         statsBar.classList.add("hidden");
         resultsLabel.classList.add("hidden");
         stopAdRotation();
+        loadHomepageAd();
         emptyState.classList.add("hidden");
         homeInput.value = "";
         homeClear.classList.add("hidden");
@@ -657,17 +658,12 @@
 
       // ── Render one result row ─────────────────────────────
       function renderRow(c, q, isFullDesc = false) {
-        // Core Identity
         const name = c.name || "Unnamed";
         const activity = c.activity || "";
-
         const rawDesc = c.description || c.slogan || "";
         const desc = !isFullDesc ? excerpt(rawDesc, MAX_DESC) : rawDesc;
-
         const website = validateURL(c.website);
         const score = c.score > 0 ? Math.round(c.score * 100) : null;
-
-        // Contact & Real-world Data
         const phone = safePhone(c.phone) || "";
         const email = safeEmail(c.email) || "";
         const addr1 = c.address || "";
@@ -676,21 +672,15 @@
         const country = c.country || "";
         const domain =
           website?.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?#]+)/)?.[1] ?? null;
-
-        // Visuals (Favicon avatar)
         const hue = nameToHue(name);
         const bg = `hsl(${hue},55%,92%)`;
         const fg = `hsl(${hue},50%,32%)`;
         const ini = initials(name);
-
         const actShort = truncateActivity(activity);
-
-        // Build a highly detailed location string
         const fullLocation = [addr1, addr2, city, country]
           .filter(Boolean)
           .join(", ");
 
-        // Generate Google Maps URL
         let mapsLink = "";
         if (c.location && c.location.lat && c.location.lon) {
           mapsLink = `https://google.com/maps/search/?api=1&query=${c.location.lat},${c.location.lon}`;
@@ -699,77 +689,136 @@
         }
         mapsLink = validateURL(mapsLink);
 
+        // ── Schema.org geo coordinates (hidden, machine-readable only) ──
+        const geoMeta =
+          c.location?.lat && c.location?.lon
+            ? `
+    <div itemprop="geo" itemscope itemtype="https://schema.org/GeoCoordinates" hidden>
+      <meta itemprop="latitude"  content="${esc(String(c.location.lat))}" />
+      <meta itemprop="longitude" content="${esc(String(c.location.lon))}" />
+    </div>`
+            : "";
+
+        // ── Schema.org address block (hidden if no address fields) ──────
+        const addressMeta =
+          addr1 || city || country
+            ? `
+    <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress" hidden>
+      ${addr1 ? `<meta itemprop="streetAddress"   content="${esc(addr1)}" />` : ""}
+      ${addr2 ? `<meta itemprop="streetAddress"   content="${esc(addr2)}" />` : ""}
+      ${city ? `<meta itemprop="addressLocality" content="${esc(city)}" />` : ""}
+      ${country ? `<meta itemprop="addressCountry"  content="${esc(country)}" />` : ""}
+    </div>`
+            : "";
+
         return `
-      <div class="result-row">
-        <div class="result-favicon" style="background:${bg};color:${fg};">${ini}</div>
+        <div class="result-row"
+            itemscope
+            itemtype="https://schema.org/LocalBusiness">
 
-        <div class="result-body">
-          ${domain ? `<div class="result-url">${esc(domain)}</div>` : ""}
+          <div class="result-favicon" style="background:${bg};color:${fg};" aria-hidden="true">${ini}</div>
 
-          <div class="flex items-start gap-2 flex-wrap">
+          <div class="result-body">
+
             ${
-              website
-                ? `<a href="${esc(website)}" target="_blank" rel="noopener noreferrer" class="result-title hover:underline flex-1 min-w-0">${esc(name)}</a>`
-                : `<h2 class="result-title flex-1 min-w-0">${esc(name)}</h2>`
-            }
-            ${
-              score !== null
-                ? `<span class="score-badge shrink-0 mt-1">${score}%</span>`
+              domain
+                ? `
+              <div class="result-url">
+                ${website ? `<link itemprop="url" href="${esc(website)}" />` : ""}
+                ${esc(domain)}
+              </div>`
                 : ""
             }
-          </div>
 
-          <div class="result-meta mt-1.5 gap-y-1.5 gap-x-2">
-            ${
-              activity
-                ? `<span class="activity-chip" title="${esc(activity)}">
-                  <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor">
+            <div class="flex items-start gap-2 flex-wrap">
+              ${
+                website
+                  ? `<a href="${esc(website)}"
+                      itemprop="url"
+                      target="_blank" rel="noopener noreferrer"
+                      class="result-title hover:underline flex-1 min-w-0">
+                    <span itemprop="name">${esc(name)}</span>
+                  </a>`
+                  : `<h2 class="result-title flex-1 min-w-0">
+                    <span itemprop="name">${esc(name)}</span>
+                  </h2>`
+              }
+              ${
+                score !== null
+                  ? `<span class="score-badge shrink-0 mt-1">${score}%</span>`
+                  : ""
+              }
+            </div>
+
+            <div class="result-meta mt-1.5 gap-y-1.5 gap-x-2">
+              ${
+                activity
+                  ? `
+                <span class="activity-chip" title="${esc(activity)}">
+                  <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd" d="M6 6V5a3 3 0 016 0v1h2a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h1zm2-1a1 1 0 112 0v1H8V5zm1 5a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/>
                   </svg>
-                  ${esc(!isFullDesc ? actShort : activity)}
+                  <span itemprop="description">${esc(!isFullDesc ? actShort : activity)}</span>
                 </span>`
-                : ""
-            }
-            ${
-              fullLocation && mapsLink
-                ? `<a href="${mapsLink}" target="_blank" rel="noopener noreferrer" class="location-pill hover:underline text-gray-600">
-                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
+                  : ""
+              }
+
+              ${
+                fullLocation && mapsLink
+                  ? `
+                <a href="${mapsLink}"
+                  target="_blank" rel="noopener noreferrer"
+                  class="location-pill hover:underline text-gray-600">
+                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0" aria-hidden="true">
                     <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
                   </svg>
-                  ${esc(fullLocation)}
+                  <span itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+                    ${addr1 ? `<span itemprop="streetAddress">${esc(addr1)}</span>` : ""}
+                    ${addr2 ? `<span itemprop="streetAddress">${esc(addr2)}</span>` : ""}
+                    ${city ? `<span itemprop="addressLocality">${esc(city)}</span>` : ""}
+                    ${country ? `<span itemprop="addressCountry">${esc(country)}</span>` : ""}
+                  </span>
                 </a>`
-                : ""
-            }
-            ${
-              phone
-                ? `<a href="tel:${esc(phone)}" class="location-pill hover:underline text-blue-600">
-                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
+                  : ""
+              }
+
+              ${
+                phone
+                  ? `
+                <a href="tel:${esc(phone)}"
+                  itemprop="telephone"
+                  class="location-pill hover:underline text-blue-600">
+                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0" aria-hidden="true">
                     <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                   </svg>
                   ${esc(phone)}
                 </a>`
-                : ""
-            }
-            ${
-              email
-                ? `<a href="mailto:${esc(email)}" class="location-pill hover:underline text-blue-600">
-                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0; margin-top:1px;">
+                  : ""
+              }
+
+              ${
+                email
+                  ? `
+                <a href="mailto:${esc(email)}"
+                  itemprop="email"
+                  class="location-pill hover:underline text-blue-600">
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0; margin-top:1px;" aria-hidden="true">
                     <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                     <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                   </svg>
                   E-mail
                 </a>`
-                : ""
-            }
+                  : ""
+              }
+            </div>
+
+            ${desc ? `<p class="result-desc mt-1.5" itemprop="description">${esc(desc)}</p>` : ""}
+
+            ${geoMeta}
+            ${addressMeta}
           </div>
-
-          <p class="result-desc mt-1.5">
-            ${desc ? esc(desc) : ""}
-          </p>
-        </div>
-      </div>`;
+        </div>`;
       }
-
       // ── Render list ───────────────────────────────────────
       function renderResults(data, q) {
         const results = data.results || [];
@@ -1188,7 +1237,6 @@
               <a href="/terms" class="hover:text-gray-600 hover:underline transition-colors">Conditions</a>`;
             homeStatus.textContent = "";
             handleRoute();
-            loadHomepageAd();
             return;
           }
 
