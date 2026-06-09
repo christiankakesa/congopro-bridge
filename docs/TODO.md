@@ -1,6 +1,6 @@
 # Tasks
 
-* Research: instead of building a full BI backend for a B2B business, what about buulding a MCP server with paid acess that is capable to build dashboard and report, or some customer can only chose to use the MCP server to use their own BI tool.
+* Research: instead of building a full BI backend for a B2B business, what about buulding a MCP server with paid access that is capable to build dashboard and report, or some customer can only chose to use the paid MCP server to use with their own BI tool.
 * Now, I need your help to elaborate a clear, concise, and solid description of everything required to make this big project go live.
 I mainly mean the backend architecture, infrastructure, and systems needed to turn this project into a real and successful platform.
 We will iterate together while you ask me questions, and I guide the architecture, technical decisions, and overall direction.
@@ -22,6 +22,7 @@ Here are the bullet points I currently have to start with.
 
 ## DONE
 
+* Handle this kind of redirection: https://congopro.com/en?page=15&q=Real+Estate+Advisor&utf8=%E2%9C%93
 * Add Schema.org tags for company search results and company view.
 * Implement "loading active Homepage AD" with a very good and luxury or high design looking.
 * Build a social app banner and create a ADS campaign
