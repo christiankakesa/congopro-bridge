@@ -338,6 +338,15 @@ var (
 )
 
 func (a *AppEngine) FrontendHandler(w http.ResponseWriter, r *http.Request) {
+	if q := r.URL.Query(); q.Has("page") {
+		target := "/"
+		if clean := strings.TrimSpace(q.Get("q")); clean != "" {
+			target = "/?q=" + clean
+		}
+		http.Redirect(w, r, target, http.StatusMovedPermanently)
+		return
+	}
+
 	if r.URL.Path == "/index.html" || r.URL.Path == "/index.htm" ||
 		r.URL.Path == "/fr" || r.URL.Path == "/fr/" ||
 		r.URL.Path == "/en" || r.URL.Path == "/en/" ||
