@@ -133,12 +133,17 @@
       gtag("consent", "default", {
         analytics_storage: "denied",
         ad_storage: "denied",
+        ad_user_data: "denied",
+        ad_personalization: "denied",
+        // wait_for_update: 500,
       });
       try {
         if (localStorage.getItem("sb_cookie_consent") === "all")
           gtag("consent", "update", {
             analytics_storage: "granted",
             ad_storage: "granted",
+            ad_user_data: "granted",
+            ad_personalization: "granted",
           });
       } catch (e) {}
       gtag("js", new Date());
@@ -1307,7 +1312,7 @@
         const color = safeCSSColor(ad.color) || "#F59E0B";
         const label = ad.label || "Partenaire d'excellence";
 
-        return `
+         return `
     <div class="w-full max-w-4xl relative bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden group hover:shadow-lg transition-all duration-300" style="display: block;">
         
         <div class="h-1 w-full" style="background-color: ${color};"></div>
