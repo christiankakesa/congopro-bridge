@@ -110,7 +110,7 @@ max_per_page: 2
 
 ads:
 
-  - id: "kiooverse-kioomonorigins"
+  - id: "kiooverse-kioomonorigins-early-access-dual-challenge"
     active: true
     title: "Kioomon Origins Early Access Challenge"
     description: "Compete in two realms, climb the leaderboard, and win cash prizes."
@@ -125,7 +125,7 @@ ads:
     # placement: "homepage"
     keywords: []
 
-  - id: "frahane-enterecommerce"
+  - id: "frahane-enterecommerce-free-congopro-partnership"
     active: true
     title: "Vendez à l'international comme à domicile"
     description: "Solution e-commerce autonome : Stripe, USDT, Mobile Money. Sans abonnement, sans commission. Démo et contact sur mon site."
@@ -139,7 +139,7 @@ ads:
     weight: 10
     keywords: []
   
-  - id: "heritier-vietcongobridge"
+  - id: "heritier-vietcongobridge-free-congopro-partnership"
     active: true
     title: "VietCongo Bridge : Fret Vietnam - RDC"
     description: "Votre partenaire logistique de confiance pour l'expédition et le suivi en temps réel de vos colis du Vietnam vers la RDC."
