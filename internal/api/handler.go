@@ -93,22 +93,27 @@ func (a *AppEngine) WithSecurityHeaders(h http.HandlerFunc) http.HandlerFunc {
 
 		// Store nonce so the template can use it
 		ctx := context.WithValue(r.Context(), constants.NonceKey, nonce)
-		w.Header().Set("Content-Security-Policy",
-			"default-src 'self'; "+
-				"script-src 'self' 'nonce-"+nonce+"' https://www.googletagmanager.com; "+
-				"connect-src 'self' "+
-				"https://www.google-analytics.com "+
-				"https://analytics.google.com "+
-				"https://www.google.com "+
-				"https://pagead2.googlesyndication.com "+
-				"https://stats.g.doubleclick.net; "+
-				"style-src 'self' 'unsafe-inline'; "+
-				"img-src 'self' data: https:; "+
-				"frame-ancestors 'none'",
-		)
+
+		csp := "default-src 'self'; " +
+			"script-src 'self' 'nonce-" + nonce + "' https://www.googletagmanager.com https://*.google-analytics.com; " +
+			"connect-src 'self' " +
+			"https://*.google-analytics.com " +
+			"https://analytics.google.com " +
+			"https://*.analytics.google.com " +
+			"https://*.googletagmanager.com " +
+			"https://www.google.com " +
+			"https://pagead2.googlesyndication.com " +
+			"https://stats.g.doubleclick.net; " +
+			"style-src 'self' 'unsafe-inline'; " +
+			"img-src 'self' data: https: https://*.google-analytics.com https://*.doubleclick.net; " +
+			"frame-src 'self' https://*.googletagmanager.com; " +
+			"frame-ancestors 'none'"
+
+		w.Header().Set("Content-Security-Policy", csp)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY") // older browser fallback for frame-ancestors
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+
 		h(w, r.WithContext(ctx))
 	}
 }
