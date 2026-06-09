@@ -135,7 +135,7 @@
         ad_storage: "denied",
         ad_user_data: "denied",
         ad_personalization: "denied",
-        // wait_for_update: 500,
+        wait_for_update: 500,
       });
       try {
         if (localStorage.getItem("sb_cookie_consent") === "all")
@@ -1198,6 +1198,19 @@
 
       // ── Override standard links for SPA Navigation ──────────
       document.addEventListener("click", (e) => {
+        const adLink = event.target.closest("[data-track-click='true']");
+        if (adLink && typeof gtag === "function") {
+          const adId = adLink.getAttribute("data-ad-id");
+          const adTitle = adLink.getAttribute("data-ad-title");
+          const adPlacement = adLink.getAttribute("data-ad-placement");
+
+          gtag("event", "click_ad", {
+            ad_id: adId,
+            ad_title: adTitle,
+            ad_placement: adPlacement,
+          });
+        }
+
         const link = e.target.closest("a");
         if (
           link &&
@@ -1299,7 +1312,11 @@
         <div class="flex-1 min-w-0">
           <span class="ad-label" style="${adAccentStyle(color)}">${esc(label)}</span>
           <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored"
-             class="ad-title" style="color:${color}">${esc(ad.title)}</a>
+            data-track-click="true"
+            data-ad-id="${esc(ad.id)}"
+            data-ad-title="${esc(ad.title)}"
+            data-ad-placement="results_page" 
+            class="ad-title" style="color:${color}">${esc(ad.title)}</a>
           <div class="ad-display-url">${esc(ad.display_url || safeUrl)}</div>
           <p class="ad-desc">${esc(ad.description)}</p>
         </div>
@@ -1312,7 +1329,7 @@
         const color = safeCSSColor(ad.color) || "#F59E0B";
         const label = ad.label || "Partenaire d'excellence";
 
-         return `
+        return `
     <div class="w-full max-w-4xl relative bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden group hover:shadow-lg transition-all duration-300" style="display: block;">
         
         <div class="h-1 w-full" style="background-color: ${color};"></div>
@@ -1334,7 +1351,12 @@
                     </span>
                 </div>
                 
-                <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored" style="text-decoration: none;">
+                <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored"
+                  data-track-click="true"
+                  data-ad-id="${esc(ad.id)}"
+                  data-ad-title="${esc(ad.title)}"
+                  data-ad-placement="homepage"   
+                  style="text-decoration: none;">
                     <h3 class="text-lg font-bold text-gray-900 truncate tracking-tight mb-1 hover:opacity-80">${esc(ad.title)}</h3>
                 </a>
                 
@@ -1349,9 +1371,13 @@
             </div>
 
             <div class="w-full sm:w-auto mt-3 sm:mt-0 flex-shrink-0">
-                <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored" 
-                class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-md text-white shadow-sm hover:opacity-90" 
-                style="background-color: ${color}; text-decoration: none;">
+                <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored"
+                  data-track-click="true"
+                  data-ad-id="${esc(ad.id)}"
+                  data-ad-title="${esc(ad.title)}"
+                  data-ad-placement="homepage" 
+                  class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-md text-white shadow-sm hover:opacity-90" 
+                  style="background-color: ${color}; text-decoration: none;">
                 Découvrir
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1.5 -mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -1373,6 +1399,13 @@
             if (container) {
               container.innerHTML = renderPremiumHomepageAd(homeAd);
               container.classList.remove("hidden");
+              if (typeof gtag === "function") {
+                gtag("event", "view_ad", {
+                  ad_id: homeAd.id,
+                  ad_title: homeAd.title,
+                  ad_placement: homeAd.placement || "homepage",
+                });
+              }
             }
           }
         } catch (error) {
@@ -1410,6 +1443,14 @@
         slots.forEach((slot) => {
           const div = document.createElement("div");
           div.innerHTML = renderAdSlot(slot);
+          if (typeof gtag === "function") {
+            gtag("event", "view_ad", {
+              ad_id: slot.id,
+              ad_title: slot.title,
+              ad_placement: slot.placement || "results_page",
+            });
+          }
+
           while (div.firstChild) {
             fragment.appendChild(div.firstChild);
           }
