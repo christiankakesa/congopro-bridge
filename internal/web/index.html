@@ -835,52 +835,49 @@
         const activity = company.activity || "Secteur non précisé";
         const description = company.description;
 
-        const address1 = company.address;
-        const address2 = company.address_line_2;
-        const city = company.city;
-        const country = company.country;
-
+        const {
+          address: address1,
+          address_line_2: address2,
+          city,
+          country,
+        } = company;
         const hasAddress = address1 || address2 || city || country;
 
-        let formattedAddress = "";
+        let addressHtml = "";
         if (hasAddress) {
-          if (address1) formattedAddress += `${esc(address1)}<br/>`;
-          if (address2) formattedAddress += `${esc(address2)}<br/>`;
+          const streetParts = [address1, address2].filter(Boolean).map(esc);
+          const streetHtml = streetParts.length
+            ? `<span itemprop="streetAddress" class="block">${streetParts.join("<br/>")}</span>`
+            : "";
 
           const locationParts = [];
-          if (city) locationParts.push(esc(city));
-          if (country) locationParts.push(esc(country));
+          if (city)
+            locationParts.push(
+              `<span itemprop="addressLocality">${esc(city)}</span>`,
+            );
+          if (country)
+            locationParts.push(
+              `<span itemprop="addressCountry">${esc(country)}</span>`,
+            );
+          const locationHtml = locationParts.length
+            ? `<span class="text-gray-500 block mt-0.5">${locationParts.join(", ")}</span>`
+            : "";
 
-          if (locationParts.length > 0) {
-            formattedAddress += `<span class="text-gray-500">${locationParts.join(", ")}</span>`;
-          }
+          addressHtml = `
+      <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress" class="text-sm font-medium text-gray-900 leading-relaxed">
+        ${streetHtml}
+        ${locationHtml}
+      </div>
+    `;
         }
 
-        // ── Schema.org geo coordinates (hidden, machine-readable only) ──
-        const geoMeta =
-          company.location?.lat && company.location?.lon
-            ? `
-              <div itemprop="geo" itemscope itemtype="https://schema.org/GeoCoordinates" hidden>
-                <meta itemprop="latitude"  content="${esc(String(company.location.lat))}" />
-                <meta itemprop="longitude" content="${esc(String(company.location.lon))}" />
-              </div>`
-            : "";
-
-        // ── Schema.org address block (hidden if no address fields) ──────
-        const addressMeta =
-          address1 || address2 || city || country
-            ? `
-              <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress" hidden>
-                ${address1 ? `<meta itemprop="streetAddress"   content="${esc(address1)}" />` : ""}
-                ${address2 ? `<meta itemprop="streetAddress"   content="${esc(address2)}" />` : ""}
-                ${city ? `<meta itemprop="addressLocality" content="${esc(city)}" />` : ""}
-                ${country ? `<meta itemprop="addressCountry"  content="${esc(country)}" />` : ""}
-              </div>`
-            : "";
-
         return `
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden w-full max-w-[700px] mb-8 animate-fade-in">
-          
+        <article 
+          itemscope itemtype="https://schema.org/LocalBusiness" 
+          class="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden w-full max-w-[700px] mb-8 animate-fade-in"
+        >
+          <meta itemprop="name" content="${esc(name)}" />
+
           <div class="h-28 sm:h-36 w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-100 relative border-b border-indigo-100/50">
             <div class="absolute -bottom-10 left-6 sm:left-8">
                 <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl shadow-sm border-4 border-white flex items-center justify-center text-2xl sm:text-3xl font-sora font-semibold text-white tracking-wide" 
@@ -897,17 +894,17 @@
                   ${esc(name)}
                 </h1>
                 <p class="text-sm font-medium text-indigo-600 mt-1.5 uppercase tracking-wider flex items-center gap-1.5">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                   </svg>
-                  ${esc(activity)}
+                  <span itemprop="knowsAbout">${esc(activity)}</span>
                 </p>
               </div>
               
               ${
                 safeUrl
                   ? `
-                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" 
+                <a itemprop="url" href="${safeUrl}" target="_blank" rel="noopener noreferrer" 
                   class="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#4285f4] hover:bg-blue-600 text-white text-sm font-medium rounded-xl shadow-sm transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -923,7 +920,7 @@
               description
                 ? `
               <div class="mt-6">
-                <p class="text-gray-600 text-sm sm:text-base leading-relaxed text-justify">
+                <p itemprop="description" class="text-gray-600 text-sm sm:text-base leading-relaxed text-justify">
                   ${esc(description)}
                 </p>
               </div>
@@ -944,7 +941,7 @@
                 </div>
                 <div>
                   <p class="text-xs text-gray-500 mb-0.5">Téléphone</p>
-                  <a href="tel:${safeTel}" class="text-sm font-medium text-gray-900 hover:text-[#4285f4] transition-colors">${esc(company.phone)}</a>
+                  <a itemprop="telephone" href="tel:${safeTel}" class="text-sm font-medium text-gray-900 hover:text-[#4285f4] transition-colors">${esc(company.phone)}</a>
                 </div>
               </div>`
                   : ""
@@ -961,7 +958,7 @@
                 </div>
                 <div class="min-w-0">
                   <p class="text-xs text-gray-500 mb-0.5">Email</p>
-                  <a href="mailto:${safeMail}" class="text-sm font-medium text-gray-900 hover:text-red-600 transition-colors truncate block">${esc(company.email)}</a>
+                  <a itemprop="email" href="mailto:${safeMail}" class="text-sm font-medium text-gray-900 hover:text-red-600 transition-colors truncate block">${esc(company.email)}</a>
                 </div>
               </div>`
                   : ""
@@ -979,7 +976,7 @@
                 </div>
                 <div>
                   <p class="text-xs text-gray-500 mb-0.5">Adresse</p>
-                  <p class="text-sm font-medium text-gray-900 leading-relaxed">${formattedAddress}</p>
+                  ${addressHtml}
                 </div>
               </div>`
                   : ""
@@ -987,10 +984,7 @@
 
             </div>
           </div>
-        </div>
-
-        ${geoMeta}
-        ${addressMeta}
+        </article>
       `;
       }
       // ── Render list ───────────────────────────────────────
