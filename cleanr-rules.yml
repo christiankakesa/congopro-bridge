@@ -42,6 +42,9 @@ pipeline:
       - facebook
       - linkedin
       - instagram
+      - tiktok
+      - whatsapp
+      - youtube
     workers: 50
 
   # 7. Remove completely deprecated fields (Google+)
