@@ -6,6 +6,7 @@ require (
 	github.com/meilisearch/meilisearch-go v0.36.2
 	github.com/rs/zerolog v1.35.1
 	github.com/urfave/cli/v2 v2.27.7
+	go.mongodb.org/mongo-driver v1.17.9
 	golang.org/x/term v0.43.0
 	golang.org/x/text v0.37.0
 	golang.org/x/time v0.15.0
