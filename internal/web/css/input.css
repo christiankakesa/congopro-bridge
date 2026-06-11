@@ -97,17 +97,6 @@ body {
   min-width: 0;
 }
 
-/* Breadcrumb line */
-.result-url {
-  font-size: 12px;
-  color: #70757a;
-  line-height: 18px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 3px;
-}
-
 .result-title {
   font-size: 19px;
   line-height: 25px;
