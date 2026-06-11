@@ -884,6 +884,7 @@
         const safeWhatsapp = validateURL(company.whatsapp);
 
         // Validate Social Media URLs
+        const safeX = validateURL(company.twitter);
         const safeFacebook = validateURL(company.facebook);
         const safeLinkedin = validateURL(company.linkedin);
         const safeInstagram = validateURL(company.instagram);
@@ -892,6 +893,7 @@
 
         // Check if there's at least one social media link
         const hasSocials =
+          safeX ||
           safeFacebook ||
           safeLinkedin ||
           safeInstagram ||
@@ -1117,6 +1119,15 @@
             <div class="sm:col-span-2 mt-2">
               <p class="text-xs text-gray-500 mb-3 ml-2">Réseaux Sociaux</p>
               <div class="flex flex-wrap gap-3 ml-2">
+                ${
+                  safeX
+                    ? `
+                  <a href="${safeX}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-gray-900 text-white hover:bg-gray-800 flex items-center justify-center transition-colors shadow-sm" aria-label="X (Twitter)">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  </a>
+                `
+                    : ""
+                }
                 ${
                   safeFacebook
                     ? `

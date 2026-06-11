@@ -95,6 +95,7 @@ type rawCompany struct {
 	MainPhone    string    `json:"main_phone"`
 	AddressLine  string    `json:"address_line_1"`
 	AddressLine2 string    `json:"address_line_2"`
+	Twitter      string    `json:"twitter"`
 	Facebook     string    `json:"facebook"`
 	LinkedIn     string    `json:"linkedin"`
 	Instagram    string    `json:"instagram"`
@@ -122,6 +123,7 @@ type Company struct {
 	Phone                string       `json:"phone"`
 	Address              string       `json:"address"`
 	AddressLine2         string       `json:"address_line_2"`
+	Twitter              string       `json:"twitter"`
 	Facebook             string       `json:"facebook"`
 	LinkedIn             string       `json:"linkedin"`
 	Instagram            string       `json:"instagram"`
@@ -147,6 +149,7 @@ type meiliCompany struct {
 	Phone        string    `json:"phone"`
 	Address      string    `json:"address"`
 	AddressLine2 string    `json:"address_line_2"`
+	Twitter      string    `json:"twitter"`
 	Facebook     string    `json:"facebook"`
 	LinkedIn     string    `json:"linkedin"`
 	Instagram    string    `json:"instagram"`
@@ -358,6 +361,7 @@ func (e *Engine) loadAndIndexOnce() error {
 			Phone:                r.MainPhone,
 			Address:              r.AddressLine,
 			AddressLine2:         r.AddressLine2,
+			Twitter:              r.Twitter,
 			Facebook:             r.Facebook,
 			LinkedIn:             r.LinkedIn,
 			Instagram:            r.Instagram,
@@ -497,6 +501,7 @@ func (e *Engine) indexMeili(companies []Company) error {
 			Phone:        c.Phone,
 			Address:      c.Address,
 			AddressLine2: c.AddressLine2,
+			Twitter:      c.Twitter,
 			Facebook:     c.Facebook,
 			LinkedIn:     c.LinkedIn,
 			Instagram:    c.Instagram,

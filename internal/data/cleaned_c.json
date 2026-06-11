@@ -25106,7 +25106,7 @@
     "created_at": {
       "$date": "2014-02-06T16:53:47.223Z"
     },
-    "description": "Compte tweeter : @vigiltech",
+    "description": "Compte twitter : @vigiltech",
     "email": "info@vigiltech-security.com",
     "geo": [
       15.3424196,
@@ -37630,13 +37630,10 @@
     },
     "description": "Congopro est l'annuaire des entreprises au Congo Brazza et au Congo Kinshasa. Son moteur de recherche, intuitif et puissant, permet de trouver facilement une entreprise. Les entreprises en RDC et au Congo Brazza ont désormais l'outil le plus performant et intuitif pour les deux Congo. Une base de données des entreprises en constante évolution. Nous vous offrons l'efficacité par excellence. Nous nous employons à fournir le meilleur service de recherche d'entreprise. Points forts : Efficace Intuitif Performant Puissant L'équipe Congopro",
     "email": "contact@congopro.com",
-    "facebook": "https://www.facebook.com/Congopro-111645768935101",
     "geo": [
       15.3066029,
       -4.305488
     ],
-    "instagram": "https://www.instagram.com/congopro/",
-    "linkedin": "",
     "name": "Congopro",
     "name_seo": "congopro",
     "po_box": "",
@@ -37644,12 +37641,17 @@
     "published": true,
     "slogan": "Demander, c'est trouver",
     "stats_show": 2299,
-    "twitter": "https://twitter.com/congopro",
     "updated_at": {
       "$date": "2023-02-21T05:19:07.019Z"
     },
-    "website": "https://congopro.com",
-    "youtube": ""
+    "twitter": "https://x.com/congopro",
+    "facebook": "https://www.facebook.com/Congopro-111645768935101",
+    "linkedin": "https://www.linkedin.com/company/congopro",
+    "instagram": "https://www.instagram.com/congopro/",
+    "tiktok": "",
+    "whatsapp":"",
+    "youtube": "https://www.youtube.com/@congopro",
+    "website": "https://congopro.com"
   },
   {
     "_id": {
@@ -44460,6 +44462,7 @@
     "alt_phone": "",
     "mobile_phone": "",
     "email": "contact@cnss.cd",
+    "twitter": "https://x.com/RdcCnss",
     "facebook": "https://www.facebook.com/cnssrdc",
     "linkedin": "",
     "instagram": "",
