@@ -26,23 +26,24 @@ const templateStr = `
     "alt_phone": "",
     "mobile_phone": "",
     "email": "",
+    "twitter": "",
     "facebook": "",
     "linkedin": "",
     "instagram": "",
-	"tiktok": "",
-	"whatsapp":"",
+    "tiktok": "",
+    "whatsapp":"",
     "youtube": "",
     "website": "",
     "published": true,
     "name_seo": "",
     "geo": null,
-    "updated_at": null,
+    "updated_at": { "$date": "%s" },
     "created_at": { "$date": "%s" }
   }
 `
 
 func main() {
 	oid := primitive.NewObjectID().Hex()
-	crrated_at := time.Now().Format("2006-01-02T15:04:05.000Z")
-	fmt.Fprintf(os.Stdout, templateStr, oid, crrated_at)
+	created_at := time.Now().Format("2006-01-02T15:04:05.000Z")
+	fmt.Fprintf(os.Stdout, templateStr, oid, created_at, created_at)
 }
