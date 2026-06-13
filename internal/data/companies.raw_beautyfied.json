@@ -37354,10 +37354,10 @@
   {
     "_id": { "$oid": "6a2c391171458d5724b0dffd" },
     "stats_show": 0,
-    "name": "Office Congolais des Postes et Télécommunications - OCPT",
+    "name": "Société Congolaise des Postes et Télécommunications - SCPT",
     "activity": "Informatique & Télécoms",
     "description": "Opérateur historique des télécommunications, fournisseur de fournisseurs, l'exploitant public désigné en République Démocratique du Congo. Horaire de service : Lundi - Vendredi: 8h30 - 16h30",
-    "slogan": "Être le fer de lance du développement du secteur postal en Afrique.",
+    "slogan": "La Poste SA",
     "address_line_1": "1009 Boulevard Du 30 Juin",
     "address_line_2": "",
     "city": "Kinshasa",
@@ -37377,7 +37377,7 @@
     "youtube": "https://www.youtube.com/@scptinfo8620",
     "website": "https://scpt.cd/",
     "published": true,
-    "name_seo": "ocpt-rdc",
+    "name_seo": "scpt-rdc",
     "geo": null,
     "updated_at": { "$date": "2026-06-13T00:51:29.994Z" },
     "created_at": { "$date": "2026-06-13T00:51:29.994Z" }
