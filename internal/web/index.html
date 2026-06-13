@@ -556,9 +556,16 @@
 
       // Deterministic 2-letter initials + hue from company name
       function initials(name) {
-        const words = (name || "?").trim().match(/[a-zA-Z0-9]+/g) || ["?"];
+        const normalizedName = (name || "?").trim().normalize("NFD");
+        const words = normalizedName
+          .replace(/[\u0300-\u036f]/g, "")
+          .match(/[\p{L}\p{N}]+/gu) || ["?"];
         if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-        return (words[0][0] + words[1][0]).toUpperCase();
+        const [first, ...rest] = words.filter((word) => word.length >= 3);
+        return (
+          (first?.[0] || words[0][0]) +
+          (rest[0]?.[0] || words[1][0]).toUpperCase()
+        );
       }
       function nameToHue(name) {
         let h = 0;
