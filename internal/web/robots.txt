@@ -1,13 +1,5 @@
 User-agent: *
 Crawl-delay: 5
 
-Disallow: /
-
-Allow: /$ 
-Allow: /{en,fr}/$
-Allow: /{en,fr}/(help|privacy|terms)$
-Allow: /company/*
-Allow: /{en,fr}/company/*
-
 # Sitemap location
 Sitemap: https://congopro.com/sitemap.xml.gz
