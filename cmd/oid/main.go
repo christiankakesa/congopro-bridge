@@ -21,7 +21,7 @@ const templateStr = `
     "city": "",
     "postal_code": "",
     "po_box": "",
-    "country": "",
+    "country": "République Démocratique du Congo",
     "main_phone": "",
     "alt_phone": "",
     "mobile_phone": "",
