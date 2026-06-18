@@ -24522,7 +24522,7 @@
   {
     "_id": { "$oid": "5001fcdcd96468020000015c" },
     "activity": "Banque, Finances",
-    "address_line_1": "563, Bld. Colonel Tshiatshi",
+    "address_line_1": "563 boulevard Colonel Tshiatshi",
     "address_line_2": "Gombe",
     "city": "Kinshasa",
     "country": "République Démocratique du Congo",
