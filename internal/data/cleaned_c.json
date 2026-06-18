@@ -29787,28 +29787,30 @@
     "_id": {
       "$oid": "5001fcdcd96468020000015c"
     },
-    "activity": "Services aux Entreprises (B2B)",
-    "address_line_1": "563, boulevard Tshatshi",
-    "address_line_2": "",
+    "activity": "Banque \u0026 Assurance",
+    "address_line_1": "563, Bld. Colonel Tshiatshi",
+    "address_line_2": "Gombe",
     "city": "Kinshasa",
     "country": "République Démocratique du Congo",
     "created_at": {
       "$date": "2012-07-14T23:12:28.513Z"
     },
-    "email": "",
+    "email": "contact@bcc.cd",
     "geo": [
       15.2817933,
       -4.3051324
     ],
     "main_phone": "+243815259035",
     "name": "Banque Centrale Du Congo",
+    "description": "La Banque Centrale du Congo est chargée de définir et de mettre en œuvre la politique monétaire du pays dont l’objectif principal est d’assurer la stabilité du niveau général des prix. Elle est indépendante dans la réalisation de cet objectif. A cet effet, la Banque, par son Conseil, en la personne de son Gouverneur ou de tout autre membre de ses organes de décision, ne doit poser aucun acte de nature à aliéner cette indépendance.",
     "name_seo": "banque-centrale-du-congo",
-    "po_box": "",
+    "po_box": "BP 2697 Kinshasa 1",
     "postal_code": "",
+    "website": "https://www.bcc.cd/",
     "published": true,
     "stats_show": 1503,
     "updated_at": {
-      "$date": "2023-02-24T13:02:15.598Z"
+      "$date": "2026-06-18T07:38:00.000Z"
     }
   },
   {
