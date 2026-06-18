@@ -40636,38 +40636,6 @@
   },
   {
     "_id": {
-      "$oid": "5ae055093eb0ed15143fcbd1"
-    },
-    "activity": "Services aux Entreprises (B2B)",
-    "address_line_1": "no, 1945",
-    "address_line_2": "",
-    "alt_phone": "+243814636174",
-    "city": "Lubumbashi",
-    "country": "République Démocratique du Congo",
-    "created_at": {
-      "$date": "2018-04-25T10:14:46.855Z"
-    },
-    "description": "Dear Sir \u0026 Madam, Greetings from CONGO ASTRAL COMPANY SARL !! I would like to introduce to you our Company, Congo Astral Company sarl we provide Security solutions to clients in industries such as Office, Residential, Mining, Farming, Transit, Warehousing, Factories and Organisation properties. We Offer security on various sites such as: Lubumbashi, Kinshasa, Kipushi, Likasi, Kambove, Kamfundawa, Kakanda, Kolwezi and anywhere else in the DRC or in the Republic Of Zambia. Static Manned Security Services Electronic Security Solutions Vechile Tracking Solutions Security Fencing Solutions Alarm Monitoring Services Load Escort Services VIP Meet and Great Services VIP Escorts from Airport to Hotel Secure VIP Escort Road Transfer Services K-9 Services We have never compromised on the quality and the services we provide to our clients. We believe in keeping our clients happy and providing our security solutions at a competitive price. Please feel free to keep in touch with us about any of your business related requirements/queries. We look forward to a wonderful relationship together and success for all concerned. Thanks \u0026 Regards SELVARAJAN Domnic Rezoreya Head Management Administration \u0026 Site Control Manager Contact: +243 (0) 81 4636174 Skype : domnic.rezoreya Email : rezdomnic@congoastral.com Website: www.congoastral.com",
-    "email": "rezdomnic@congoastral.com",
-    "geo": [
-      27.4826264,
-      -11.6642316
-    ],
-    "main_phone": "+243814636174",
-    "mobile_phone": "+243814636174",
-    "name": "Selvarajan Domnic Rezoreya",
-    "name_seo": "selvarajan-domnic-rezoreya",
-    "po_box": "",
-    "postal_code": "",
-    "published": true,
-    "slogan": "Business Proposal for Security \u0026 Investigations",
-    "stats_show": 1099,
-    "updated_at": {
-      "$date": "2023-02-24T13:12:02.311Z"
-    }
-  },
-  {
-    "_id": {
       "$oid": "5ae56e443eb0ed15223fcd40"
     },
     "activity": "Informatique \u0026 Télécoms",
