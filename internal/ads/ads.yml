@@ -112,15 +112,15 @@ ads:
 
   - id: "kiooverse-kioomonorigins-early-access-dual-challenge"
     active: true
-    title: "Kioomon Origins Early Access Challenge"
-    description: "Compete in two realms, climb the leaderboard, and win cash prizes."
+    title: "Kioomon Origins game"
+    description: "A Roguelike Action Survivor game on mobile. Compete in two realms, climb the leaderboard, and win cash prizes."
     url: "https://kioomonorigins.com/"
     display_url: "kioomonorigins.com"
     label: *home_label
     color: *home_color
     period:
       start: "2026-05-09"
-      end: "2026-06-20"
+      end: "2026-08-31"
     weight: 10
     # placement: "homepage"
     keywords: []
@@ -135,7 +135,7 @@ ads:
     color: *verified_color
     period:
       start: "2026-05-09"
-      end: "2026-06-30"
+      end: "2026-08-31"
     weight: 10
     keywords: []
   
@@ -143,13 +143,13 @@ ads:
     active: true
     title: "VietCongo Bridge : Fret Vietnam - RDC"
     description: "Votre partenaire logistique de confiance pour l'expédition et le suivi en temps réel de vos colis du Vietnam vers la RDC."
-    url: "https://vietcongobridge-web.vercel.app"
-    display_url: "vietcongobridge-web.vercel.app"
+    url: "https://vietcongobridge.com"
+    display_url: "vietcongobridge.com"
     label: *verified_label
     color: *verified_color
     period:
       start: "2026-05-14"
-      end: "2026-06-30"
+      end: "2026-08-31"
     weight: 10
     keywords: []
 
