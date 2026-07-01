@@ -109,6 +109,41 @@ rotation_sec: 18
 max_per_page: 2
 
 ads:
+  # ─────────────────────────────────────────────────────────────────
+  # Congopro Bridge — Ads Configuration (Recrutement Commerciaux)
+  # ─────────────────────────────────────────────────────────────────
+  - id: "recrutement-sales-kin-homepage"
+    active: true
+    title: "Devenez Partenaire (35% Commission)"
+    description: "Vendez nos solutions publicitaires. Indépendant, horaires flexibles, fort potentiel de revenus. Postulez en DM !"
+    url: "https://www.linkedin.com/company/congopro/jobs"
+    display_url: "linkedin.com/company/congopro/jobs"
+    label: "OPPORTUNITÉ"
+    color: "#FF5722"
+    weight: 10
+    placement: "homepage"
+
+  - id: "recrutement-sales-kin-search"
+    active: true
+    title: "Congopro recrute des Commerciaux à Kinshasa"
+    description: "Rejoignez une tech ambitieuse. Gagnez 35% de commission sur chaque vente publicitaire B2B. Contactez-nous !"
+    url: "https://www.linkedin.com/company/congopro/jobs"
+    display_url: "linkedin.com/company/congopro/jobs"
+    label: "RECRUTEMENT"
+    color: "#00E676"
+    weight: 5
+    placement: "search_results"
+    keywords:
+      - "emploi"
+      - "job"
+      - "travail"
+      - "commercial"
+      - "sales"
+      - "vendeur"
+      - "business"
+      - "kinshasa"
+      - "freelance"
+      - "argent"
 
   - id: "kiooverse-kioomonorigins-early-access-dual-challenge"
     active: true
