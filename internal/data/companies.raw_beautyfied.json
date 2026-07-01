@@ -24230,7 +24230,7 @@
     "message_send_gplus": false,
     "message_send_twitter": true,
     "modifier_id": { "$oid": "513c99e4e4e8821b90000001" },
-    "name": "Fonds de promotion de l'Industrie",
+    "name": "Fonds de promotion de l'Industrie",
     "name_seo": "fonds-de-promotion-de-l-industrie",
     "published": true,
     "stats_show": 1989,
