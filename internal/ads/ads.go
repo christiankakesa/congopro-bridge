@@ -137,7 +137,7 @@ func adInPeriod(ad *AdConfig, now time.Time) bool {
 
 func adMatchesQuery(ad *AdConfig, q string) bool {
 	if len(ad.lowerKeywords) == 0 {
-		return true // Pack Notoriété
+		return true
 	}
 	if q == "" {
 		return false
