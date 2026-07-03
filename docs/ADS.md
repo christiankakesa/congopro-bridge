@@ -8,4 +8,5 @@
 - Orange RDC
 - Mpesa
 - https://forrestgroup.com/a-propos/
+- https://www.beatricehotel.com/
 - 
