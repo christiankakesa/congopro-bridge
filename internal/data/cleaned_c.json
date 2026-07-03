@@ -39245,14 +39245,12 @@
     "activity": "Hébergement \u0026 Tourisme",
     "address_line_1": "1, avenue Isiro",
     "address_line_2": "",
-    "alt_phone": "",
     "city": "Kinshasa",
     "country": "République Démocratique du Congo",
     "created_at": {
       "$date": "2016-08-21T21:25:50.111Z"
     },
     "description": "Beatrice Hôtel est un hôtel quatre étoiles à l'élégance discrète au cœur de Kinshasa. Les chambres sont spacieuses, lumineuses et décorées avec prestige. De l'espace, un cadre magnifique et du silence, telles sont les exigences des voyageurs contemporains.",
-    "email": "info@beatricehotel.com",
     "facebook": "",
     "geo": [
       15.3139294,
@@ -39261,6 +39259,8 @@
     "instagram": "",
     "linkedin": "",
     "main_phone": "+243812535000",
+    "alt_phone": "+243815555666",
+    "email": "reservation@beatricehotel.com",
     "mobile_phone": "",
     "name": "Béatrice Hôtel",
     "name_seo": "beatrice-hotel",
