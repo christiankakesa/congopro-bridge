@@ -110,6 +110,7 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 		</head>
 		<body class="bg-white text-gray-900 antialiased min-h-full overflow-x-hidden">
 			{ children... }
+			@scrollToTop(nonce)
 			@cookieConsent(nonce)
 		</body>
 	</html>
@@ -120,6 +121,40 @@ func pageTitle(title string) string {
 		return "Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
 	}
 	return title
+}
+
+// scrollToTop mirrors the SPA's results-page scroll-to-top widget
+// (index.html #scrollToTopBtn). Positioning is simplified to a plain
+// bottom-right anchor since these standalone pages don't have the SPA's
+// sidebar-offset layout the original's lg:left-[920px] override compensated
+// for.
+templ scrollToTop(nonce string) {
+	<button
+		id="scrollToTopBtn"
+		aria-label="Retour en haut"
+		class="fixed bottom-8 right-4 md:right-8 z-[90] p-3 bg-white text-gray-600 rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-gray-200 transition-all duration-300 transform opacity-0 translate-y-8 pointer-events-none hover:bg-gray-50 hover:text-[#1a73e8] focus:outline-none"
+	>
+		<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"></path>
+		</svg>
+	</button>
+	<script nonce={ nonce }>
+		(function () {
+			const btn = document.getElementById("scrollToTopBtn");
+			window.addEventListener("scroll", () => {
+				if (window.scrollY > 300) {
+					btn.classList.remove("opacity-0", "translate-y-8", "pointer-events-none");
+					btn.classList.add("opacity-100", "translate-y-0");
+				} else {
+					btn.classList.add("opacity-0", "translate-y-8", "pointer-events-none");
+					btn.classList.remove("opacity-100", "translate-y-0");
+				}
+			});
+			btn.addEventListener("click", () => {
+				window.scrollTo({ top: 0, behavior: "smooth" });
+			});
+		})();
+	</script>
 }
 
 templ cookieConsent(nonce string) {

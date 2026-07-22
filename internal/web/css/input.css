@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @source "../../../internal/web/**/*.html";
+@source "../../../internal/web/**/*.templ";
 
 @font-face {
   font-display: swap;
