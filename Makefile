@@ -28,7 +28,7 @@ RSYNC        := rsync -az --progress --delete \
 
 .PHONY: all build build-local clean test \
         docker-build docker-push docker-save docker-run docker-up docker-down docker-down-v meili-reset \
-        deploy deploy-binary deploy-config deploy-service deploy-full deploy-all \
+        deploy deploy-binary deploy-config deploy-service deploy-full deploy-all secrets-init \
         service-start service-stop service-restart service-status service-logs \
         traefik-reload traefik-logs \
         ollama-install ollama-configure-limit ollama-pull-models ollama-clean-models ollama-reset ollama-status ollama-setup ollama-logs \
@@ -158,9 +158,25 @@ deploy-service:
 	@echo "✓ unit installed — run 'make service-start' to enable"
 
 # First-time app setup: installs systemd unit, deploys binary, enables on boot.
-deploy-full: deploy-service deploy
+deploy-full: deploy-service secrets-init deploy
 	@$(SSH) "sudo systemctl enable $(SERVICE)"
 	@echo "✓ $(SERVICE) enabled on boot"
+
+# Generates a shared MEILI_MASTER_KEY on the server (never leaves the host) and writes it to
+# both services' EnvironmentFile. Idempotent: does nothing if a key already exists.
+secrets-init:
+	@echo "▶ Ensuring MEILI_MASTER_KEY secret exists on $(DEPLOY_HOST)…"
+	@$(SSH) "sudo mkdir -p $(REMOTE_DIR) $(MEILI_DIR)/etc; \
+	  if [ ! -s $(REMOTE_DIR)/secrets.env ]; then \
+	    KEY=\$$(openssl rand -base64 48); \
+	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee $(REMOTE_DIR)/secrets.env >/dev/null; \
+	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee $(MEILI_DIR)/etc/secrets.env >/dev/null; \
+	    sudo chown root:root $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env; \
+	    sudo chmod 600 $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env; \
+	    echo '✓ generated a new MEILI_MASTER_KEY on the server (not downloaded, not printed)'; \
+	  else \
+	    echo '✓ secrets.env already present — leaving existing key in place'; \
+	  fi"
 
 # Full server bootstrap: Ollama + Meilisearch + app. Run once on a fresh server.
 deploy-all: ollama-setup meili-setup deploy-full
@@ -286,7 +302,7 @@ meili-deploy-traefik:
 	@echo "✓ Traefik config deployed"
 
 # First-time Meilisearch setup: installs binary, config, systemd unit, Traefik, enables service.
-meili-setup: meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik
+meili-setup: meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik secrets-init
 	@$(SSH) "sudo systemctl enable --now meilisearch"
 	@echo ""
 	@echo "╔══════════════════════════════════════╗"

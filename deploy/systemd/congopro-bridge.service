@@ -16,8 +16,12 @@ Environment=ALLOWED_ORIGIN=https://congopro.com
 Environment=OLLAMA_ALLOW_PUBLIC_IP=false
 Environment=OLLAMA_ALLOWED_HOSTS=
 Environment=MEILI_URL=http://127.0.0.1:7700
-Environment=MEILI_MASTER_KEY=REDACTED
 Environment=MEILI_INDEX_NAME=companies
+
+# MEILI_MASTER_KEY is a secret and must NOT be committed to git.
+# Run `make secrets-init` to generate it on the target host (chmod 600, owned by root:root),
+# or create /opt/congopro-bridge/secrets.env manually with: MEILI_MASTER_KEY=<value>
+EnvironmentFile=/opt/congopro-bridge/secrets.env
 
 WorkingDirectory=/opt/congopro-bridge
 ExecStart=/opt/congopro-bridge/congopro-bridge

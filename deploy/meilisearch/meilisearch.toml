@@ -14,7 +14,10 @@ http_addr = "127.0.0.1:7700"
 
 # Sets the instance's master key, automatically protecting all routes except GET /health.
 # https://www.meilisearch.com/docs/learn/configuration/instance_options#master-key
-master_key = "REDACTED"
+# Do NOT set a real key here — this file is committed to git. The key is supplied at
+# runtime via the MEILI_MASTER_KEY environment variable, injected by
+# deploy/meilisearch/meilisearch.service through an untracked secrets file.
+# master_key = ""
 
 # Deactivates Meilisearch's built-in telemetry when provided.
 # Meilisearch automatically collects data from all instances that do not opt out using this flag.

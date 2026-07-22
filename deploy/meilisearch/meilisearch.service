@@ -5,6 +5,10 @@ After=systemd-user-sessions.service
 [Service]
 Type=simple
 WorkingDirectory=/opt/meilisearch
+# MEILI_MASTER_KEY is a secret and must NOT be committed to git.
+# Run `make secrets-init` to generate it on the target host (chmod 600, owned by root:root) —
+# it writes the same key here and to /opt/congopro-bridge/secrets.env so the app can authenticate.
+EnvironmentFile=/opt/meilisearch/etc/secrets.env
 ExecStart=/opt/meilisearch/bin/meilisearch --config-file-path /opt/meilisearch/etc/meilisearch.toml
 User=meilisearch
 Group=meilisearch

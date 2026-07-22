@@ -27,7 +27,10 @@ services:
       retries: 5
       start_period: 5s
     ports:
-      - "11434:11434"
+      # Loopback-only: reachable for local debugging (curl localhost:11434) but not
+      # from the network. Only `app` needs it, and it reaches ollama over the
+      # internal compose network regardless of this mapping.
+      - "127.0.0.1:11434:11434"
 
   ollama-init:
     image: ollama/ollama
@@ -54,12 +57,15 @@ services:
   meilisearch:
     image: getmeili/meilisearch:v1.37
     ports:
-      - "7700:7700"
+      # Loopback-only: reachable for local debugging (curl localhost:7700) but not
+      # from the network. Only `app` needs it, and it reaches meilisearch over the
+      # internal compose network regardless of this mapping.
+      - "127.0.0.1:7700:7700"
     environment:
       - MEILI_ENV=${MEILI_ENV:-development}
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-}
       - MEILI_NO_ANALYTICS=true
-      - MEILI_EXPERIMENTAL_ALLOWED_IP_NETWORKS=any
+      - MEILI_EXPERIMENTAL_ALLOWED_IP_NETWORKS=127.0.0.0/8,::1/128,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8
     volumes:
       - meili_data:/meili_data
     healthcheck:

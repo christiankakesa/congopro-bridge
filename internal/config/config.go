@@ -15,6 +15,7 @@ type Config struct {
 	MeiliURL            string
 	MeiliMasterKey      string
 	MeiliIndexName      string
+	TrustedProxies      []string
 }
 
 func Load() *Config {
@@ -46,6 +47,9 @@ func Load() *Config {
 	if mi := os.Getenv("MEILI_INDEX_NAME"); mi != "" {
 		cfg.MeiliIndexName = mi
 	}
+	if tp := os.Getenv("TRUSTED_PROXIES"); tp != "" {
+		cfg.TrustedProxies = splitTrimmed(tp, ",")
+	}
 
 	return cfg
 }
@@ -61,6 +65,10 @@ func defaults() *Config {
 		MeiliURL:            "http://127.0.0.1:7700",
 		MeiliMasterKey:      "",
 		MeiliIndexName:      "companies",
+		// Only these peers are trusted to set X-Forwarded-For/X-Real-IP (e.g. a local
+		// reverse proxy like Traefik). Requests from anyone else have their client-supplied
+		// forwarding headers ignored, so the rate limiter can't be bypassed by spoofing them.
+		TrustedProxies: []string{"127.0.0.1/32", "::1/128"},
 	}
 }
 

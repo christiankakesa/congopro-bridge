@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	cryptorand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -81,15 +82,22 @@ func (a *AppEngine) WithCORS(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func generateNonce() string {
+func generateNonce() (string, error) {
 	b := make([]byte, 16)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
+	if _, err := cryptorand.Read(b); err != nil {
+		return "", fmt.Errorf("generate nonce: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(b), nil
 }
 
 func (a *AppEngine) WithSecurityHeaders(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		nonce := generateNonce()
+		nonce, err := generateNonce()
+		if err != nil {
+			log.Error().Msgf("[security] nonce generation failed: %v", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
 
 		// Store nonce so the template can use it
 		ctx := context.WithValue(r.Context(), constants.NonceKey, nonce)
@@ -177,6 +185,16 @@ func (a *AppEngine) HealthHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	select {
+	case <-a.Engine.IndexingDone:
+	case <-r.Context().Done():
+		return
+	default:
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "server still indexing, please retry"})
+		return
+	}
 
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	if q == "" {

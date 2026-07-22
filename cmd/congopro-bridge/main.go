@@ -28,6 +28,11 @@ func main() {
 	logger.Init(logType, logger.Options{Level: logLevel})
 
 	cfg := config.Load()
+	if cfg.MeiliMasterKey == "" {
+		log.Warn().Msg("[startup] MEILI_MASTER_KEY is empty — Meilisearch is running without authentication, anyone reachable on MEILI_URL has full read/write access. Set MEILI_MASTER_KEY except for local, network-isolated development.")
+	}
+
+	ratelimiter.SetTrustedProxies(cfg.TrustedProxies)
 
 	ads.LoadAds()
 
