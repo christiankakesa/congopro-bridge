@@ -56,10 +56,14 @@ func Load() *Config {
 
 func defaults() *Config {
 	return &Config{
-		OllamaURL:           "http://127.0.0.1:11434",
-		GenerativeModel:     "gemma3:1b",
-		EmbeddingModel:      "nomic-embed-text",
-		AllowedOrigin:       "*",
+		OllamaURL:       "http://127.0.0.1:11434",
+		GenerativeModel: "gemma3:1b",
+		EmbeddingModel:  "nomic-embed-text",
+		// Empty disables cross-origin access by default (WithCORS then sends no
+		// Access-Control-* headers). The shipped frontend only ever calls the API
+		// same-origin, so this has no effect on it — only third-party cross-origin
+		// consumers need ALLOWED_ORIGIN set explicitly.
+		AllowedOrigin:       "",
 		OllamaAllowPublicIP: false,
 		OllamaAllowedHosts:  nil,
 		MeiliURL:            "http://127.0.0.1:7700",

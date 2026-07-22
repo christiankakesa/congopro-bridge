@@ -1,23 +1,36 @@
 ---
-http:
-  services:
-    meilisearch-service:
-      loadBalancer:
-        servers:
-          - url: "http://127.0.0.1:7700"
-
-  # middlewares:
-  #   meilisearch-header-mdw:
-  #     headers:
-  #       customRequestHeaders:
-  #         X-Forwarded-Proto: "https"
-
-  routers:
-    meilisearch-router:
-      rule: "Host(`meili.congopro.com`)"
-      service: meilisearch-service
-      entryPoints: [websecure]
-      # middlewares:
-      #   - meilisearch-header-mdw
-      tls:
-        certResolver: letsencrypt
+# Meilisearch is NOT exposed publicly by default: the app only ever reaches it
+# over 127.0.0.1 (see meilisearch.toml http_addr and the systemd unit's
+# MEILI_URL), so no public Traefik router is required for the app to work.
+#
+# If you need ad-hoc admin access (e.g. the Meilisearch web UI), prefer an SSH
+# tunnel over exposing the admin API publicly:
+#   ssh -L 7700:127.0.0.1:7700 <user>@<host>
+# then browse http://127.0.0.1:7700 on your own machine.
+#
+# If you later need real remote access, uncomment the router below AND add an
+# IP allowlist (or Basic Auth) middleware — never expose it with only the
+# master key as the sole guard.
+#
+# http:
+#   services:
+#     meilisearch-service:
+#       loadBalancer:
+#         servers:
+#           - url: "http://127.0.0.1:7700"
+#
+#   middlewares:
+#     meilisearch-ip-allowlist:
+#       ipAllowList:
+#         sourceRange:
+#           - "203.0.113.0/24" # replace with your actual admin IP(s)/CIDR
+#
+#   routers:
+#     meilisearch-router:
+#       rule: "Host(`meili.congopro.com`)"
+#       service: meilisearch-service
+#       entryPoints: [websecure]
+#       middlewares:
+#         - meilisearch-ip-allowlist
+#       tls:
+#         certResolver: letsencrypt

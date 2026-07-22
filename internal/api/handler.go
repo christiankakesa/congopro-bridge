@@ -67,13 +67,20 @@ func init() {
 
 func (a *AppEngine) WithCORS(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if a.Engine.Config.AllowedOrigin != "*" {
-			w.Header().Add("Vary", "Origin")
-		}
+		origin := a.Engine.Config.AllowedOrigin
 
-		w.Header().Set("Access-Control-Allow-Origin", a.Engine.Config.AllowedOrigin)
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		// Empty AllowedOrigin (the default) means cross-origin access is disabled:
+		// no Access-Control-* headers are sent. This never affects the shipped
+		// frontend, which only calls the API same-origin — browsers don't gate
+		// same-origin requests behind CORS headers at all.
+		if origin != "" {
+			if origin != "*" {
+				w.Header().Add("Vary", "Origin")
+			}
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return

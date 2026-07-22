@@ -31,6 +31,9 @@ func main() {
 	if cfg.MeiliMasterKey == "" {
 		log.Warn().Msg("[startup] MEILI_MASTER_KEY is empty — Meilisearch is running without authentication, anyone reachable on MEILI_URL has full read/write access. Set MEILI_MASTER_KEY except for local, network-isolated development.")
 	}
+	if cfg.AllowedOrigin == "*" {
+		log.Warn().Msg("[startup] ALLOWED_ORIGIN is \"*\" — any website can call the API cross-origin. Set ALLOWED_ORIGIN to a specific origin unless third-party cross-origin access is intentional.")
+	}
 
 	ratelimiter.SetTrustedProxies(cfg.TrustedProxies)
 
