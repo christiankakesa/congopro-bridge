@@ -44,7 +44,8 @@ func main() {
 	go func() {
 		start := time.Now()
 		if err := engine.LoadAndIndex(); err != nil {
-			log.Fatal().Msgf("[startup] indexing failed: %v", err)
+			log.Error().Msgf("[startup] indexing failed after retries — search and AI endpoints will return errors, but static pages and company profiles still work: %v", err)
+			return
 		}
 		log.Info().Msgf("[startup] indexing completed in %s", time.Since(start).Round(time.Millisecond))
 	}()

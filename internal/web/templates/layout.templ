@@ -1,0 +1,329 @@
+// Package templates holds server-rendered (templ) pages. It is the SSR
+// counterpart to the client-side SPA in internal/web/index.html: routes that
+// don't need live, in-page interactivity (static content, company profiles)
+// render their full HTML on the server instead of shipping an empty shell
+// for client JS to fill in.
+package templates
+
+templ Layout(title, canonicalURL, nonce, cssVersion string) {
+	<!DOCTYPE html>
+	<html lang="fr" class="h-full overflow-x-hidden">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+			<!-- ========================================== -->
+			<!-- SEO Standard -->
+			<!-- ========================================== -->
+			<title>{ pageTitle(title) }</title>
+			<meta
+				name="description"
+				content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA."
+			/>
+			<meta
+				name="keywords"
+				content="Congopro, moteur de recherche RDC, annuaire entreprises Congo, professionnels RDC, services Kinshasa, intelligence artificielle Congo, trouver entreprise RDC, business RDC, IA Congo"
+			/>
+			<meta name="robots" content="index,follow"/>
+			<meta name="author" content="Congopro"/>
+			<link rel="canonical" href={ canonicalURL }/>
+
+			<!-- ========================================== -->
+			<!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+			<!-- ========================================== -->
+			<meta property="og:type" content="website"/>
+			<meta property="og:url" content="https://www.congopro.com/"/>
+			<meta property="og:title" content="Congopro | Moteur de recherche boosté à l'IA"/>
+			<meta
+				property="og:description"
+				content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA."
+			/>
+			<meta property="og:image" content="https://www.congopro.com/images/og-image.png"/>
+			<meta property="og:site_name" content="Congopro"/>
+			<meta property="og:locale" content="fr_FR"/>
+
+			<!-- ========================================== -->
+			<!-- Twitter Card -->
+			<!-- ========================================== -->
+			<meta name="twitter:card" content="summary_large_image"/>
+			<meta name="twitter:url" content="https://www.congopro.com/"/>
+			<meta name="twitter:title" content="Congopro | Moteur de recherche boosté à l'IA"/>
+			<meta
+				name="twitter:description"
+				content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance en RDC grâce à l'IA."
+			/>
+			<meta name="twitter:image" content="https://www.congopro.com/images/twitter-image.png"/>
+			<meta name="twitter:site" content="@Congopro"/>
+
+			<!-- ========================================== -->
+			<!-- Favicons & App Icons -->
+			<!-- ========================================== -->
+			<link rel="icon" href="/images/favicon.svg" type="image/svg+xml"/>
+			<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png"/>
+			<link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png"/>
+			<link rel="icon" type="image/png" sizes="192x192" href="/images/android-chrome-192x192.png"/>
+			<link rel="icon" type="image/png" sizes="512x512" href="/images/android-chrome-512x512.png"/>
+			<link rel="icon" href="/favicon.ico"/>
+
+			<!-- Favicon standard (Anciens navigateurs) -->
+			<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+
+			<!-- Apple Touch Icon (iOS) -->
+			<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png"/>
+
+			<!-- Android / Web App Manifest (Chrome, Firefox, etc.) -->
+			<link rel="manifest" href="/site.webmanifest"/>
+			<meta name="theme-color" content="#be0203"/>
+
+			<!-- Microsoft / Windows Tiles -->
+			<meta name="msapplication-TileColor" content="#ffffff"/>
+			<meta name="msapplication-TileImage" content="/images/mstile-150x150.png"/>
+			<meta name="application-name" content="Congopro"/>
+
+			<link rel="preload" href={ "/css/style.min.css?h=" + cssVersion } as="style"/>
+			<link rel="stylesheet" href={ "/css/style.min.css?h=" + cssVersion }/>
+			<script async nonce={ nonce } src="https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG"></script>
+			<script nonce={ nonce }>
+				window.dataLayer = window.dataLayer || [];
+				function gtag() {
+					dataLayer.push(arguments);
+				}
+				gtag("consent", "default", {
+					analytics_storage: "denied",
+					ad_storage: "denied",
+					ad_user_data: "denied",
+					ad_personalization: "denied",
+					wait_for_update: 500,
+				});
+				try {
+					if (localStorage.getItem("sb_cookie_consent") === "all")
+						gtag("consent", "update", {
+							analytics_storage: "granted",
+							ad_storage: "granted",
+							ad_user_data: "granted",
+							ad_personalization: "granted",
+						});
+				} catch (e) {}
+				gtag("js", new Date());
+				gtag("config", "G-VS32J060KG");
+			</script>
+		</head>
+		<body class="bg-white text-gray-900 antialiased min-h-full overflow-x-hidden">
+			{ children... }
+			@cookieConsent(nonce)
+		</body>
+	</html>
+}
+
+func pageTitle(title string) string {
+	if title == "" {
+		return "Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
+	}
+	return title
+}
+
+templ cookieConsent(nonce string) {
+	<div
+		id="cookieBanner"
+		class="fixed bottom-0 inset-x-0 z-[100] hidden"
+		tabindex="-1"
+		role="dialog"
+		aria-live="polite"
+		aria-label="Avis relatif aux cookies"
+		aria-modal="true"
+	>
+		<div class="bg-white/95 backdrop-blur border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+			<div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+				<span class="text-2xl shrink-0 select-none" aria-hidden="true">🔒</span>
+				<div class="flex-1 min-w-0">
+					<p class="text-sm text-gray-700 leading-relaxed">
+						<strong class="font-semibold text-gray-900">Votre vie privée est importante.</strong>
+						Nous utilisons uniquement des cookies essentiels et des SDK
+						partenaires de confiance pour la sécurité, les performances et les
+						statistiques anonymisées.
+						<strong class="font-semibold text-gray-900">Nous ne vendons jamais vos données personnelles et ne les
+							partageons pas avec des annonceurs.</strong>
+						<button
+							id="cookieLearnMore"
+							class="ml-1 text-blue-600 hover:underline text-sm font-medium whitespace-nowrap"
+						>
+							En savoir plus
+						</button>
+					</p>
+				</div>
+				<div class="flex items-center gap-2 shrink-0 flex-wrap">
+					<button
+						id="cookieDecline"
+						class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+					>
+						Uniquement les essentiels
+					</button>
+					<button
+						id="cookieAccept"
+						class="px-5 py-2 text-sm font-semibold text-white rounded-full transition-colors"
+						style="background: #1a73e8"
+					>
+						Tout accepter
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div
+		id="cookieModal"
+		class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="modalTitle"
+	>
+		<div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="cookieModalBackdrop"></div>
+		<div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden">
+			<div class="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+				<h2 id="modalTitle" class="text-base font-semibold text-gray-900">
+					Détails sur les cookies et la confidentialité
+				</h2>
+				<button id="cookieModalClose" class="text-gray-400 hover:text-gray-700 transition-colors" aria-label="Fermer">
+					<svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+						<path
+							fill-rule="evenodd"
+							d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+							clip-rule="evenodd"
+						></path>
+					</svg>
+				</button>
+			</div>
+			<div class="px-6 py-5 space-y-5 text-sm text-gray-600 max-h-[60vh] overflow-y-auto">
+				<p class="text-gray-700">
+					Nous pensons que vous devez savoir exactement ce qui s'exécute
+					lorsque vous utilisez Congopro Bridge.
+				</p>
+				<div class="rounded-xl border border-gray-100 p-4 space-y-1.5">
+					<div class="flex items-center justify-between">
+						<span class="font-semibold text-gray-900 flex items-center gap-1.5">
+							<span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+							Cookies essentiels
+						</span>
+						<span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Toujours actifs</span>
+					</div>
+					<p>
+						Nécessaires au fonctionnement du site - gestion des sessions et
+						jetons de sécurité. Aucune donnée personnelle n'est stockée.
+					</p>
+				</div>
+				<div class="rounded-xl border border-gray-100 p-4 space-y-1.5">
+					<div class="flex items-center justify-between">
+						<span class="font-semibold text-gray-900 flex items-center gap-1.5">
+							<span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+							Statistiques anonymes
+						</span>
+						<span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Optionnel</span>
+					</div>
+					<p>
+						Les statistiques d'utilisation agrégées et anonymisées (par
+						exemple les recherches populaires ou les taux d'erreur) nous
+						aident à améliorer le produit. Aucune adresse IP ni identifiant
+						n'est conservé.
+					</p>
+				</div>
+				<div class="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-2">
+					<p class="font-semibold text-blue-900">
+						Ce que nous ne faisons pas
+					</p>
+					<ul class="space-y-1 text-blue-800">
+						<li class="flex items-start gap-2">
+							<span class="mt-0.5">✗</span> Vendre ou louer vos données à des
+							tiers
+						</li>
+						<li class="flex items-start gap-2">
+							<span class="mt-0.5">✗</span> Créer des profils publicitaires
+						</li>
+						<li class="flex items-start gap-2">
+							<span class="mt-0.5">✗</span> Partager les requêtes de recherche
+							avec des réseaux publicitaires externes
+						</li>
+						<li class="flex items-start gap-2">
+							<span class="mt-0.5">✗</span> Vous suivre sur d'autres sites web
+						</li>
+					</ul>
+				</div>
+			</div>
+			<div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+				<button id="modalDecline" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+					Uniquement les essentiels
+				</button>
+				<button id="modalAccept" class="px-5 py-2 text-sm font-semibold text-white rounded-full transition-colors" style="background: #1a73e8">
+					Tout accepter
+				</button>
+			</div>
+		</div>
+	</div>
+	<script nonce={ nonce }>
+		(function () {
+			const COOKIE_KEY = "sb_cookie_consent";
+			const banner = document.getElementById("cookieBanner");
+			const modal = document.getElementById("cookieModal");
+
+			function getConsent() {
+				try {
+					return localStorage.getItem(COOKIE_KEY);
+				} catch {
+					return null;
+				}
+			}
+			function setConsent(v) {
+				try {
+					localStorage.setItem(COOKIE_KEY, v);
+				} catch {}
+			}
+			function hideBanner() {
+				banner.classList.add("hidden");
+			}
+			function showBanner() {
+				banner.classList.remove("hidden");
+				banner.focus();
+			}
+			function openModal() {
+				modal.classList.remove("hidden");
+				modal.classList.add("flex");
+			}
+			function closeModal() {
+				modal.classList.add("hidden");
+				modal.classList.remove("flex");
+			}
+
+			function accept() {
+				setConsent("all");
+				hideBanner();
+				closeModal();
+				if (typeof gtag === "function")
+					gtag("consent", "update", {
+						analytics_storage: "granted",
+						ad_storage: "granted",
+					});
+			}
+			function decline() {
+				setConsent("essential");
+				hideBanner();
+				closeModal();
+				if (typeof gtag === "function")
+					gtag("consent", "update", {
+						analytics_storage: "denied",
+						ad_storage: "denied",
+					});
+			}
+
+			document.getElementById("cookieAccept").addEventListener("click", accept);
+			document.getElementById("cookieDecline").addEventListener("click", decline);
+			document.getElementById("cookieLearnMore").addEventListener("click", openModal);
+			document.getElementById("cookieModalClose").addEventListener("click", closeModal);
+			document.getElementById("cookieModalBackdrop").addEventListener("click", closeModal);
+			document.getElementById("modalAccept").addEventListener("click", accept);
+			document.getElementById("modalDecline").addEventListener("click", decline);
+			document.addEventListener("keydown", (e) => {
+				if (e.key === "Escape") closeModal();
+			});
+
+			if (!getConsent()) showBanner();
+		})();
+	</script>
+}

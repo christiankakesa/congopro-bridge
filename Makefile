@@ -18,6 +18,7 @@ GENERATIVE_MODEL ?= gemma3:1b
 EMBEDDING_MODEL ?= nomic-embed-text
 SERVICE      := congopro-bridge
 TAILWIND_CLI := $(shell which tailwindcss)
+TEMPL_CLI    := $(shell which templ)
 
 _ssh_opts    := -p $(DEPLOY_PORT) -i $(SSH_KEY) \
                 -o StrictHostKeyChecking=accept-new \
@@ -26,7 +27,7 @@ SSH          := ssh $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST)
 RSYNC        := rsync -az --progress --delete \
                 -e "ssh $(_ssh_opts)"
 
-.PHONY: all build build-local clean test \
+.PHONY: all build build-local clean test templ \
         docker-build docker-push docker-save docker-run docker-up docker-down docker-down-v meili-reset \
         deploy deploy-binary deploy-config deploy-service deploy-full deploy-all secrets-init \
         service-start service-stop service-restart service-status service-logs \
@@ -47,7 +48,17 @@ css:
 	@$(TAILWIND_CLI) -i ./internal/web/css/input.css -o ./internal/web/css/style.min.css --minify
 	@echo "✓ CSS compiled"
 
-build: css
+templ:
+	@echo "▶ Generating templ components…"
+	@if [ ! -x "$(TEMPL_CLI)" ]; then \
+		echo "❌ Error: templ CLI not found."; \
+		echo "Install it via: go install github.com/a-h/templ/cmd/templ@latest"; \
+		exit 1; \
+	fi
+	@$(TEMPL_CLI) generate ./...
+	@echo "✓ templ components generated"
+
+build: css templ
 	@echo "▶ Building $(BINARY)…"
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
@@ -348,6 +359,7 @@ help:
 	@echo "  App:        deploy              Rebuild and deploy binary"
 	@echo "              deploy-full         First-time: installs systemd unit + deploy"
 	@echo "  Dev:        docker-up/down      Start/stop local stack"
+	@echo "              templ               Regenerate *_templ.go from .templ sources"
 	@echo "              meili-reset         Wipe local Meilisearch index"
 	@echo "  Meili:      meili-setup         First-time remote Meilisearch install"
 	@echo "              meili-index-reset   Wipe remote index (rebuilds on next start)"

@@ -24,6 +24,7 @@ import (
 	"congopro-bridge/internal/constants"
 	"congopro-bridge/internal/data"
 	"congopro-bridge/internal/web"
+	"congopro-bridge/internal/web/templates"
 )
 
 type AppEngine struct {
@@ -180,6 +181,14 @@ func (a *AppEngine) HealthHandler(w http.ResponseWriter, r *http.Request) {
 
 	select {
 	case <-a.Engine.IndexingDone:
+		if a.Engine.IndexingError() != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(HealthResponse{
+				Status:    "degraded",
+				Companies: len(a.Engine.Companies()),
+			})
+			return
+		}
 		json.NewEncoder(w).Encode(HealthResponse{
 			Status:    "ready",
 			Companies: len(a.Engine.Companies()),
@@ -253,35 +262,71 @@ func (a *AppEngine) ServeSPAHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AppEngine) HelpHandler(w http.ResponseWriter, r *http.Request) {
-	a.serveSPA(w, r, "Aide | Congopro")
+	a.serveStaticPage(w, r, "Aide | Congopro", "help", "Aide et Assistance")
 }
 
 func (a *AppEngine) PrivacyHandler(w http.ResponseWriter, r *http.Request) {
-	a.serveSPA(w, r, "Confidentialité | Congopro")
+	a.serveStaticPage(w, r, "Confidentialité | Congopro", "privacy", "Politique de Confidentialité")
 }
 
 func (a *AppEngine) TermsHandler(w http.ResponseWriter, r *http.Request) {
-	a.serveSPA(w, r, "Conditions d'utilisation | Congopro")
+	a.serveStaticPage(w, r, "Conditions d'utilisation | Congopro", "terms", "Conditions d'Utilisation")
 }
 
+// serveStaticPage renders a fully server-rendered content page (help,
+// privacy, terms) — real content in the initial response, no client-side
+// fetch-and-inject round trip, and no SPA JS bundle required to see it.
+func (a *AppEngine) serveStaticPage(w http.ResponseWriter, r *http.Request, title, page, heading string) {
+	content, err := web.ContentFS.ReadFile("content/" + page + ".html")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	nonce, _ := r.Context().Value(constants.NonceKey).(string)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600") // 1 hour
+
+	if err := templates.StaticPage(title, canonicalURL(r), nonce, cssHash, heading, string(content)).Render(r.Context(), w); err != nil {
+		log.Error().Msgf("[templates] render static page %q: %v", page, err)
+	}
+}
+
+// CompanyHandler renders a company's profile as a real, fully server-rendered
+// page instead of the old approach of serving the generic SPA shell and
+// letting client JS resolve the company via a "-company-slug:" search hack.
 func (a *AppEngine) CompanyHandler(w http.ResponseWriter, r *http.Request) {
 	slug := strings.TrimPrefix(r.URL.Path, "/company/")
 	slug = strings.Trim(slug, "/")
-
-	title := defaultTitle
-	if slug != "" {
-		// Wait for indexing or fall back to default
-		select {
-		case <-a.Engine.IndexingDone:
-			if company, err := a.Engine.FindBySlug(slug); err != nil {
-				title = company.Name + " | Congopro"
-			}
-		default:
-			// still indexing, use default
-		}
+	if slug == "" {
+		http.NotFound(w, r)
+		return
 	}
 
-	a.serveSPA(w, r, title)
+	select {
+	case <-a.Engine.IndexingDone:
+	case <-r.Context().Done():
+		return
+	default:
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte("server still indexing, please retry"))
+		return
+	}
+
+	company, err := a.Engine.FindBySlug(slug)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	nonce, _ := r.Context().Value(constants.NonceKey).(string)
+	title := company.Name + " | Congopro"
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=300") // 5 minutes
+
+	if err := templates.CompanyPage(title, canonicalURL(r), nonce, cssHash, company).Render(r.Context(), w); err != nil {
+		log.Error().Msgf("[templates] render company page %q: %v", slug, err)
+	}
 }
 
 func (a *AppEngine) ContentHandler(w http.ResponseWriter, r *http.Request) {

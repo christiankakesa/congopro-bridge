@@ -3,6 +3,7 @@ module congopro-bridge
 go 1.25.0
 
 require (
+	github.com/a-h/templ v0.3.1020
 	github.com/meilisearch/meilisearch-go v0.36.2
 	github.com/rs/zerolog v1.35.1
 	github.com/urfave/cli/v2 v2.27.7

@@ -1,0 +1,16 @@
+package templates
+
+// StaticPage renders a fully server-rendered content page (help, privacy,
+// terms). bodyHTML is trusted, admin-authored markup (from
+// internal/web/content/*.html) injected as-is via templ.Raw — the same trust
+// boundary the old client-side fetch-and-inject flow already crossed.
+templ StaticPage(title, canonicalURL, nonce, cssVersion, heading, bodyHTML string) {
+	@Layout(title, canonicalURL, nonce, cssVersion) {
+		<div class="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-28">
+			<h1 class="text-3xl font-sora font-normal text-gray-900 mb-6">{ heading }</h1>
+			<div class="prose prose-blue text-gray-700 leading-relaxed space-y-4">
+				@templ.Raw(bodyHTML)
+			</div>
+		</div>
+	}
+}

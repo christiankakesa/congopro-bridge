@@ -247,6 +247,13 @@ func (e *Engine) Companies() []Company {
 	return e.companies
 }
 
+// IndexingError returns the error from the last indexing attempt, if any.
+// Only meaningful after IndexingDone is closed — the channel close happens
+// after initErr is set, so no additional synchronization is needed here.
+func (e *Engine) IndexingError() error {
+	return e.initErr
+}
+
 var htmlTagRE = regexp.MustCompile(`<[^>]+>`)
 
 func stripHTML(s string) string {

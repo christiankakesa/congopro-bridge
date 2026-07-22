@@ -264,20 +264,6 @@
       ></p>
     </div>
 
-    <div
-      id="staticPage"
-      class="hidden w-full max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-28"
-    >
-      <h1
-        id="staticTitle"
-        class="text-3xl font-sora font-normal text-gray-900 mb-6"
-      ></h1>
-      <div
-        id="staticContent"
-        class="prose prose-blue text-gray-700 leading-relaxed space-y-4"
-      ></div>
-    </div>
-
     <div id="resultsPage" class="hidden w-full">
       <div id="topBar" class="px-4 sm:px-6 py-3 w-full">
         <div
@@ -500,9 +486,6 @@
       let abortCtrl = null;
 
       // ── DOM ───────────────────────────────────────────────
-      const staticPage = document.getElementById("staticPage");
-      const staticTitle = document.getElementById("staticTitle");
-      const staticContent = document.getElementById("staticContent");
       const homepage = document.getElementById("homepage");
       const resultsPage = document.getElementById("resultsPage");
       const homeInput = document.getElementById("homeInput");
@@ -666,6 +649,18 @@
           });
         },
       };
+
+      // Paths that are real server-rendered pages (internal/web/templates),
+      // not part of this SPA — navigation to them must not be intercepted.
+      function isServerRenderedPath(pathname) {
+        return (
+          pathname === "/help" ||
+          pathname === "/privacy" ||
+          pathname === "/terms" ||
+          pathname.startsWith("/company/")
+        );
+      }
+
       // ── View switching ────────────────────────────────────
       function showHome() {
         if (window.location.pathname !== "/" || window.location.search !== "") {
@@ -1338,41 +1333,25 @@
       });
 
       // ── The Router ─────────────────────────────────────────
+      // /help, /privacy, /terms and /company/* are real server-rendered
+      // pages now (see internal/web/templates) — this SPA only owns "/" and
+      // search results, so handleRoute() no longer needs branches for them.
+      // The click handler below lets navigation to those paths fall through
+      // to a normal browser page load instead of intercepting it.
       function handleRoute() {
-        const path = window.location.pathname;
-
         homepage.style.display = "none";
         resultsPage.classList.add("hidden");
-        staticPage.classList.add("hidden");
 
-        if (path.startsWith("/company/")) {
-          const parts = path.split("/");
-          if (parts.length >= 3 && parts[2]) {
-            const slug = parts[2];
-            topInput.value = "";
-            topClear.classList.add("hidden");
-            doSearch(`-company-slug:${slug}`, false);
-          } else {
-            showHome();
-          }
-        } else if (path === "/help") {
-          fetchStaticContent("Aide et Assistance", "help");
-        } else if (path === "/privacy") {
-          fetchStaticContent("Politique de Confidentialité", "privacy");
-        } else if (path === "/terms") {
-          fetchStaticContent("Conditions d'Utilisation", "terms");
+        // Route: Home OR a Shared Search Link
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryParam = urlParams.get("q");
+
+        if (queryParam) {
+          topInput.value = queryParam;
+          topClear.classList.remove("hidden");
+          doSearch(queryParam, false);
         } else {
-          // Route: Home OR a Shared Search Link
-          const urlParams = new URLSearchParams(window.location.search);
-          const queryParam = urlParams.get("q");
-
-          if (queryParam) {
-            topInput.value = queryParam;
-            topClear.classList.remove("hidden");
-            doSearch(queryParam, false);
-          } else {
-            showHome();
-          }
+          showHome();
         }
       }
 
@@ -1547,25 +1526,6 @@
         }
       }
 
-      async function fetchStaticContent(title, pageSlug) {
-        staticPage.classList.remove("hidden");
-        staticTitle.textContent = title;
-        staticContent.innerHTML = `<div class="flex items-center gap-2 text-gray-500">
-                  <svg class="spinner w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
-                  Chargement...
-                </div>`;
-        window.scrollTo(0, 0);
-
-        try {
-          const res = await fetch(`${API_BASE}/api/v1/content/${pageSlug}`);
-          if (!res.ok) throw new Error("Failed to load content");
-          const html = await res.text();
-          staticContent.innerHTML = html;
-        } catch (err) {
-          staticContent.innerHTML = `<p class="text-red-500">⚠️ Impossible de charger le document. Vérifiez votre connexion et réessayez.</p>`;
-        }
-      }
-
       // ── Override standard links for SPA Navigation ──────────
       document.addEventListener("click", async (e) => {
         const adLink = event.target.closest("[data-track-click='true']");
@@ -1617,12 +1577,16 @@
         if (
           link &&
           link.host === window.location.host &&
-          !link.hasAttribute("target")
+          !link.hasAttribute("target") &&
+          !isServerRenderedPath(link.pathname)
         ) {
           e.preventDefault();
           history.pushState(null, "", link.href);
           handleRoute();
         }
+        // Links to /help, /privacy, /terms and /company/* fall through to a
+        // normal browser navigation — those routes are real server-rendered
+        // pages now (see internal/web/templates), not part of this SPA.
       });
 
       window.addEventListener("popstate", handleRoute);
@@ -1647,15 +1611,21 @@
         try {
           const res = await fetch(`${API_BASE}/api/v1/health`);
           const data = await res.json();
-          if (data.status === "ready") {
+          // Any status other than "indexing" means the server has finished
+          // starting up — "ready" or "degraded" (indexing failed but static
+          // pages and company profiles still work off in-memory data).
+          if (data.status !== "indexing") {
             HEALTH_BACKOFF.attempt = 0;
             serverReady = true;
             homeFooter.innerHTML = `© ${new Date().getFullYear()} Congopro ·
-                    <a href="{validateURL('https://t.me/+yzJqliLeudNkZjY0')}" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 hover:underline transition-colors">Support</a> ·
+                    <a href="${validateURL('https://t.me/+yzJqliLeudNkZjY0')}" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 hover:underline transition-colors">Support</a> ·
                     <a href="/help" class="hover:text-gray-600 hover:underline transition-colors">Aide</a> ·
                     <a href="/privacy" class="hover:text-gray-600 hover:underline transition-colors">Confidentialité</a> ·
                     <a href="/terms" class="hover:text-gray-600 hover:underline transition-colors">Conditions</a>`;
-            homeStatus.textContent = "";
+            homeStatus.textContent =
+              data.status === "degraded"
+                ? "⚠️ Recherche temporairement indisponible."
+                : "";
             handleRoute();
             return;
           }
