@@ -15,12 +15,13 @@ import (
 )
 
 var (
-	phoneRe  = regexp.MustCompile(`^[+\d\s\-().]+$`)
-	emailRe  = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
-	ipv4Re   = regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}$`)
-	priv172  = regexp.MustCompile(`^172\.(1[6-9]|2\d|3[01])\.`)
-	nonDigit = regexp.MustCompile(`[^0-9+]`)
-	wordRe   = regexp.MustCompile(`[\p{L}\p{N}]+`)
+	phoneRe    = regexp.MustCompile(`^[+\d\s\-().]+$`)
+	emailRe    = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+	cssColorRe = regexp.MustCompile(`(?i)^(#[0-9a-f]{3,8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(\s*,\s*[\d.]+)?\s*\)|hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%(\s*,\s*[\d.]+)?\s*\)|[a-z]+)$`)
+	ipv4Re     = regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}$`)
+	priv172    = regexp.MustCompile(`^172\.(1[6-9]|2\d|3[01])\.`)
+	nonDigit   = regexp.MustCompile(`[^0-9+]`)
+	wordRe     = regexp.MustCompile(`[\p{L}\p{N}]+`)
 )
 
 // ValidateURL is a Go port of the frontend's validateURL(): only absolute
@@ -276,4 +277,142 @@ func isUnreservedURIComponent(b byte) bool {
 		return true
 	}
 	return false
+}
+
+// Excerpt is a Go port of the frontend's excerpt(): truncate to at most max
+// runes, breaking at the last plain space at or before that position. If no
+// space is found, the frontend's quirk of returning the full, untruncated
+// text is preserved here too.
+func Excerpt(text string, max int) string {
+	text = strings.TrimSpace(text)
+	runes := []rune(text)
+	if len(runes) <= max {
+		return text
+	}
+	cut := -1
+	for i := max; i >= 0; i-- {
+		if runes[i] == ' ' {
+			cut = i
+			break
+		}
+	}
+	if cut == -1 {
+		return text
+	}
+	return strings.TrimRightFunc(string(runes[:cut]), unicode.IsSpace) + "…"
+}
+
+// TruncateActivity is a Go port of the frontend's truncateActivity() (fixed
+// 32-rune limit, the only value it's ever called with): unlike Excerpt, a
+// missing space falls back to a hard cut at max runes rather than returning
+// the untruncated text.
+func TruncateActivity(activity string) string {
+	const max = 32
+	activity = strings.TrimSpace(activity)
+	runes := []rune(activity)
+	if len(runes) <= max {
+		return activity
+	}
+	cut := -1
+	for i := max; i >= 0; i-- {
+		if runes[i] == ' ' {
+			cut = i
+			break
+		}
+	}
+	if cut > 0 {
+		return strings.TrimRightFunc(string(runes[:cut]), unicode.IsSpace) + "…"
+	}
+	return strings.TrimRightFunc(string(runes[:max]), unicode.IsSpace) + "…"
+}
+
+// MapsURLForRow mirrors the frontend's renderRow() mapsLink logic, which —
+// unlike the company-profile page's MapsURL — prefers GPS coordinates over
+// the free-text address when both are present.
+func MapsURLForRow(address1, address2, city, country string, lat, lon float64, hasLocation bool) string {
+	var raw string
+	if hasLocation && lat != 0 && lon != 0 {
+		raw = fmt.Sprintf("https://google.com/maps/search/?api=1&query=%v,%v", lat, lon)
+	} else {
+		parts := make([]string, 0, 4)
+		for _, p := range []string{address1, address2, city, country} {
+			if p != "" {
+				parts = append(parts, p)
+			}
+		}
+		if len(parts) > 0 {
+			raw = "https://google.com/maps/search/?api=1&query=" + encodeURIComponent(strings.Join(parts, ", "))
+		}
+	}
+	if raw == "" {
+		return ""
+	}
+	return ValidateURL(raw)
+}
+
+// LocationPillAddressHTML mirrors renderRow()'s inline address spans inside
+// the visible location pill (distinct from the hidden AddressMetaHTML
+// below, which always renders regardless of whether the pill itself does).
+func LocationPillAddressHTML(address1, address2, city, country string) string {
+	var sb strings.Builder
+	for _, p := range []struct{ prop, val string }{
+		{"streetAddress", address1},
+		{"streetAddress", address2},
+		{"addressLocality", city},
+		{"addressCountry", country},
+	} {
+		if p.val == "" {
+			continue
+		}
+		sb.WriteString(`<span itemprop="` + p.prop + `">` + html.EscapeString(p.val) + `</span>`)
+	}
+	return sb.String()
+}
+
+// GeoMetaHTML mirrors renderRow()'s hidden, machine-readable geo block —
+// rendered whenever coordinates exist, independent of whether the visible
+// location pill renders.
+func GeoMetaHTML(lat, lon float64, hasLocation bool) string {
+	if !hasLocation || lat == 0 || lon == 0 {
+		return ""
+	}
+	return `<div itemprop="geo" itemscope itemtype="https://schema.org/GeoCoordinates" hidden>` +
+		`<meta itemprop="latitude" content="` + html.EscapeString(fmt.Sprintf("%v", lat)) + `"/>` +
+		`<meta itemprop="longitude" content="` + html.EscapeString(fmt.Sprintf("%v", lon)) + `"/>` +
+		`</div>`
+}
+
+// AddressMetaHTML mirrors renderRow()'s hidden, machine-readable address
+// block — rendered whenever any address field exists, independent of
+// whether the visible location pill renders.
+func AddressMetaHTML(address1, address2, city, country string) string {
+	if address1 == "" && address2 == "" && city == "" && country == "" {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString(`<div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress" hidden>`)
+	for _, p := range []struct{ prop, val string }{
+		{"streetAddress", address1},
+		{"streetAddress", address2},
+		{"addressLocality", city},
+		{"addressCountry", country},
+	} {
+		if p.val == "" {
+			continue
+		}
+		sb.WriteString(`<meta itemprop="` + p.prop + `" content="` + html.EscapeString(p.val) + `"/>`)
+	}
+	sb.WriteString(`</div>`)
+	return sb.String()
+}
+
+// SafeCSSColor is a Go port of the frontend's safeCSSColor(): allow hex,
+// rgb()/hsl(), or a bare named color; reject anything else (in particular,
+// anything that could break out of a style="" attribute).
+func SafeCSSColor(val string) string {
+	val = strings.TrimSpace(val)
+	if val == "" || !cssColorRe.MatchString(val) {
+		return ""
+	}
+	return val
 }

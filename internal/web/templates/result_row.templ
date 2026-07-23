@@ -1,0 +1,126 @@
+package templates
+
+import (
+	"fmt"
+	"math"
+
+	"congopro-bridge/internal/data"
+)
+
+// resultRow is a Go port of the frontend's renderRow(): one row in a
+// multi-result search results list.
+templ resultRow(sr data.SearchResult) {
+	{{
+		c := sr.Company
+		name := c.Name
+		if name == "" {
+			name = "Unnamed"
+		}
+		activity := c.Activity
+		rawDesc := c.Description
+		if rawDesc == "" {
+			rawDesc = c.Slogan
+		}
+		desc := Excerpt(rawDesc, 200)
+		hasScore := sr.Score > 0
+		scorePct := int(math.Round(sr.Score * 100))
+		phone := SafePhone(c.Phone)
+		email := SafeEmail(c.Email)
+		hue := NameToHue(name)
+		bg := fmt.Sprintf("hsl(%d,55%%,92%%)", hue)
+		fg := fmt.Sprintf("hsl(%d,50%%,32%%)", hue)
+		ini := Initials(name)
+		actShort := TruncateActivity(activity)
+
+		fullLocationParts := make([]string, 0, 4)
+		for _, p := range []string{c.Address, c.AddressLine2, c.City, c.Country} {
+			if p != "" {
+				fullLocationParts = append(fullLocationParts, p)
+			}
+		}
+		hasFullLocation := len(fullLocationParts) > 0
+
+		var lat, lon float64
+		hasLocation := c.Location != nil
+		if hasLocation {
+			lat, lon = c.Location.Lat, c.Location.Lon
+		}
+		mapsLink := MapsURLForRow(c.Address, c.AddressLine2, c.City, c.Country, lat, lon, hasLocation)
+		showLocationPill := hasFullLocation && mapsLink != ""
+
+		locationPillAddress := LocationPillAddressHTML(c.Address, c.AddressLine2, c.City, c.Country)
+		geoMeta := GeoMetaHTML(lat, lon, hasLocation)
+		addressMeta := AddressMetaHTML(c.Address, c.AddressLine2, c.City, c.Country)
+
+		analyticsItemID := c.NameSeo
+		if analyticsItemID == "" {
+			analyticsItemID = name
+		}
+		analyticsCategory := activity
+		if analyticsCategory == "" {
+			analyticsCategory = "Non précisé"
+		}
+	}}
+	<div
+		class="result-row"
+		itemscope
+		itemtype="https://schema.org/LocalBusiness"
+		data-item-id={ analyticsItemID }
+		data-item-name={ name }
+		data-item-category={ analyticsCategory }
+	>
+		<div class="result-favicon" style={ "background:" + bg + ";color:" + fg + ";" } aria-hidden="true">{ ini }</div>
+		<div class="result-body">
+			<div class="flex items-start gap-2 flex-wrap">
+				<a href={ templ.URL("/company/" + c.NameSeo) } target="_self" class="result-title hover:underline flex-1 min-w-0">
+					<span itemprop="name">{ name }</span>
+				</a>
+				if hasScore {
+					<span class="score-badge shrink-0 mt-1">{ fmt.Sprintf("%d%%", scorePct) }</span>
+				}
+			</div>
+			<div class="result-meta mt-1.5 gap-y-1.5 gap-x-2">
+				if activity != "" {
+					<span class="activity-chip" title={ activity }>
+						<svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+							<path fill-rule="evenodd" d="M6 6V5a3 3 0 016 0v1h2a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h1zm2-1a1 1 0 112 0v1H8V5zm1 5a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path>
+						</svg>
+						<span itemprop="description">{ actShort }</span>
+					</span>
+				}
+				if showLocationPill {
+					<a href={ templ.URL(mapsLink) } target="_blank" rel="noopener noreferrer" class="location-pill hover:underline text-gray-600">
+						<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0" aria-hidden="true">
+							<path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+						</svg>
+						<span itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+							@templ.Raw(locationPillAddress)
+						</span>
+					</a>
+				}
+				if phone != "" {
+					<a href={ templ.SafeURL("tel:" + phone) } itemprop="telephone" class="location-pill hover:underline text-blue-600">
+						<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0" aria-hidden="true">
+							<path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path>
+						</svg>
+						{ phone }
+					</a>
+				}
+				if email != "" {
+					<a href={ templ.SafeURL("mailto:" + email) } itemprop="email" class="location-pill hover:underline text-blue-600">
+						<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0; margin-top:1px;" aria-hidden="true">
+							<path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+							<path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+						</svg>
+						E-mail
+					</a>
+				}
+			</div>
+			if desc != "" {
+				<p class="result-desc mt-1.5" itemprop="description">{ desc }</p>
+			}
+			@templ.Raw(geoMeta)
+			@templ.Raw(addressMeta)
+		</div>
+	</div>
+}

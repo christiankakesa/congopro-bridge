@@ -15,8 +15,10 @@ templ CompanyPage(title, canonicalURL, nonce, cssVersion string, c *data.Company
 	@Layout(title, canonicalURL, nonce, cssVersion) {
 		@companyTopBar()
 		<main class="px-4 sm:px-6 pt-5 pb-20 sm:ml-[172px]">
-			@companyProfile(c, nonce)
+			@companyProfile(c)
 		</main>
+		@shareButtonScript(nonce)
+		@viewItemTrackingScript(nonce)
 	}
 }
 
@@ -58,7 +60,13 @@ templ companyTopBar() {
 	</div>
 }
 
-templ companyProfile(c *data.Company, nonce string) {
+// companyProfile renders just the profile card, reused both by the
+// standalone company page and by the search-results fragment when a search
+// resolves to exactly one company. It does not include shareButtonScript —
+// callers embedding this in a page that already has the SPA's global
+// delegated .js-share-btn click handler (search results) don't need it;
+// the standalone CompanyPage does and includes it separately.
+templ companyProfile(c *data.Company) {
 	{{
 		name := c.Name
 		if name == "" {
@@ -97,8 +105,24 @@ templ companyProfile(c *data.Company, nonce string) {
 		}
 		mapURL := MapsURL(c.Address, c.AddressLine2, c.City, c.Country, lat, lon, hasLocation)
 		waURL := WhatsAppURL(safeWhatsapp, safeTel)
+
+		analyticsItemID := c.NameSeo
+		if analyticsItemID == "" {
+			analyticsItemID = name
+		}
+		analyticsCategory := activity
+		if analyticsCategory == "" {
+			analyticsCategory = "Non précisé"
+		}
 	}}
-	<article itemscope itemtype="https://schema.org/LocalBusiness" class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden w-full max-w-[700px] mb-8 relative">
+	<article
+		itemscope
+		itemtype="https://schema.org/LocalBusiness"
+		class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden w-full max-w-[700px] mb-8 relative"
+		data-item-id={ analyticsItemID }
+		data-item-name={ name }
+		data-item-category={ analyticsCategory }
+	>
 		<!-- Header Background & Initials -->
 		<div class="h-28 sm:h-36 w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-100 relative border-b border-indigo-100/50">
 			<div class="absolute -bottom-10 left-6 sm:left-8">
@@ -251,6 +275,36 @@ templ companyProfile(c *data.Company, nonce string) {
 			</div>
 		</div>
 	</article>
+}
+
+// viewItemTrackingScript fires the same GA4 view_item event the SPA sends
+// when a search narrows to a single company (Analytics.trackCompanyView in
+// index.html) — needed here because a direct /company/{slug} visit no
+// longer passes through that search flow at all (see Phase 1).
+templ viewItemTrackingScript(nonce string) {
+	<script nonce={ nonce }>
+		(function () {
+			if (typeof gtag !== "function") return;
+			const el = document.querySelector("[data-item-id]");
+			if (!el) return;
+			gtag("event", "view_item", {
+				currency: "USD",
+				value: 0,
+				items: [
+					{
+						item_id: el.getAttribute("data-item-id"),
+						item_name: el.getAttribute("data-item-name"),
+						item_category: el.getAttribute("data-item-category"),
+					},
+				],
+			});
+		})();
+	</script>
+}
+
+// shareButtonScript wires up .js-share-btn on standalone pages that don't
+// have the SPA's global delegated click handler for it (search results do).
+templ shareButtonScript(nonce string) {
 	<script nonce={ nonce }>
 		document.querySelectorAll(".js-share-btn").forEach(function (btn) {
 			btn.addEventListener("click", async function () {

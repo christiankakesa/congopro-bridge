@@ -1,0 +1,17 @@
+package templates
+
+import "strings"
+
+// AIAnswerFragment renders the AI-generated answer as safely escaped text
+// with line breaks — the server-rendered equivalent of the frontend's
+// triggerAI(), which built the same shape via textContent-safe <span>/<br>
+// elements.
+templ AIAnswerFragment(answer string) {
+	{{ lines := strings.Split(answer, "\n") }}
+	for i, line := range lines {
+		if i > 0 {
+			<br/>
+		}
+		{ line }
+	}
+}

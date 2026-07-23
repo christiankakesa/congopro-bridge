@@ -12,6 +12,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"path"
 	"regexp"
 	"strconv"
@@ -58,12 +59,19 @@ var (
 	cssHash        string
 	indexTmpl      *template.Template
 	adsPreviewTmpl *template.Template
+	footerHTML     template.HTML
 )
 
 func init() {
 	cssHash = fmt.Sprintf("%.8x", md5.Sum(web.TailwindCSS))
 	indexTmpl = template.Must(template.New("index").Parse(string(web.IndexHTML)))
 	adsPreviewTmpl = template.Must(template.New("ads-preview").Parse(string(web.AdsPreviewHTML)))
+
+	var footerBuf bytes.Buffer
+	if err := templates.SiteFooter().Render(context.Background(), &footerBuf); err != nil {
+		panic(fmt.Sprintf("render site footer: %v", err))
+	}
+	footerHTML = template.HTML(footerBuf.String())
 }
 
 func (a *AppEngine) WithCORS(h http.HandlerFunc) http.HandlerFunc {
@@ -135,40 +143,62 @@ func (a *AppEngine) WithSecurityHeaders(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	htmxReq := isHTMXRequest(r)
 
 	select {
 	case <-a.Engine.IndexingDone:
 	case <-r.Context().Done():
 		return
 	default:
+		if htmxReq {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			templates.SearchResultsFragment("", nil, 0, "server still indexing, please retry").Render(r.Context(), w)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(ErrorResponse{Error: "server still indexing, please retry"})
 		return
 	}
 
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
-	if q == "" {
-		json.NewEncoder(w).Encode(SearchResponse{
-			Query:   q,
-			Results: []data.SearchResult{},
-			Total:   0,
-		})
-		return
-	}
 
-	results, err := a.Engine.Search(q)
-	if err != nil {
-		log.Error().Msgf("[search] error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "search failed"})
-		return
+	var results []data.SearchResult
+	var searchErr string
+	if q != "" {
+		var err error
+		results, err = a.Engine.Search(q)
+		if err != nil {
+			log.Error().Msgf("[search] error: %v", err)
+			searchErr = "search failed"
+		}
 	}
-
 	if results == nil {
 		results = []data.SearchResult{}
 	}
 
+	if htmxReq {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if q != "" {
+			// Mirrors the SPA's history.replaceState(null, "", `/?q=${q}`) —
+			// the whole debounced-typing session replaces one history entry
+			// rather than pushing a new one per keystroke.
+			w.Header().Set("HX-Replace-Url", "/?q="+url.QueryEscape(q))
+		}
+		if searchErr != "" {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		templates.SearchResultsFragment(q, results, len(results), searchErr).Render(r.Context(), w)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if searchErr != "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: searchErr})
+		return
+	}
 	json.NewEncoder(w).Encode(SearchResponse{
 		Query:   q,
 		Results: results,
@@ -200,40 +230,58 @@ func (a *AppEngine) HealthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	htmxReq := isHTMXRequest(r)
+
+	writeErr := func(status int, msg string) {
+		if htmxReq {
+			// htmx doesn't swap 4xx/5xx responses by default — the client
+			// resets the trigger button via the htmx:responseError event
+			// instead, so the body here is just for debugging.
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(status)
+			w.Write([]byte(msg))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: msg})
+	}
 
 	select {
 	case <-a.Engine.IndexingDone:
 	case <-r.Context().Done():
 		return
 	default:
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "server still indexing, please retry"})
+		writeErr(http.StatusServiceUnavailable, "server still indexing, please retry")
 		return
 	}
 
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	if q == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "empty query"})
+		writeErr(http.StatusBadRequest, "empty query")
 		return
 	}
 
 	results, err := a.Engine.Search(q)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "search error"})
+		writeErr(http.StatusInternalServerError, "search error")
 		return
 	}
 
 	answer, err := a.Engine.GenerateAnswer(q, results)
 	if err != nil {
 		log.Error().Msgf("[ai] Ollama error: %v", err)
-		w.WriteHeader(http.StatusBadGateway)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "AI service is unavailable"})
+		writeErr(http.StatusBadGateway, "AI service is unavailable")
 		return
 	}
 
+	if htmxReq {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		templates.AIAnswerFragment(answer).Render(r.Context(), w)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(AIResponse{
 		Query:  q,
 		Answer: answer,
@@ -365,6 +413,31 @@ func (a *AppEngine) AdsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Cache-Control", "no-cache") // needed
+
+	if isHTMXRequest(r) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if !ads.AdsConfig.Active {
+			if q == "" {
+				templates.HomepageAdFragment(nil).Render(r.Context(), w)
+			} else {
+				templates.AdsResultsFragment(q, nil).Render(r.Context(), w)
+			}
+			return
+		}
+		if q == "" {
+			var homeAd *ads.AdWire
+			if len(eAds) > 0 {
+				homeAd = &eAds[0]
+			}
+			templates.HomepageAdFragment(homeAd).Render(r.Context(), w)
+			return
+		}
+		slots := templates.SelectAdSlots(eAds, maxAdsPerPage)
+		templates.AdsResultsFragment(q, slots).Render(r.Context(), w)
+		return
+	}
+
 	resp := ads.AdResponse{
 		Active:      ads.AdsConfig.Active,
 		RotationSec: ads.AdsConfig.RotationSec,
@@ -373,7 +446,6 @@ func (a *AppEngine) AdsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-cache") // needed
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -462,11 +534,13 @@ func (a *AppEngine) serveSPA(w http.ResponseWriter, r *http.Request, title strin
 		Title        string
 		Nonce        string
 		CanonicalURL string
+		Footer       template.HTML
 	}{
 		CSSVersion:   cssHash,
 		Title:        title,
 		Nonce:        nonce,
 		CanonicalURL: canonicalURL(r),
+		Footer:       footerHTML,
 	}
 	indexTmpl.Execute(w, data)
 }
@@ -583,6 +657,20 @@ func TailwindCssHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	http.ServeContent(w, r, "style.min.css", startupTime, bytes.NewReader(web.TailwindCSS))
+}
+
+func HtmxJSHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	http.ServeContent(w, r, "htmx.min.js", startupTime, bytes.NewReader(web.HtmxJS))
+}
+
+// isHTMXRequest reports whether r was issued by htmx (as opposed to a
+// programmatic JSON API consumer). Used to content-negotiate between the
+// existing JSON contract and a server-rendered HTML fragment from the same
+// route, without duplicating business logic across two handlers.
+func isHTMXRequest(r *http.Request) bool {
+	return r.Header.Get("HX-Request") == "true"
 }
 
 func canonicalURL(r *http.Request) string {

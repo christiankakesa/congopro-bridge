@@ -22,6 +22,9 @@ var SiteManifest []byte
 //go:embed css/style.min.css
 var TailwindCSS []byte
 
+//go:embed js/htmx.min.js
+var HtmxJS []byte
+
 //go:embed fonts/*.woff2
 var FontsFS embed.FS
 

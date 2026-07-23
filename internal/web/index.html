@@ -120,6 +120,7 @@
       as="style"
     />
     <link rel="stylesheet" href="/css/style.min.css?h={{.CSSVersion}}" />
+    <script nonce="{{ .Nonce }}" src="/js/htmx.min.js"></script>
     <script
       async
       nonce="{{ .Nonce }}"
@@ -151,10 +152,10 @@
     </script>
   </head>
 
-  <body class="bg-white text-gray-900 antialiased min-h-full overflow-x-hidden">
+  <body class="bg-white text-gray-900 antialiased min-h-screen flex flex-col overflow-x-hidden">
     <div
       id="homepage"
-      class="relative w-full flex flex-col items-center justify-center min-h-screen px-4 pb-28"
+      class="relative w-full flex flex-col items-center justify-center flex-1 px-4"
     >
       <div class="mb-8 select-none text-center">
         <span
@@ -226,12 +227,19 @@
           </svg>
           <input
             id="homeInput"
+            name="q"
             type="text"
             aria-label="Rechercher une entreprise, un service ou un professionnel"
             placeholder="Que recherchez-vous aujourd'hui ?"
             autocomplete="off"
             spellcheck="false"
             class="flex-1 text-base text-gray-800 placeholder-gray-400 bg-transparent outline-none min-w-0"
+            hx-get="/api/v1/search"
+            hx-target="#resultsList"
+            hx-swap="innerHTML"
+            hx-sync="this:replace"
+            hx-replace-url="true"
+            hx-trigger="input delay:260ms"
           />
           <button
             id="homeClear"
@@ -257,14 +265,9 @@
         id="homepageAdContainer"
         class="hidden w-full max-w-[584px] space-y-4"
       ></div>
-
-      <p
-        class="absolute bottom-6 inset-x-0 w-full text-xs text-gray-400 text-center px-4"
-        id="homeFooter"
-      ></p>
     </div>
 
-    <div id="resultsPage" class="hidden w-full">
+    <div id="resultsPage" class="hidden w-full flex-1">
       <div id="topBar" class="px-4 sm:px-6 py-3 w-full">
         <div
           class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 max-w-5xl"
@@ -343,11 +346,18 @@
             </svg>
             <input
               id="topInput"
+              name="q"
               type="text"
               aria-label="Modifier votre recherche"
               autocomplete="off"
               spellcheck="false"
               class="flex-1 text-sm text-gray-800 placeholder-gray-400 bg-transparent outline-none min-w-0"
+              hx-get="/api/v1/search"
+              hx-target="#resultsList"
+              hx-swap="innerHTML"
+              hx-sync="this:replace"
+              hx-replace-url="true"
+              hx-trigger="input delay:260ms"
             />
             <button
               id="topClear"
@@ -455,6 +465,12 @@
       </main>
     </div>
 
+    <!-- Shared across both views: outside #homepage/#resultsPage so it
+         shows on whichever one is currently visible, without duplication.
+         {{ .Footer }} already includes its own <footer> wrapper (see
+         internal/web/templates/footer.templ) — don't add another one here. -->
+    {{ .Footer }}
+
     <button
       id="scrollToTopBtn"
       aria-label="Retour en haut"
@@ -478,12 +494,6 @@
     <script nonce="{{ .Nonce }}">
       // ── Config ────────────────────────────────────────────
       const API_BASE = "";
-      const DEBOUNCE = 260;
-      const MAX_DESC = 200;
-
-      // ── State ─────────────────────────────────────────────
-      let serverReady = false;
-      let abortCtrl = null;
 
       // ── DOM ───────────────────────────────────────────────
       const homepage = document.getElementById("homepage");
@@ -491,7 +501,6 @@
       const homeInput = document.getElementById("homeInput");
       const homeClear = document.getElementById("homeClear");
       const homeStatus = document.getElementById("homeStatus");
-      const homeFooter = document.getElementById("homeFooter");
       const homeSearchIcon = document.getElementById("homeSearchIcon");
       const homeSpinner = document.getElementById("homeSpinner");
       const topInput = document.getElementById("topInput");
@@ -499,111 +508,19 @@
       const topSearchIcon = document.getElementById("topSearchIcon");
       const topSpinner = document.getElementById("topSpinner");
       const logoLink = document.getElementById("logoLink");
-      const statsBar = document.getElementById("statsBar");
       const resultsList = document.getElementById("resultsList");
-      const resultsLabel = document.getElementById("resultsLabel");
-      const emptyState = document.getElementById("emptyState");
-      const adContainer = document.getElementById("adContainer");
-      const emptyTitle = document.getElementById("emptyTitle");
-      const emptySubtitle = document.getElementById("emptySubtitle");
       const scrollToTopBtn = document.getElementById("scrollToTopBtn");
+      // statsBar, emptyState, adContainer and resultsLabel are NOT cached
+      // here — each gets replaced wholesale (hx-swap-oob="outerHTML" or
+      // hx-swap="outerHTML") by htmx responses, so a cached reference would
+      // go stale (pointing at a detached node) after the first swap. Always
+      // look them up fresh at the point of use instead.
 
       // ── Utilities ─────────────────────────────────────────
-      function debounce(fn, ms) {
-        let t;
-        return (...a) => {
-          clearTimeout(t);
-          t = setTimeout(() => fn(...a), ms);
-        };
-      }
-      function esc(s) {
-        if (!s) return "";
-        return String(s)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#39;");
-      }
-      function excerpt(text, max) {
-        if (!text) return "";
-
-        text = text.trim();
-        if (text.length <= max) return text;
-
-        const lastSpace = text.lastIndexOf(" ", max);
-        if (lastSpace === -1) return text;
-
-        return text.slice(0, lastSpace).trimEnd() + "…";
-      }
-
-      // Deterministic 2-letter initials + hue from company name
-      function initials(name) {
-        const normalizedName = (name || "?").trim().normalize("NFD");
-        const words = normalizedName
-          .replace(/[\u0300-\u036f]/g, "")
-          .match(/[\p{L}\p{N}]+/gu) || ["?"];
-        if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-        const [first, ...rest] = words.filter((word) => word.length >= 3);
-        return (
-          (first?.[0] || words[0][0]) +
-          (rest[0]?.[0] || words[1][0]).toUpperCase()
-        );
-      }
-      function nameToHue(name) {
-        let h = 0;
-        for (let i = 0; i < (name || "").length; i++)
-          h = (h * 31 + name.charCodeAt(i)) & 0xffff;
-        return h % 360;
-      }
-
-      function truncateActivity(activity, max = 32) {
-        if (!activity) return "";
-        activity = activity.trim();
-        if (activity.length <= max) return activity;
-
-        const lastSpace = activity.lastIndexOf(" ", max);
-        if (lastSpace > 0) {
-          return activity.slice(0, lastSpace).trimEnd() + "…";
-        }
-
-        // If no space, cut the word (strict limit)
-        return activity.slice(0, max).trimEnd() + "…";
-      }
-
-      function validateURL(url) {
-        if (!url || typeof url !== "string") return null;
-
-        try {
-          const parsed = new URL(url.trim());
-          if (parsed.protocol !== "https:") return null;
-          if (!parsed.hostname || parsed.hostname === ".") return null;
-          const host = parsed.hostname.toLowerCase();
-          if (
-            host === "localhost" ||
-            host.endsWith(".local") ||
-            host.endsWith(".internal") ||
-            /^127\./.test(host) ||
-            /^10\./.test(host) ||
-            /^192\.168\./.test(host) ||
-            /^172\.(1[6-9]|2\d|3[01])\./.test(host)
-          )
-            return null;
-          if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) return null;
-          if (!host.includes(".")) return null;
-          return parsed.href;
-        } catch {
-          return null;
-        }
-      }
-      function safePhone(p) {
-        return /^[+\d\s\-().]+$/.test((p || "").trim()) ? p.trim() : null;
-      }
-      function safeEmail(e) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((e || "").trim())
-          ? e.trim()
-          : null;
-      }
+      // esc()/validateURL()/safePhone()/safeEmail() are gone — the last
+      // client-side renderers that needed them (ads, results rows, the
+      // footer) all moved server-side in Phase 2 / the shared-footer change.
+      // Their Go equivalents live in internal/web/templates/safe.go.
 
       const Analytics = {
         /**
@@ -674,11 +591,11 @@
         resultsPage.classList.add("hidden");
         homepage.style.display = "flex";
         resultsList.innerHTML = "";
-        statsBar.classList.add("hidden");
-        resultsLabel.classList.add("hidden");
+        document.getElementById("statsBar")?.classList.add("hidden");
+        document.getElementById("resultsLabel")?.classList.add("hidden");
         stopAdRotation();
         loadHomepageAd();
-        emptyState.classList.add("hidden");
+        document.getElementById("emptyState")?.classList.add("hidden");
         homeInput.value = "";
         homeClear.classList.add("hidden");
         homeInput.focus();
@@ -708,604 +625,115 @@
         spin.classList.toggle("hidden", !on);
       }
 
-      // ── Render one result row ─────────────────────────────
-      function renderRow(c, q) {
-        const name = c.name || "Unnamed";
-        const activity = c.activity || "";
-        const rawDesc = c.description || c.slogan || "";
-        const desc = excerpt(rawDesc, MAX_DESC);
-        const score = c.score > 0 ? Math.round(c.score * 100) : null;
-        const phone = safePhone(c.phone) || "";
-        const email = safeEmail(c.email) || "";
-        const addr1 = c.address || "";
-        const addr2 = c.address_line_2 || "";
-        const city = c.city || "";
-        const country = c.country || "";
-        const hue = nameToHue(name);
-        const bg = `hsl(${hue},55%,92%)`;
-        const fg = `hsl(${hue},50%,32%)`;
-        const ini = initials(name);
-        const actShort = truncateActivity(activity);
-        const fullLocation = [addr1, addr2, city, country]
-          .filter(Boolean)
-          .join(", ");
+      // ── Search (htmx-driven) ────────────────────────────────
+      // homeInput/topInput carry hx-get/hx-trigger/hx-target — htmx issues
+      // the request and swaps #resultsList. This coordinator handles the
+      // parts htmx doesn't: showing the results view the instant a search
+      // starts (not after the response arrives), the loading spinner, and —
+      // once the swap lands — GA tracking, the AI-overview box, and ads,
+      // all of which depend on the outcome of the search.
+      let lastSearchQuery = "";
 
-        let mapsLink = "";
-        if (c.location && c.location.lat && c.location.lon) {
-          mapsLink = `https://google.com/maps/search/?api=1&query=${c.location.lat},${c.location.lon}`;
-        } else if (fullLocation) {
-          mapsLink = `https://google.com/maps/search/?api=1&query=${encodeURIComponent(fullLocation)}`;
+      // Below-3-chars guard for the debounced "input" trigger. This can't
+      // be expressed as an hx-trigger [expression] filter — htmx evaluates
+      // those via new Function()/eval, which our CSP (no 'unsafe-eval')
+      // correctly blocks. Enter-triggered and shared-link searches bypass
+      // this entirely: they call htmx.ajax() directly instead of going
+      // through the declarative trigger, so this only ever gates typing.
+      document.body.addEventListener("htmx:configRequest", (e) => {
+        const elt = e.detail.elt;
+        const isDeclaredInputTrigger =
+          e.detail.triggeringEvent && e.detail.triggeringEvent.type === "input";
+        if (
+          isDeclaredInputTrigger &&
+          (elt === homeInput || elt === topInput) &&
+          elt.value.trim().length < 3
+        ) {
+          e.preventDefault();
         }
-        mapsLink = validateURL(mapsLink);
+      });
 
-        // ── Schema.org geo coordinates (hidden, machine-readable only) ──
-        const geoMeta =
-          c.location?.lat && c.location?.lon
-            ? `
-                    <div itemprop="geo" itemscope itemtype="https://schema.org/GeoCoordinates" hidden>
-                      <meta itemprop="latitude"  content="${esc(String(c.location.lat))}" />
-                      <meta itemprop="longitude" content="${esc(String(c.location.lon))}" />
-                    </div>`
-            : "";
-
-        // ── Schema.org address block (hidden if no address fields) ──────
-        const addressMeta =
-          addr1 || addr2 || city || country
-            ? `
-                    <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress" hidden>
-                      ${addr1 ? `<meta itemprop="streetAddress"   content="${esc(addr1)}" />` : ""}
-                      ${addr2 ? `<meta itemprop="streetAddress"   content="${esc(addr2)}" />` : ""}
-                      ${city ? `<meta itemprop="addressLocality" content="${esc(city)}" />` : ""}
-                      ${country ? `<meta itemprop="addressCountry"  content="${esc(country)}" />` : ""}
-                    </div>`
-            : "";
-
-        return `
-              <div class="result-row"
-                  itemscope
-                  itemtype="https://schema.org/LocalBusiness">
-
-                <div class="result-favicon" style="background:${bg};color:${fg};" aria-hidden="true">${ini}</div>
-
-                <div class="result-body">
-
-                  <div class="flex items-start gap-2 flex-wrap">
-                    <a href="/company/${esc(c.name_seo)?.trim()}"
-                        target="_self"
-                        class="result-title hover:underline flex-1 min-w-0">
-                      <span itemprop="name">${esc(name)}</span>
-                    </a>
-
-                    ${
-                      score !== null
-                        ? `<span class="score-badge shrink-0 mt-1">${score}%</span>`
-                        : ""
-                    }
-                  </div>
-
-                  <div class="result-meta mt-1.5 gap-y-1.5 gap-x-2">
-                    ${
-                      activity
-                        ? `
-                      <span class="activity-chip" title="${esc(activity)}">
-                        <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fill-rule="evenodd" d="M6 6V5a3 3 0 016 0v1h2a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h1zm2-1a1 1 0 112 0v1H8V5zm1 5a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/>
-                        </svg>
-                        <span itemprop="description">${esc(actShort)}</span>
-                      </span>`
-                        : ""
-                    }
-
-                    ${
-                      fullLocation && mapsLink
-                        ? `
-                      <a href="${mapsLink}"
-                        target="_blank" rel="noopener noreferrer"
-                        class="location-pill hover:underline text-gray-600">
-                        <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0" aria-hidden="true">
-                          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                        </svg>
-                        <span itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
-                          ${addr1 ? `<span itemprop="streetAddress">${esc(addr1)}</span>` : ""}
-                          ${addr2 ? `<span itemprop="streetAddress">${esc(addr2)}</span>` : ""}
-                          ${city ? `<span itemprop="addressLocality">${esc(city)}</span>` : ""}
-                          ${country ? `<span itemprop="addressCountry">${esc(country)}</span>` : ""}
-                        </span>
-                      </a>`
-                        : ""
-                    }
-
-                    ${
-                      phone
-                        ? `
-                      <a href="tel:${esc(phone)}"
-                        itemprop="telephone"
-                        class="location-pill hover:underline text-blue-600">
-                        <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0" aria-hidden="true">
-                          <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                        </svg>
-                        ${esc(phone)}
-                      </a>`
-                        : ""
-                    }
-
-                    ${
-                      email
-                        ? `
-                      <a href="mailto:${esc(email)}"
-                        itemprop="email"
-                        class="location-pill hover:underline text-blue-600">
-                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0; margin-top:1px;" aria-hidden="true">
-                          <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                          <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                        </svg>
-                        E-mail
-                      </a>`
-                        : ""
-                    }
-                  </div>
-
-                  ${desc ? `<p class="result-desc mt-1.5" itemprop="description">${esc(desc)}</p>` : ""}
-
-                  ${geoMeta}
-                  ${addressMeta}
-                </div>
-              </div>`;
+      function searchOnEnter(input) {
+        const q = input.value.trim();
+        if (!q) return;
+        htmx.ajax("GET", "/api/v1/search?q=" + encodeURIComponent(q), {
+          source: input,
+          target: "#resultsList",
+          swap: "innerHTML",
+        });
       }
+      homeInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") searchOnEnter(homeInput);
+      });
+      topInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") searchOnEnter(topInput);
+      });
 
-      function generateVCardURI(company) {
-        const name = company.name || "Contact";
-        let vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${esc(name)}\nORG:${esc(name)}\n`;
-        if (company.phone)
-          vcard += `TEL;TYPE=WORK,VOICE:${esc(company.phone)}\n`;
-        if (company.email)
-          vcard += `EMAIL;TYPE=PREF,INTERNET:${esc(company.email)}\n`;
-        if (company.website) vcard += `URL:${esc(company.website)}\n`;
-
-        const adr = [company.address, company.city, company.country]
-          .filter(Boolean)
-          .join(", ");
-        if (adr) vcard += `ADR;TYPE=WORK:;;${esc(adr)}\n`;
-        vcard += `END:VCARD`;
-
-        return `data:text/vcard;charset=utf-8,${encodeURIComponent(vcard)}`;
-      }
-
-      function renderSingleCompanyProfile(company) {
-        // Extract main infos
-        const name = company.name || "Entreprise non nommée";
-        const bgHue = nameToHue(name);
-        const init = initials(name);
-
-        // Validate standard URLs & Contacts
-        const safeUrl = validateURL(company.website);
-        const safeTel = safePhone(company.phone);
-        const safeMail = safeEmail(company.email);
-        const activity = company.activity || "Secteur non précisé";
-        const description = company.description;
-        const safeWhatsapp = validateURL(company.whatsapp);
-
-        // Validate Social Media URLs
-        const safeX = validateURL(company.twitter);
-        const safeFacebook = validateURL(company.facebook);
-        const safeLinkedin = validateURL(company.linkedin);
-        const safeInstagram = validateURL(company.instagram);
-        const safeTiktok = validateURL(company.tiktok);
-        const safeYoutube = validateURL(company.youtube);
-
-        // Check if there's at least one social media link
-        const hasSocials =
-          safeX ||
-          safeFacebook ||
-          safeLinkedin ||
-          safeInstagram ||
-          safeTiktok ||
-          safeYoutube;
-
-        const {
-          address: address1,
-          address_line_2: address2,
-          city,
-          country,
-        } = company;
-        const hasAddress = address1 || address2 || city || country;
-
-        // Domain extraction for UI
-        let domainName = "";
-        if (safeUrl) {
-          try {
-            domainName = new URL(safeUrl).hostname.replace("www.", "");
-          } catch (e) {}
-        }
-
-        // Action links building
-        const vCardUri = generateVCardURI(company);
-        const mapQuery = [address1, address2, city, country]
-          .filter(Boolean)
-          .join(", ");
-        const mapUrl = address1
-          ? `https://google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`
-          : company.location && company.location.lat && company.location.lon
-            ? `https://google.com/maps/search/?api=1&query=${company.location.lat},${company.location.lon}`
-            : null;
-
-        // WhatsApp extraction (priority to whatsapp URL, fallback to safeTel formatting)
-        const waTel = safeWhatsapp
-          ? safeWhatsapp
-          : safeTel
-            ? safeTel.replace(/[^0-9+]/g, "")
-            : null;
-
-        // Formatting Address HTML
-        let addressHtml = "";
-        if (hasAddress) {
-          const streetParts = [address1, address2].filter(Boolean).map(esc);
-          const streetHtml = streetParts.length
-            ? `<span itemprop="streetAddress" class="block">${streetParts.join("<br/>")}</span>`
-            : "";
-          const locationParts = [];
-          if (city)
-            locationParts.push(
-              `<span itemprop="addressLocality">${esc(city)}</span>`,
-            );
-          if (country)
-            locationParts.push(
-              `<span itemprop="addressCountry">${esc(country)}</span>`,
-            );
-          const locationHtml = locationParts.length
-            ? `<span class="text-gray-500 block mt-0.5">${locationParts.join(", ")}</span>`
-            : "";
-
-          addressHtml = `
-      <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress" class="text-sm font-medium text-gray-900 leading-relaxed">
-        ${streetHtml}
-        ${locationHtml}
-      </div>
-    `;
-        }
-
-        return `
-    <article itemscope itemtype="https://schema.org/LocalBusiness" class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden w-full max-w-[700px] mb-8 animate-fade-in relative">
-
-      <!-- Header Background & Initials -->
-      <div class="h-28 sm:h-36 w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-100 relative border-b border-indigo-100/50">
-          <div class="absolute -bottom-10 left-6 sm:left-8">
-            <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl shadow-sm border-4 border-white flex items-center justify-center text-2xl sm:text-3xl font-sora font-semibold text-white tracking-wide" style="background-color: hsl(${bgHue}, 65%, 50%)">
-                ${init}
-            </div>
-          </div>
-      </div>
-
-      <div class="pt-14 pb-8 px-6 sm:px-8">
-
-        <!-- Title & Domain -->
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-          <div class="flex-1">
-            ${
-              safeUrl
-                ? `
-              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" itemprop="url" class="group flex items-center gap-2">
-                <h1 itemprop="name" class="text-2xl sm:text-3xl font-sora font-semibold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">
-                  ${esc(name)}
-                </h1>
-                <svg class="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-              </a>
-              <p class="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-                ${domainName}
-              </p>
-            `
-                : `
-              <h1 itemprop="name" class="text-2xl sm:text-3xl font-sora font-semibold text-gray-900 leading-tight">
-                ${esc(name)}
-              </h1>
-            `
-            }
-
-            <p class="text-sm font-medium text-indigo-600 mt-2.5 uppercase tracking-wider flex items-center gap-1.5">
-              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-              <span itemprop="knowsAbout">${esc(activity)}</span>
-            </p>
-          </div>
-        </div>
-
-        <!-- Description -->
-        ${
-          description
-            ? `
-          <div class="mt-5">
-            <p itemprop="description" class="text-gray-600 text-sm sm:text-base leading-relaxed text-justify">
-              ${esc(description)}
-            </p>
-          </div>
-        `
-            : ""
-        }
-
-        <!-- Actions Bar -->
-        <div class="mt-6 flex flex-wrap gap-3">
-
-          <a href="${vCardUri}" download="${esc(name).replace(/\s+/g, "_")}.vcf"
-              class="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-xl shadow-sm transition-all active:scale-95">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            Enregistrer contact
-          </a>
-
-          ${
-            mapUrl
-              ? `
-            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl shadow-sm transition-all active:scale-95">
-              <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-              Itinéraire
-            </a>
-          `
-              : ""
-          }
-
-          ${
-            waTel
-              ? `
-            <a href="${waTel.startsWith("http") ? waTel : `https://wa.me/${waTel}`}" target="_blank" rel="noopener noreferrer"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-[#25D366]/10 text-[#075E54] hover:bg-[#25D366]/20 text-sm font-medium rounded-xl transition-all active:scale-95">
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-              WhatsApp
-            </a>
-          `
-              : ""
-          }
-
-          <button type="button" 
-                  class="js-share-btn cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#4285f4] hover:bg-blue-100 text-sm font-medium rounded-xl transition-all active:scale-95 border border-blue-100"
-                  data-title="${esc(name)}">
-            <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
-            </svg>
-            Partager
-          </button>
-
-        </div>
-
-        <!-- Coordinates Grid -->
-        <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-gray-100">
-
-            ${
-              safeTel
-                ? `
-            <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-              <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.896-1.596-5.48-4.18-7.076-7.076l1.293-.97c.362-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"></path></svg>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 mb-0.5">Téléphone</p>
-                <a itemprop="telephone" href="tel:${safeTel}" class="text-sm font-medium text-gray-900 hover:text-[#4285f4] transition-colors">${esc(company.phone)}</a>
-              </div>
-            </div>`
-                : ""
-            }
-
-            ${
-              safeMail
-                ? `
-            <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-              <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 shrink-0">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"></path></svg>
-              </div>
-              <div class="min-w-0">
-                <p class="text-xs text-gray-500 mb-0.5">Email</p>
-                <a itemprop="email" href="mailto:${safeMail}" class="text-sm font-medium text-gray-900 hover:text-red-600 transition-colors truncate block">${esc(company.email)}</a>
-              </div>
-            </div>`
-                : ""
-            }
-
-            ${
-              hasAddress
-                ? `
-            <div class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors sm:col-span-2">
-              <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 shrink-0 mt-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"></path></svg>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 mb-0.5">Adresse physique</p>
-                ${addressHtml}
-              </div>
-            </div>`
-                : ""
-            }
-
-            <!-- Social Media Block (dynamically injected if links exist) -->
-            ${
-              hasSocials
-                ? `
-            <div class="sm:col-span-2 mt-2">
-              <p class="text-xs text-gray-500 mb-3 ml-2">Réseaux Sociaux</p>
-              <div class="flex flex-wrap gap-3 ml-2">
-                ${
-                  safeX
-                    ? `
-                  <a href="${safeX}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-gray-900 text-white hover:bg-gray-800 flex items-center justify-center transition-colors shadow-sm" aria-label="X (Twitter)">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                  </a>
-                `
-                    : ""
-                }
-                ${
-                  safeFacebook
-                    ? `
-                  <a href="${safeFacebook}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 flex items-center justify-center transition-colors shadow-sm" aria-label="Facebook">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                  </a>
-                `
-                    : ""
-                }
-                ${
-                  safeLinkedin
-                    ? `
-                  <a href="${safeLinkedin}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2]/20 flex items-center justify-center transition-colors shadow-sm" aria-label="LinkedIn">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-                  </a>
-                `
-                    : ""
-                }
-                ${
-                  safeInstagram
-                    ? `
-                  <a href="${safeInstagram}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-[#E4405F]/10 text-[#E4405F] hover:bg-[#E4405F]/20 flex items-center justify-center transition-colors shadow-sm" aria-label="Instagram">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                  </a>
-                `
-                    : ""
-                }
-                ${
-                  safeTiktok
-                    ? `
-                  <a href="${safeTiktok}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-gray-100 text-gray-900 hover:bg-gray-200 flex items-center justify-center transition-colors shadow-sm" aria-label="TikTok">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 2.78-1.15 5.54-3.33 7.37-1.78 1.5-4.13 2.1-6.42 1.81-2.58-.33-4.87-1.84-6.05-4.14-1.1-2.15-1.11-4.75-.12-6.9 1.17-2.56 3.73-4.45 6.55-4.83.05 1.44.02 2.89.04 4.33-1.39.11-2.73.91-3.41 2.12-.58 1.03-.6 2.37-.1 3.44.47.98 1.45 1.71 2.54 1.89 1.18.2 2.45-.11 3.26-1.02.77-.85 1.09-2.06 1.08-3.21-.04-5.69-.02-11.39-.02-17.08z"/></svg>
-                  </a>
-                `
-                    : ""
-                }
-                ${
-                  safeYoutube
-                    ? `
-                  <a href="${safeYoutube}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-[#FF0000]/10 text-[#FF0000] hover:bg-[#FF0000]/20 flex items-center justify-center transition-colors shadow-sm" aria-label="YouTube">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                  </a>
-                `
-                    : ""
-                }
-              </div>
-            </div>`
-                : ""
-            }
-
-        </div>
-      </div>
-    </article>
-  `;
-      }
-      // ── Render list ───────────────────────────────────────
-      function renderResults(data, q) {
-        const results = data.results || [];
-
-        if (!results.length) {
-          resultsList.innerHTML = "";
-          statsBar.classList.add("hidden");
-          resultsLabel.classList.add("hidden");
-          emptyState.classList.remove("hidden");
-          emptyTitle.textContent = `Aucun résultat pour "${q}"`;
-          emptySubtitle.textContent =
-            "Votre recherche ne correspond à aucune entreprise.";
-          return;
-        }
-
-        emptyState.classList.add("hidden");
-        if (results.length === 1) {
-          resultsList.innerHTML = renderSingleCompanyProfile(results[0]);
-          Analytics.trackCompanyView(results[0]);
-          return;
-        }
-        resultsList.innerHTML = results.map((c) => renderRow(c, q)).join("");
-        Analytics.trackSearchResults(results, q);
-
-        const total =
-          parseInt(data.total || results.length, 10) || results.length;
-        statsBar.classList.remove("hidden");
-        statsBar.innerHTML = `Environ <strong>${total.toLocaleString()}</strong> résultat${total !== 1 ? "s" : ""}`;
-      }
-
-      // ── Search ────────────────────────────────────────────
-      async function doSearch(q, fromHome) {
-        if (!serverReady || !q.trim()) {
-          if (!q.trim()) showHome();
-          return;
-        }
-
-        const isSlugSearch = q.startsWith("-company-slug:");
-        const displayQ = isSlugSearch ? "" : q;
-
-        if (!isSlugSearch) {
-          const searchUrl = `/?q=${encodeURIComponent(q)}`;
-          if (window.location.pathname + window.location.search !== searchUrl) {
-            history.replaceState(null, "", searchUrl);
-          }
-        }
-
-        showResults(displayQ, fromHome);
+      document.body.addEventListener("htmx:beforeRequest", (e) => {
+        const elt = e.detail.elt;
+        if (elt !== homeInput && elt !== topInput) return;
+        const q = elt.value.trim();
+        lastSearchQuery = q;
+        const fromHome = elt === homeInput;
+        showResults(q, fromHome);
         setLoading(true, fromHome);
+      });
 
-        if (abortCtrl) {
-          abortCtrl.abort();
-          abortCtrl = null;
+      document.body.addEventListener("htmx:afterRequest", (e) => {
+        const elt = e.detail.elt;
+        if (elt !== homeInput && elt !== topInput) return;
+        setLoading(false, elt === homeInput);
+      });
+
+      document.body.addEventListener("htmx:afterSwap", (e) => {
+        if (e.detail.target !== resultsList) return;
+        const q = lastSearchQuery;
+
+        const items = resultsList.querySelectorAll("[data-item-id]");
+        if (items.length === 1) {
+          const el = items[0];
+          Analytics.trackCompanyView({
+            name_seo: el.getAttribute("data-item-id"),
+            name: el.getAttribute("data-item-name"),
+            activity: el.getAttribute("data-item-category"),
+          });
+        } else if (items.length > 1) {
+          const results = Array.from(items).map((el) => ({
+            name_seo: el.getAttribute("data-item-id"),
+            name: el.getAttribute("data-item-name"),
+            activity: el.getAttribute("data-item-category"),
+          }));
+          Analytics.trackSearchResults(results, q);
         }
-        abortCtrl = new AbortController();
 
-        try {
-          const res = await fetch(
-            `${API_BASE}/api/v1/search?q=${encodeURIComponent(q)}`,
-            { signal: abortCtrl.signal },
-          );
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
+        const aiBox = document.getElementById("aiOverview");
+        if (items.length > 0) {
+          aiBox.classList.remove("hidden");
 
-          renderResults(data, displayQ);
-
-          const aiBox = document.getElementById("aiOverview");
-          if (!isSlugSearch && data.results && data.results.length > 0) {
-            aiBox.classList.remove("hidden");
-
-            if (isComplexQuery(displayQ)) {
-              triggerAI(displayQ);
-            } else {
-              document
-                .getElementById("aiTriggerBtn")
-                .classList.remove("hidden");
-              document.getElementById("aiTriggerBtn").classList.add("flex");
-              document.getElementById("aiLoading").classList.add("hidden");
-              document.getElementById("aiLoading").classList.remove("flex");
-              document.getElementById("aiContent").classList.add("hidden");
-
-              document.getElementById("aiTriggerBtn").onclick = () =>
-                triggerAI(displayQ);
-            }
+          if (isComplexQuery(q)) {
+            triggerAI(q);
           } else {
-            aiBox.classList.add("hidden");
+            document.getElementById("aiTriggerBtn").classList.remove("hidden");
+            document.getElementById("aiTriggerBtn").classList.add("flex");
+            document.getElementById("aiLoading").classList.add("hidden");
+            document.getElementById("aiLoading").classList.remove("flex");
+            document.getElementById("aiContent").classList.add("hidden");
+
+            document.getElementById("aiTriggerBtn").onclick = () =>
+              triggerAI(q);
           }
-
-          if (!isSlugSearch) fetchAds(q);
-          else stopAdRotation();
-        } catch (err) {
-          if (err.name === "AbortError") return;
-          resultsList.innerHTML = "";
-          statsBar.classList.add("hidden");
-          resultsLabel.classList.add("hidden");
-          document.getElementById("aiOverview").classList.add("hidden");
-          emptyState.classList.remove("hidden");
-          emptyTitle.textContent = "Une erreur est survenue";
-          emptySubtitle.textContent = err.message;
-        } finally {
-          setLoading(false, fromHome);
+        } else {
+          aiBox.classList.add("hidden");
         }
-      }
 
-      const debouncedSearch = debounce(
-        (q, fromHome) => doSearch(q, fromHome),
-        DEBOUNCE,
-      );
+        fetchAds(q);
+      });
 
       // ── Home input ────────────────────────────────────────
       homeInput.addEventListener("input", () => {
         const q = homeInput.value.trim();
         homeClear.classList.toggle("hidden", !q);
-        if (q.length >= 3) {
-          debouncedSearch(q, true);
-        } else if (q.length === 0) {
-          showHome();
-        }
-      });
-      homeInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") doSearch(homeInput.value.trim(), true);
+        if (q.length === 0) showHome();
       });
       homeClear.addEventListener("click", () => {
         homeInput.value = "";
@@ -1317,14 +745,7 @@
       topInput.addEventListener("input", () => {
         const q = topInput.value.trim();
         topClear.classList.toggle("hidden", !q);
-        if (q.length >= 3) {
-          debouncedSearch(q, false);
-        } else if (q.length === 0) {
-          showHome();
-        }
-      });
-      topInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") doSearch(topInput.value.trim(), false);
+        if (q.length === 0) showHome();
       });
       topClear.addEventListener("click", () => {
         topInput.value = "";
@@ -1349,13 +770,18 @@
         if (queryParam) {
           topInput.value = queryParam;
           topClear.classList.remove("hidden");
-          doSearch(queryParam, false);
+          // Programmatic equivalent of the input's own hx-get — source:
+          // topInput makes this participate in the normal htmx event
+          // lifecycle (htmx:beforeRequest/afterSwap) just like typing does.
+          htmx.ajax("GET", "/api/v1/search?q=" + encodeURIComponent(queryParam), {
+            source: topInput,
+            target: "#resultsList",
+            swap: "innerHTML",
+          });
         } else {
           showHome();
         }
       }
-
-      let aiAbortCtrl = null;
 
       function isComplexQuery(q) {
         if (!q || q.length < 5) return false;
@@ -1474,7 +900,15 @@
         return score >= 3 && endsWithQuestion;
       }
 
-      async function triggerAI(q) {
+      // pendingAiQuery tracks which query the in-flight AI request is for.
+      // Answers are slow (LLM inference), so a search that starts while one
+      // is still generating must not let the stale answer clobber whatever
+      // the newer search already displayed — htmx:beforeSwap below discards
+      // it if lastSearchQuery has since moved on, replacing the old
+      // AbortController-based cancellation.
+      let pendingAiQuery = "";
+
+      function triggerAI(q) {
         const triggerBtn = document.getElementById("aiTriggerBtn");
         const loading = document.getElementById("aiLoading");
         const content = document.getElementById("aiContent");
@@ -1484,47 +918,33 @@
         loading.classList.add("flex");
         content.classList.add("hidden");
 
-        if (aiAbortCtrl) {
-          aiAbortCtrl.abort();
-          aiAbortCtrl = null;
-        }
-        aiAbortCtrl = new AbortController();
-
-        try {
-          const res = await fetch(
-            `${API_BASE}/api/v1/ask?q=${encodeURIComponent(q)}`,
-            {
-              signal: aiAbortCtrl.signal,
-            },
-          );
-          if (!res.ok) throw new Error("Erreur IA");
-          const data = await res.json();
-
-          const fragment = document.createDocumentFragment();
-          const lines = data.answer.split("\n");
-          lines.forEach((line, i) => {
-            const span = document.createElement("span");
-            span.textContent = line; // textContent escapes everything automatically
-            fragment.appendChild(span);
-            if (i < lines.length - 1) {
-              fragment.appendChild(document.createElement("br"));
-            }
-          });
-
-          loading.classList.add("hidden");
-          loading.classList.remove("flex");
-          content.innerHTML = "";
-          content.classList.remove("hidden");
-          content.appendChild(fragment);
-        } catch (err) {
-          if (err.name !== "AbortError") {
-            loading.classList.add("hidden");
-            loading.classList.remove("flex");
-            triggerBtn.classList.remove("hidden");
-            triggerBtn.textContent = "Générer à nouveau";
-          }
-        }
+        pendingAiQuery = q;
+        htmx.ajax("GET", `${API_BASE}/api/v1/ask?q=${encodeURIComponent(q)}`, {
+          target: "#aiContent",
+          swap: "innerHTML",
+        });
       }
+
+      document.body.addEventListener("htmx:beforeSwap", (e) => {
+        if (!e.detail.target || e.detail.target.id !== "aiContent") return;
+        if (pendingAiQuery !== lastSearchQuery) {
+          e.detail.shouldSwap = false;
+          return;
+        }
+        document.getElementById("aiLoading").classList.add("hidden");
+        document.getElementById("aiLoading").classList.remove("flex");
+        e.detail.target.classList.remove("hidden");
+      });
+
+      document.body.addEventListener("htmx:responseError", (e) => {
+        if (!e.detail.target || e.detail.target.id !== "aiContent") return;
+        const loading = document.getElementById("aiLoading");
+        const triggerBtn = document.getElementById("aiTriggerBtn");
+        loading.classList.add("hidden");
+        loading.classList.remove("flex");
+        triggerBtn.classList.remove("hidden");
+        triggerBtn.textContent = "Générer à nouveau";
+      });
 
       // ── Override standard links for SPA Navigation ──────────
       document.addEventListener("click", async (e) => {
@@ -1616,12 +1036,6 @@
           // pages and company profiles still work off in-memory data).
           if (data.status !== "indexing") {
             HEALTH_BACKOFF.attempt = 0;
-            serverReady = true;
-            homeFooter.innerHTML = `© ${new Date().getFullYear()} Congopro ·
-                    <a href="${validateURL('https://t.me/+yzJqliLeudNkZjY0')}" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 hover:underline transition-colors">Support</a> ·
-                    <a href="/help" class="hover:text-gray-600 hover:underline transition-colors">Aide</a> ·
-                    <a href="/privacy" class="hover:text-gray-600 hover:underline transition-colors">Confidentialité</a> ·
-                    <a href="/terms" class="hover:text-gray-600 hover:underline transition-colors">Conditions</a>`;
             homeStatus.textContent =
               data.status === "degraded"
                 ? "⚠️ Recherche temporairement indisponible."
@@ -1652,220 +1066,84 @@
         }
       }
 
-      // ── Ad engine ─────────────────────────────────────────
-      const adState = {
-        pool: [],
-        rotationSec: 8,
-        maxPerPage: 2,
-        timer: null,
-        cursor: 0,
-      };
-
-      function safeCSSColor(val) {
-        if (!val || typeof val !== "string") return null;
-        // allow hex, rgb(), named colors — block anything with parens except rgb/rgba/hsl
-        return /^(#[0-9a-f]{3,8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(\s*,\s*[\d.]+)?\s*\)|hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%(\s*,\s*[\d.]+)?\s*\)|[a-z]+)$/i.test(
-          val.trim(),
-        )
-          ? val.trim()
-          : null;
-      }
-      function adAccentStyle(color) {
-        return color ? `background:${color}` : "background:#1a73e8";
-      }
-      function renderAdSlot(ad) {
-        const safeUrl = validateURL(ad.url);
-        if (!safeUrl) return "";
-
-        const label = ad.label || "Sponsorisé";
-        const color = safeCSSColor(ad.color) || "#1a73e8";
-        return `<div class="ad-slot">
-              <div class="ad-accent" style="${adAccentStyle(color)}"></div>
-              <div class="flex-1 min-w-0">
-                <span class="ad-label" style="${adAccentStyle(color)}">${esc(label)}</span>
-                <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored"
-                  data-track-click="true"
-                  data-ad-id="${esc(ad.id)}"
-                  data-ad-title="${esc(ad.title)}"
-                  data-ad-placement="results_page"
-                  class="ad-title" style="color:${color}">${esc(ad.title)}</a>
-                <div class="ad-display-url">${esc(ad.display_url || safeUrl)}</div>
-                <p class="ad-desc">${esc(ad.description)}</p>
-              </div>
-            </div>`;
-      }
-      function renderPremiumHomepageAd(ad) {
-        const safeUrl = validateURL(ad.url);
-        if (!safeUrl) return "";
-
-        const color = safeCSSColor(ad.color) || "#F59E0B";
-        const label = ad.label || "Partenaire d'excellence";
-
-        return `
-          <div class="w-full max-w-4xl relative bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden group hover:shadow-lg transition-all duration-300" style="display: block;">
-
-              <div class="h-1 w-full" style="background-color: ${color};"></div>
-
-              <div class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-
-                  <div class="hidden sm:flex shrink-0 w-12 h-12 rounded-xl items-center justify-center border"
-                      style="background-color: ${color}10; border-color: ${color}30; color: ${color};">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                      </svg>
-                  </div>
-
-                  <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2 mb-1">
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                                  style="background-color: ${color}15; color: ${color}; border: 1px solid ${color}30;">
-                              ${esc(label)}
-                          </span>
-                      </div>
-
-                      <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored"
-                        data-track-click="true"
-                        data-ad-id="${esc(ad.id)}"
-                        data-ad-title="${esc(ad.title)}"
-                        data-ad-placement="homepage"
-                        style="text-decoration: none;">
-                          <h3 class="text-lg font-bold text-gray-900 truncate tracking-tight mb-1 hover:opacity-80">${esc(ad.title)}</h3>
-                      </a>
-
-                      <p class="text-sm text-gray-600 mb-1.5 leading-snug" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${esc(ad.description)}</p>
-
-                      <div class="flex items-center text-xs font-medium text-gray-400">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                          </svg>
-                          ${esc(ad.display_url || safeUrl)}
-                      </div>
-                  </div>
-
-                  <div class="w-full sm:w-auto mt-3 sm:mt-0 flex-shrink-0">
-                      <a href="${esc(safeUrl)}" target="_blank" rel="noopener sponsored"
-                        data-track-click="true"
-                        data-ad-id="${esc(ad.id)}"
-                        data-ad-title="${esc(ad.title)}"
-                        data-ad-placement="homepage"
-                        class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-md text-white shadow-sm hover:opacity-90"
-                        style="background-color: ${color}; text-decoration: none;">
-                      Découvrir
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1.5 -mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                      </a>
-                  </div>
-
-              </div>
-          </div>`;
-      }
-      async function loadHomepageAd() {
-        try {
-          const response = await fetch("/api/v1/ads?q=");
-          const data = await response.json();
-          const adsArray = data.ads || [];
-          const homeAd = adsArray.find((ad) => ad.placement === "homepage");
-          if (homeAd) {
-            const container = document.getElementById("homepageAdContainer");
-            if (container) {
-              container.innerHTML = renderPremiumHomepageAd(homeAd);
-              container.classList.remove("hidden");
-              if (typeof gtag === "function") {
-                gtag("event", "view_ad", {
-                  ad_id: homeAd.id,
-                  ad_title: homeAd.title,
-                  ad_placement: homeAd.placement || "homepage",
-                });
-              }
-            }
-          }
-        } catch (error) {
-          console.error(
-            "Erreur lors du chargement de l'annonce d'accueil :",
-            error,
-          );
-        }
-      }
-      function renderAds() {
-        const pool = adState.pool;
-        if (!pool.length) {
-          adContainer.classList.add("hidden");
-          adContainer.innerHTML = "";
-          return;
-        }
-        const slots = [],
-          seen = new Set();
-        let itemsExamined = 0;
-        for (
-          let i = 0;
-          i < pool.length && slots.length < adState.maxPerPage;
-          i++
-        ) {
-          ++itemsExamined;
-          const ad = pool[(adState.cursor + i) % pool.length];
-          if (!seen.has(ad.id)) {
-            seen.add(ad.id);
-            slots.push(ad);
-          }
-        }
-        adState.cursor = (adState.cursor + itemsExamined) % pool.length;
-        adContainer.innerHTML = "";
-        const fragment = document.createDocumentFragment();
-        slots.forEach((slot) => {
-          const div = document.createElement("div");
-          div.innerHTML = renderAdSlot(slot);
-          if (typeof gtag === "function") {
-            gtag("event", "view_ad", {
-              ad_id: slot.id,
-              ad_title: slot.title,
-              ad_placement: slot.placement || "results_page",
-            });
-          }
-
-          while (div.firstChild) {
-            fragment.appendChild(div.firstChild);
-          }
+      // ── Ad engine (htmx-driven) ─────────────────────────────
+      // Rendering, color/URL validation and slot selection now happen
+      // server-side (internal/web/templates/ads.templ). Rotation on the
+      // results page is a self-perpetuating hx-trigger="every Ns" (server-configured) baked
+      // into each server-rendered replacement rather than a client-side
+      // timer replaying a cached pool — a deliberate simplification: more
+      // requests, no cursor state to keep in sync.
+      function loadHomepageAd() {
+        htmx.ajax("GET", "/api/v1/ads?q=", {
+          target: "#homepageAdContainer",
+          swap: "outerHTML",
         });
-        adContainer.appendChild(fragment);
-        adContainer.classList.remove("hidden");
-        resultsLabel.classList.toggle("hidden", !slots.length);
       }
-      function startAdRotation() {
-        if (adState.timer) clearInterval(adState.timer);
-        if (!adState.pool.length) return;
-        adState.timer = setInterval(renderAds, adState.rotationSec * 1000);
+      function fetchAds(q) {
+        htmx.ajax("GET", `${API_BASE}/api/v1/ads?q=${encodeURIComponent(q)}`, {
+          target: "#adContainer",
+          swap: "outerHTML",
+        });
       }
       function stopAdRotation() {
-        if (adState.timer) {
-          clearInterval(adState.timer);
-          adState.timer = null;
-        }
-        adContainer.classList.add("hidden");
-        adContainer.innerHTML = "";
-        resultsLabel.classList.add("hidden");
+        const container = document.getElementById("adContainer");
+        container.classList.add("hidden");
+        container.innerHTML = "";
+        document.getElementById("resultsLabel")?.classList.add("hidden");
       }
-      async function fetchAds(q) {
-        try {
-          const res = await fetch(
-            `${API_BASE}/api/v1/ads?q=${encodeURIComponent(q)}`,
-          );
-          if (!res.ok) return;
-          const data = await res.json();
-          if (!data.active) {
-            stopAdRotation();
-            return;
-          }
-          adState.pool = data.ads || [];
-          adState.rotationSec = data.rotation_sec || 8;
-          adState.maxPerPage = data.max_per_page || 2;
-          adState.cursor = 0;
-          renderAds();
-          startAdRotation();
-        } catch {
-          // OK to avoid catching ads errors!
+
+      // GA4 ad impressions: fire once per unique ad shown, deduped since a
+      // single ad can carry more than one tracked link (e.g. the homepage
+      // card's title and its "Découvrir" button).
+      document.body.addEventListener("htmx:afterSwap", (e) => {
+        const target = e.detail.target;
+        if (
+          !target ||
+          (target.id !== "adContainer" && target.id !== "homepageAdContainer")
+        )
+          return;
+        if (typeof gtag !== "function") return;
+        const seen = new Set();
+        target.querySelectorAll("[data-track-click='true']").forEach((el) => {
+          const id = el.getAttribute("data-ad-id");
+          if (seen.has(id)) return;
+          seen.add(id);
+          gtag("event", "view_ad", {
+            ad_id: id,
+            ad_title: el.getAttribute("data-ad-title"),
+            ad_placement: el.getAttribute("data-ad-placement"),
+          });
+        });
+      });
+
+      // Don't poll for new results-page ads while the results page itself
+      // is hidden (i.e. back on the homepage) — the fragment's own
+      // hx-trigger="every Ns" has no [visible]-style guard available (that
+      // syntax needs eval, which our CSP blocks), so this is the
+      // CSP-compliant equivalent.
+      document.body.addEventListener("htmx:configRequest", (e) => {
+        if (
+          e.detail.elt &&
+          e.detail.elt.id === "adContainer" &&
+          resultsPage.classList.contains("hidden")
+        ) {
+          e.preventDefault();
         }
-      }
+      });
+
+      // A slow-to-resolve #adContainer fetch (started while search results
+      // were showing) can still land after the user has since cleared back
+      // to the homepage — since this is an outerHTML swap, it would
+      // otherwise resurrect the container instead of leaving it hidden.
+      document.body.addEventListener("htmx:beforeSwap", (e) => {
+        if (
+          e.detail.target &&
+          e.detail.target.id === "adContainer" &&
+          resultsPage.classList.contains("hidden")
+        ) {
+          e.detail.shouldSwap = false;
+        }
+      });
 
       // ── Scroll to Top Widget ──────────────────────────────
       window.addEventListener("scroll", () => {

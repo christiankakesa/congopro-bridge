@@ -1,0 +1,83 @@
+package templates
+
+import (
+	"strconv"
+	"strings"
+
+	"congopro-bridge/internal/data"
+)
+
+// SearchResultsFragment is the htmx counterpart to the frontend's
+// renderResults(): the primary body swaps into #resultsList, while
+// #statsBar and #emptyState update themselves via out-of-band swaps so a
+// single response can drive all three regions like the original JS did.
+templ SearchResultsFragment(q string, results []data.SearchResult, total int, errMsg string) {
+	if errMsg == "" && len(results) == 1 {
+		@companyProfile(&results[0].Company)
+	} else if errMsg == "" && len(results) > 1 {
+		for _, r := range results {
+			@resultRow(r)
+		}
+	}
+	<div id="statsBar" hx-swap-oob="outerHTML" class={ statsBarClass(errMsg, results) }>
+		if errMsg == "" && len(results) > 1 {
+			Environ <strong>{ formatTotal(total) }</strong> { resultWord(total) }
+		}
+	</div>
+	@emptyStateFragment(q, errMsg, results)
+}
+
+func statsBarClass(errMsg string, results []data.SearchResult) string {
+	if errMsg == "" && len(results) > 1 {
+		return ""
+	}
+	return "hidden"
+}
+
+func formatTotal(total int) string {
+	s := strconv.Itoa(total)
+	if len(s) <= 3 {
+		return s
+	}
+	var parts []string
+	for len(s) > 3 {
+		parts = append([]string{s[len(s)-3:]}, parts...)
+		s = s[:len(s)-3]
+	}
+	parts = append([]string{s}, parts...)
+	return strings.Join(parts, " ")
+}
+
+func resultWord(total int) string {
+	if total == 1 {
+		return "résultat"
+	}
+	return "résultats"
+}
+
+templ emptyStateFragment(q, errMsg string, results []data.SearchResult) {
+	{{
+		show := errMsg != "" || len(results) == 0
+		title := "Aucun résultat pour \"" + q + "\""
+		subtitle := "Votre recherche ne correspond à aucune entreprise."
+		if errMsg != "" {
+			title = "Une erreur est survenue"
+			subtitle = errMsg
+		}
+		class := "hidden pt-4 max-w-[652px]"
+		if show {
+			class = "pt-4 max-w-[652px]"
+		}
+	}}
+	<div id="emptyState" hx-swap-oob="outerHTML" class={ class }>
+		<p class="no-results-title">{ title }</p>
+		<p class="no-results-sub">{ subtitle }</p>
+		<hr class="mt-6 border-[#f0f0f0]"/>
+		<p class="mt-4 text-sm text-gray-500">Suggestions :</p>
+		<ul class="mt-2 text-sm text-gray-500 list-disc list-inside space-y-1">
+			<li>Vérifiez l'orthographe de tous les mots.</li>
+			<li>Essayez des mots-clés différents ou moins nombreux.</li>
+			<li>Essayez des mots-clés plus généraux.</li>
+		</ul>
+	</div>
+}

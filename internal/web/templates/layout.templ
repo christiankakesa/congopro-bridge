@@ -108,8 +108,11 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 				gtag("config", "G-VS32J060KG");
 			</script>
 		</head>
-		<body class="bg-white text-gray-900 antialiased min-h-full overflow-x-hidden">
-			{ children... }
+		<body class="bg-white text-gray-900 antialiased min-h-screen flex flex-col overflow-x-hidden">
+			<div class="flex-1 w-full">
+				{ children... }
+			</div>
+			@SiteFooter()
 			@scrollToTop(nonce)
 			@cookieConsent(nonce)
 		</body>
