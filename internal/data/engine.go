@@ -4,108 +4,32 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/rs/zerolog/log"
 
 	"congopro-bridge/internal/config"
 )
 
-//go:embed cleaned_c.json
-var CompaniesJSON []byte
-
 const (
 	MaxResults        = 30
 	CompanySlugPrefix = "-company-slug:"
 )
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MongoDB JSON helpers & Domain Models
-// ─────────────────────────────────────────────────────────────────────────────
-
-type MongoOID struct{ Value string }
-
-func (m *MongoOID) UnmarshalJSON(b []byte) error {
-	var w struct {
-		OID string `json:"$oid"`
-	}
-	if err := json.Unmarshal(b, &w); err == nil && w.OID != "" {
-		m.Value = w.OID
-		return nil
-	}
-	return json.Unmarshal(b, &m.Value)
-}
-
-type MongoDate struct{ Value time.Time }
-
-func (m *MongoDate) UnmarshalJSON(b []byte) error {
-	var w struct {
-		Date string `json:"$date"`
-	}
-	if err := json.Unmarshal(b, &w); err == nil && w.Date != "" {
-		t, err := time.Parse(time.RFC3339Nano, w.Date)
-		if err != nil {
-			return fmt.Errorf("MongoDate parse %q: %w", w.Date, err)
-		}
-		m.Value = t
-		return nil
-	}
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	t, err := time.Parse(time.RFC3339Nano, s)
-	if err != nil {
-		return fmt.Errorf("MongoDate fallback parse %q: %w", s, err)
-	}
-	m.Value = t
-	return nil
-}
-
 type GeoLocation struct {
 	Lon float64 `json:"lon"`
 	Lat float64 `json:"lat"`
-}
-
-type rawCompany struct {
-	ID           MongoOID  `json:"_id"`
-	Name         string    `json:"name"`
-	NameSeo      string    `json:"name_seo"`
-	Activity     string    `json:"activity"`
-	City         string    `json:"city"`
-	Country      string    `json:"country"`
-	Description  string    `json:"description"`
-	Slogan       string    `json:"slogan"`
-	Website      string    `json:"website"`
-	Email        string    `json:"email"`
-	MainPhone    string    `json:"main_phone"`
-	AddressLine  string    `json:"address_line_1"`
-	AddressLine2 string    `json:"address_line_2"`
-	Twitter      string    `json:"twitter"`
-	Facebook     string    `json:"facebook"`
-	LinkedIn     string    `json:"linkedin"`
-	Instagram    string    `json:"instagram"`
-	TikTok       string    `json:"tiktok"`
-	Whatsapp     string    `json:"whatsapp"`
-	Youtube      string    `json:"youtube"`
-	Published    bool      `json:"published"`
-	UpdatedAt    MongoDate `json:"updated_at"`
-	StatsShow    int       `json:"stats_show"`
-	Geo          []float64 `json:"geo"`
 }
 
 type Company struct {
@@ -197,6 +121,7 @@ type SitemapEntry struct {
 
 type Engine struct {
 	Config *config.Config
+	db     *pgxpool.Pool
 
 	initOnce     sync.Once
 	initErr      error
@@ -216,11 +141,12 @@ type Engine struct {
 	ollamaGenerateURL string
 }
 
-func NewEngine(cfg *config.Config) *Engine {
+func NewEngine(cfg *config.Config, pool *pgxpool.Pool) *Engine {
 	client := meilisearch.New(cfg.MeiliURL, meilisearch.WithAPIKey(cfg.MeiliMasterKey))
 
 	return &Engine{
 		Config:       cfg,
+		db:           pool,
 		IndexingDone: make(chan struct{}),
 		companyMap:   make(map[string]*Company),
 		slugMap:      make(map[string]*Company),
@@ -252,14 +178,6 @@ func (e *Engine) Companies() []Company {
 // after initErr is set, so no additional synchronization is needed here.
 func (e *Engine) IndexingError() error {
 	return e.initErr
-}
-
-var htmlTagRE = regexp.MustCompile(`<[^>]+>`)
-
-func stripHTML(s string) string {
-	s = htmlTagRE.ReplaceAllString(s, " ")
-	s = html.UnescapeString(s)
-	return strings.Join(strings.Fields(s), " ")
 }
 
 func validateOllamaURL(cfg *config.Config) error {
@@ -310,6 +228,15 @@ func (e *Engine) LoadAndIndex() error {
 	return e.initErr
 }
 
+// Reload re-queries Postgres and re-syncs Meilisearch — for use after an
+// admin write, unlike LoadAndIndex which is sync.Once-gated to startup only
+// and safe to call repeatedly. Meilisearch's background embedding step can
+// take a while (minutes, under load), so callers that don't want an HTTP
+// request blocked on it should run this in a goroutine.
+func (e *Engine) Reload() error {
+	return e.loadAndIndexOnce()
+}
+
 func (e *Engine) loadAndIndexOnce() error {
 	start := time.Now()
 
@@ -317,72 +244,14 @@ func (e *Engine) loadAndIndexOnce() error {
 		return fmt.Errorf("ollama URL rejected: %w", err)
 	}
 
-	var raws []rawCompany
-	if err := json.Unmarshal(CompaniesJSON, &raws); err != nil {
-		return fmt.Errorf("unmarshal companies: %w", err)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	companies, err := e.loadCompaniesFromDB(ctx)
+	if err != nil {
+		return fmt.Errorf("load companies from database: %w", err)
 	}
-	log.Info().Msgf("[load] parsed %d raw companies", len(raws))
-
-	const descriptionLimit = 150
-	companies := make([]Company, 0, len(raws))
-	seenIDs := make(map[string]struct{}, len(raws))
-
-	for i, r := range raws {
-		id := r.ID.Value
-		if id == "" {
-			id = fmt.Sprintf("gen-%d", i)
-		}
-		if _, exists := seenIDs[id]; exists {
-			continue
-		}
-		seenIDs[id] = struct{}{}
-
-		rDescription := stripHTML(r.Description)
-		var rDescriptionForPrompt string
-		if utf8.RuneCountInString(rDescription) > descriptionLimit {
-			runes := []rune(rDescription)
-			cutAt := descriptionLimit
-			for cutAt > 0 && runes[cutAt] != ' ' {
-				cutAt--
-			}
-			if cutAt == 0 {
-				cutAt = descriptionLimit
-			}
-			rDescriptionForPrompt = string(runes[:cutAt]) + "..."
-		} else {
-			rDescriptionForPrompt = rDescription
-		}
-
-		c := Company{
-			ID:                   id,
-			Name:                 r.Name,
-			NameSeo:              r.NameSeo,
-			Activity:             r.Activity,
-			City:                 r.City,
-			Country:              r.Country,
-			Description:          rDescription,
-			DescriptionForPrompt: rDescriptionForPrompt,
-			Slogan:               r.Slogan,
-			Website:              r.Website,
-			Email:                r.Email,
-			Phone:                r.MainPhone,
-			Address:              r.AddressLine,
-			AddressLine2:         r.AddressLine2,
-			Twitter:              r.Twitter,
-			Facebook:             r.Facebook,
-			LinkedIn:             r.LinkedIn,
-			Instagram:            r.Instagram,
-			TikTok:               r.TikTok,
-			Whatsapp:             r.Whatsapp,
-			Youtube:              r.Youtube,
-			UpdatedAt:            r.UpdatedAt.Value,
-			StatsShow:            r.StatsShow,
-		}
-		if len(r.Geo) == 2 {
-			c.Location = &GeoLocation{Lon: r.Geo[0], Lat: r.Geo[1]}
-		}
-		companies = append(companies, c)
-	}
+	log.Info().Msgf("[load] loaded %d companies from database", len(companies))
 
 	companyMap := make(map[string]*Company, len(companies))
 	slugMap := make(map[string]*Company, len(companies))
@@ -404,8 +273,6 @@ func (e *Engine) loadAndIndexOnce() error {
 	e.slugMap = slugMap
 	e.mu.Unlock()
 
-	raws = nil
-
 	if err := e.indexMeili(companies); err != nil {
 		return fmt.Errorf("meilisearch indexing: %w", err)
 	}
@@ -415,6 +282,49 @@ func (e *Engine) loadAndIndexOnce() error {
 	log.Info().Msgf("[load] all systems ready in %s (%d companies indexed)",
 		time.Since(start).Round(time.Millisecond), len(companies))
 	return nil
+}
+
+// loadCompaniesFromDB reads every published company from Postgres. Draft and
+// disputed companies are deliberately excluded — they're not public yet.
+func (e *Engine) loadCompaniesFromDB(ctx context.Context) ([]Company, error) {
+	rows, err := e.db.Query(ctx, `
+		SELECT id, name, name_seo, activity, city, country, description, slogan,
+		       website, email, phone, address_line_1, address_line_2, twitter,
+		       facebook, linkedin, instagram, tiktok, whatsapp, youtube,
+		       stats_show, updated_at,
+		       ST_X(location::geometry), ST_Y(location::geometry)
+		FROM companies
+		WHERE status = 'published'
+		ORDER BY id
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query companies: %w", err)
+	}
+	defer rows.Close()
+
+	var companies []Company
+	for rows.Next() {
+		var c Company
+		var lon, lat *float64
+		if err := rows.Scan(
+			&c.ID, &c.Name, &c.NameSeo, &c.Activity, &c.City, &c.Country,
+			&c.Description, &c.Slogan, &c.Website, &c.Email, &c.Phone,
+			&c.Address, &c.AddressLine2, &c.Twitter, &c.Facebook, &c.LinkedIn,
+			&c.Instagram, &c.TikTok, &c.Whatsapp, &c.Youtube, &c.StatsShow,
+			&c.UpdatedAt, &lon, &lat,
+		); err != nil {
+			return nil, fmt.Errorf("scan company row: %w", err)
+		}
+		c.DescriptionForPrompt = truncateForPrompt(c.Description, descriptionPromptLimit)
+		if lon != nil && lat != nil {
+			c.Location = &GeoLocation{Lon: *lon, Lat: *lat}
+		}
+		companies = append(companies, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate company rows: %w", err)
+	}
+	return companies, nil
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

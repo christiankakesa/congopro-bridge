@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Congopro Bridge database backup daily
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+# Runs the missed backup on boot if the VPS was down at 03:15.
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

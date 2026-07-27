@@ -16,6 +16,12 @@ type Config struct {
 	MeiliMasterKey      string
 	MeiliIndexName      string
 	TrustedProxies      []string
+	// DatabaseURL is a standard postgres:// connection string. No default —
+	// deliberately not baked into defaults() since even a "local dev only"
+	// placeholder credential doesn't belong hardcoded in source. Must be set
+	// via the DATABASE_URL env var (the Makefile's db-* targets set it for
+	// local dev; systemd sets it in production).
+	DatabaseURL string
 }
 
 func Load() *Config {
@@ -49,6 +55,9 @@ func Load() *Config {
 	}
 	if tp := os.Getenv("TRUSTED_PROXIES"); tp != "" {
 		cfg.TrustedProxies = splitTrimmed(tp, ",")
+	}
+	if du := os.Getenv("DATABASE_URL"); du != "" {
+		cfg.DatabaseURL = du
 	}
 
 	return cfg

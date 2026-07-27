@@ -8,12 +8,15 @@ services:
     environment:
       - OLLAMA_URL=http://ollama:11434
       - MEILI_URL=http://meilisearch:7700
+      - DATABASE_URL=postgres://congopro_bridge:congopro_bridge@postgres:5432/congopro_bridge?sslmode=disable
     depends_on:
       ollama:
         condition: service_healthy
       ollama-init:
         condition: service_completed_successfully
       meilisearch:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   ollama:
@@ -54,6 +57,26 @@ services:
       ollama:
         condition: service_healthy
 
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      - POSTGRES_USER=congopro_bridge
+      - POSTGRES_PASSWORD=congopro_bridge
+      - POSTGRES_DB=congopro_bridge
+    ports:
+      # Loopback-only, same reasoning as ollama/meilisearch below: reachable
+      # for local debugging, not from the network. Host port is 5433 (not the
+      # default 5432) since other projects on this machine already bind 5432.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U congopro_bridge -d congopro_bridge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   meilisearch:
     image: getmeili/meilisearch:v1.37
     ports:
@@ -78,3 +101,4 @@ services:
 volumes:
   ollama_data:
   meili_data:
+  postgres_data:

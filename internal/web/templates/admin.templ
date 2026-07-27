@@ -1,0 +1,355 @@
+package templates
+
+import (
+	"fmt"
+	"net/url"
+	"strconv"
+)
+
+// AdminCompanyRow is one row in the admin companies list.
+type AdminCompanyRow struct {
+	ID        string
+	Name      string
+	City      string
+	Country   string
+	Status    string
+	UpdatedAt string
+}
+
+// AdminCompanyFormData backs both the "new company" and "edit company" forms.
+type AdminCompanyFormData struct {
+	ID            string
+	Name          string
+	NameSeo       string
+	Activity      string
+	City          string
+	Country       string
+	Description   string
+	Slogan        string
+	Website       string
+	Email         string
+	Phone         string
+	AddressLine1  string
+	AddressLine2  string
+	Twitter       string
+	Facebook      string
+	LinkedIn      string
+	Instagram     string
+	TikTok        string
+	Whatsapp      string
+	Youtube       string
+	StatsShow     bool
+	Status        string
+	Lon           string
+	Lat           string
+}
+
+// AdminLayout is the internal-tool counterpart to Layout — no analytics, no
+// cookie banner, no public SEO metadata (noindex instead). Deliberately
+// separate from the public Layout rather than a shared component with flags,
+// since the two pages have almost nothing in common besides the stylesheet.
+templ AdminLayout(title, nonce, userName string) {
+	<!DOCTYPE html>
+	<html lang="fr" class="h-full">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } · Congopro Admin</title>
+			<meta name="robots" content="noindex,nofollow"/>
+			<link rel="stylesheet" href="/css/style.min.css"/>
+		</head>
+		<body class="bg-gray-50 text-gray-900 antialiased min-h-full">
+			if userName != "" {
+				<header class="bg-white border-b border-gray-200">
+					<div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+						<a href="/admin" class="font-sora font-semibold text-gray-900">Congopro Admin</a>
+						<div class="flex items-center gap-4 text-sm">
+							<span class="text-gray-500">{ userName }</span>
+							<form method="post" action="/admin/logout">
+								<button type="submit" class="text-gray-500 hover:text-gray-900">Déconnexion</button>
+							</form>
+						</div>
+					</div>
+				</header>
+			}
+			<main class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}
+
+templ AdminLoginPage(nonce, errorMsg string) {
+	@AdminLayout("Connexion", nonce, "") {
+		<div class="max-w-sm mx-auto mt-16">
+			<h1 class="text-xl font-sora font-semibold text-gray-900 mb-6">Connexion staff</h1>
+			if errorMsg != "" {
+				<div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+					{ errorMsg }
+				</div>
+			}
+			<form method="post" action="/admin/login" class="space-y-4">
+				<div>
+					<label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+					<input
+						type="email"
+						id="email"
+						name="email"
+						required
+						autocomplete="username"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+					/>
+				</div>
+				<div>
+					<label for="password" class="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+					<input
+						type="password"
+						id="password"
+						name="password"
+						required
+						autocomplete="current-password"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+					/>
+				</div>
+				<div>
+					<label for="totp_code" class="block text-sm font-medium text-gray-700 mb-1">Code d'authentification (6 chiffres)</label>
+					<input
+						type="text"
+						id="totp_code"
+						name="totp_code"
+						inputmode="numeric"
+						pattern="[0-9]{6}"
+						maxlength="6"
+						required
+						autocomplete="one-time-code"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"
+					/>
+				</div>
+				<button
+					type="submit"
+					class="w-full rounded-lg bg-gray-900 text-white text-sm font-medium py-2.5 hover:bg-gray-800 transition-colors"
+				>
+					Se connecter
+				</button>
+			</form>
+		</div>
+	}
+}
+
+templ AdminCompaniesList(nonce, userName, query string, companies []AdminCompanyRow, page int, hasNext bool) {
+	@AdminLayout("Entreprises", nonce, userName) {
+		<div class="flex items-center justify-between mb-6">
+			<h1 class="text-xl font-sora font-semibold text-gray-900">Entreprises</h1>
+			<a
+				href="/admin/companies/new"
+				class="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2 hover:bg-gray-800 transition-colors"
+			>
+				+ Nouvelle entreprise
+			</a>
+		</div>
+		<form method="get" action="/admin" class="mb-4">
+			<input
+				type="search"
+				name="q"
+				value={ query }
+				placeholder="Rechercher par nom…"
+				class="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+			/>
+		</form>
+		<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+			<table class="w-full text-sm">
+				<thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+					<tr>
+						<th class="text-left px-4 py-2.5 font-medium">Nom</th>
+						<th class="text-left px-4 py-2.5 font-medium">Ville</th>
+						<th class="text-left px-4 py-2.5 font-medium">Pays</th>
+						<th class="text-left px-4 py-2.5 font-medium">Statut</th>
+						<th class="text-left px-4 py-2.5 font-medium">Mis à jour</th>
+						<th class="px-4 py-2.5"></th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-100">
+					for _, c := range companies {
+						<tr class="hover:bg-gray-50">
+							<td class="px-4 py-2.5 font-medium text-gray-900">{ c.Name }</td>
+							<td class="px-4 py-2.5 text-gray-600">{ c.City }</td>
+							<td class="px-4 py-2.5 text-gray-600">{ c.Country }</td>
+							<td class="px-4 py-2.5">
+								@statusBadge(c.Status)
+							</td>
+							<td class="px-4 py-2.5 text-gray-500">{ c.UpdatedAt }</td>
+							<td class="px-4 py-2.5 text-right">
+								<a href={ templ.URL("/admin/companies/" + c.ID + "/edit") } class="text-blue-600 hover:underline">
+									Modifier
+								</a>
+							</td>
+						</tr>
+					}
+					if len(companies) == 0 {
+						<tr>
+							<td colspan="6" class="px-4 py-8 text-center text-gray-500">Aucune entreprise trouvée.</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+		<div class="flex items-center justify-between mt-4 text-sm">
+			<span class="text-gray-500">Page { fmt.Sprint(page) }</span>
+			<div class="flex gap-2">
+				if page > 1 {
+					<a href={ templ.URL(pageURL(query, page-1)) } class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">← Précédent</a>
+				}
+				if hasNext {
+					<a href={ templ.URL(pageURL(query, page+1)) } class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Suivant →</a>
+				}
+			</div>
+		</div>
+	}
+}
+
+func pageURL(query string, page int) string {
+	u := "/admin?page=" + strconv.Itoa(page)
+	if query != "" {
+		u += "&q=" + url.QueryEscape(query)
+	}
+	return u
+}
+
+templ statusBadge(status string) {
+	switch status {
+		case "published":
+			<span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700">Publié</span>
+		case "draft":
+			<span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Brouillon</span>
+		case "disputed":
+			<span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Litige</span>
+		default:
+			<span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{ status }</span>
+	}
+}
+
+templ AdminCompanyForm(nonce, userName string, form AdminCompanyFormData, isEdit bool, errorMsg string) {
+	@AdminLayout(formTitle(isEdit), nonce, userName) {
+		<div class="max-w-2xl">
+			<div class="flex items-center justify-between mb-6">
+				<h1 class="text-xl font-sora font-semibold text-gray-900">{ formTitle(isEdit) }</h1>
+				<a href="/admin" class="text-sm text-gray-500 hover:text-gray-900">← Retour à la liste</a>
+			</div>
+			if errorMsg != "" {
+				<div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+					{ errorMsg }
+				</div>
+			}
+			<form
+				method="post"
+				action={ templ.URL(formAction(isEdit, form.ID)) }
+				class="bg-white rounded-lg border border-gray-200 p-6 space-y-5"
+			>
+				<div class="grid grid-cols-2 gap-4">
+					@field("Nom *", "name", "text", form.Name, true)
+					@field("Slug (name_seo)", "name_seo", "text", form.NameSeo, false)
+					@field("Activité", "activity", "text", form.Activity, false)
+					@field("Ville", "city", "text", form.City, false)
+					@field("Pays", "country", "text", form.Country, false)
+					<div>
+						<label for="status" class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+						<select
+							id="status"
+							name="status"
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							<option value="draft" selected?={ form.Status == "draft" }>Brouillon</option>
+							<option value="published" selected?={ form.Status == "published" }>Publié</option>
+							<option value="disputed" selected?={ form.Status == "disputed" }>Litige</option>
+						</select>
+					</div>
+				</div>
+				<div>
+					<label for="slogan" class="block text-sm font-medium text-gray-700 mb-1">Slogan</label>
+					<input
+						type="text"
+						id="slogan"
+						name="slogan"
+						value={ form.Slogan }
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+					/>
+				</div>
+				<div>
+					<label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+					<textarea
+						id="description"
+						name="description"
+						rows="4"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+					>{ form.Description }</textarea>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					@field("Site web", "website", "url", form.Website, false)
+					@field("Email", "email", "email", form.Email, false)
+					@field("Téléphone", "phone", "text", form.Phone, false)
+					@field("Adresse", "address_line_1", "text", form.AddressLine1, false)
+					@field("Complément d'adresse", "address_line_2", "text", form.AddressLine2, false)
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					@field("Twitter/X", "twitter", "text", form.Twitter, false)
+					@field("Facebook", "facebook", "text", form.Facebook, false)
+					@field("LinkedIn", "linkedin", "text", form.LinkedIn, false)
+					@field("Instagram", "instagram", "text", form.Instagram, false)
+					@field("TikTok", "tiktok", "text", form.TikTok, false)
+					@field("WhatsApp", "whatsapp", "text", form.Whatsapp, false)
+					@field("YouTube", "youtube", "text", form.Youtube, false)
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					@field("Longitude", "lon", "text", form.Lon, false)
+					@field("Latitude", "lat", "text", form.Lat, false)
+				</div>
+				<div class="flex items-center gap-2">
+					<input
+						type="checkbox"
+						id="stats_show"
+						name="stats_show"
+						checked?={ form.StatsShow }
+						class="rounded border-gray-300"
+					/>
+					<label for="stats_show" class="text-sm text-gray-700">Afficher les statistiques publiquement</label>
+				</div>
+				<div class="pt-2">
+					<button
+						type="submit"
+						class="rounded-lg bg-gray-900 text-white text-sm font-medium px-5 py-2.5 hover:bg-gray-800 transition-colors"
+					>
+						Enregistrer
+					</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ field(label, name, inputType, value string, required bool) {
+	<div>
+		<label for={ name } class="block text-sm font-medium text-gray-700 mb-1">{ label }</label>
+		<input
+			type={ inputType }
+			id={ name }
+			name={ name }
+			value={ value }
+			required?={ required }
+			class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+		/>
+	</div>
+}
+
+func formTitle(isEdit bool) string {
+	if isEdit {
+		return "Modifier l'entreprise"
+	}
+	return "Nouvelle entreprise"
+}
+
+func formAction(isEdit bool, id string) string {
+	if isEdit {
+		return "/admin/companies/" + id + "/edit"
+	}
+	return "/admin/companies/new"
+}

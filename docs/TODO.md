@@ -102,25 +102,38 @@ Let’s go ! 🚀
 * https://pagespeed.web.dev/analysis/https-congopro-com/loz8e4kjae?hl=fr&form_factor=mobile
 * https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr
 
-## Message in French
+## Sample prompt for a website
 
-Hello mon réseau 👋
+Créer un site web moderne et responsive avec un design élégant et professionnel
+Présenter un catalogue de produits de beauté naturels avec des descriptions détaillées et des images de haute qualité
+Inclure un formulaire de commande simple et sécurisé pour permettre aux clients de passer commande en ligne
+Intégrer un bouton WhatsApp pour permettre aux clients de contacter facilement le site pour des questions ou des commandes
 
-Je suis actuellement en train de refondre le projet Congopro afin de le remettre au goût du jour et surtout l’adapter aux opportunités liées à l’émergence du continent africain.
+Exigences techniques :
+Utiliser un framework de développement web moderne tel que NextJS
+Intégrer un backend écrit en Go et utilisant une base de données tel RQlite (SGBD) pour stocker les informations sur les produits et les commandes
+Assurer la sécurité du site avec des protocoles de cryptage et des mesures de protection contre les attaques
 
-Ma vision et la direction du projet sont détaillées ici :
-[Article LinkedIn – Congopro évolue](https://www.linkedin.com/pulse/congopro-%C3%A9volue-congopro-erfvc/)
+Design et interface utilisateur :
+Créer un design moderne et élégant avec des couleurs et des typographies qui reflètent la marque
+Utiliser des images de haute qualité pour présenter les produits
+Créer un formulaire de commande simple et intuitif avec des champs pour les informations de paiement et de livraison
+Intégrer un bouton WhatsApp pour permettre aux clients de contacter facilement le site
 
-Une première étape concrète est déjà en ligne :
-[Congopro](https://congopro.com/)
+Fonctionnalités clés :
+Catalogue de produits avec des descriptions détaillées et des images de haute qualité
+Formulaire de commande simple et sécurisé
+Bouton WhatsApp pour contacter le site
+Intégration avec les réseaux sociaux pour partager les produits et les promotions
 
-L’objectif est ambitieux : construire une plateforme moderne capable d’accompagner la visibilité, la découverte et la croissance des entreprises africaines à grande échelle.
-
-Je suis aujourd’hui à la recherche de collaborateurs, partenaires et profils motivés pour rejoindre cette aventure, aussi bien sur les aspects :
-• réseau & développement stratégique
-• technologie & produit
-• financement & accompagnement à la croissance
-
-Si le projet vous parle, n’hésitez pas à me contacter ou à partager ce post autour de vous 🙏
-
-Merci à tous pour votre soutien.
+Exemple de wireframe :
+* Page d'accueil :
+  Header avec logo et menu de navigation
+  Section de présentation des produits avec des images et des descriptions
+  Bouton de commande pour accéder au formulaire de commande
+* Page de catalogue :
+  Liste de produits avec des images et des descriptions
+  Filtres et tri pour faciliter la recherche de produits
+* Page de commande :
+  Formulaire de commande avec des champs pour les informations de paiement et de livraison
+  Bouton de paiement sécurisé

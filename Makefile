@@ -20,6 +20,19 @@ SERVICE      := congopro-bridge
 TAILWIND_CLI := $(shell which tailwindcss)
 TEMPL_CLI    := $(shell which templ)
 
+# Database — local dev (docker compose, see db-* targets below)
+POSTGRES_PORT     ?= 5433
+DB_NAME           ?= congopro_bridge
+DB_USER           ?= congopro_bridge
+PG_VERSION        ?= 16
+LOCAL_DATABASE_URL ?= postgres://congopro_bridge:congopro_bridge@localhost:$(POSTGRES_PORT)/congopro_bridge?sslmode=disable
+
+# Database — backups (production)
+BACKUP_DIR       ?= /opt/congopro-bridge/backups
+BACKUP_KEEP      ?= 14
+LOCAL_BACKUP_DIR ?= ./backups
+BACKUP_FILE      ?=
+
 _ssh_opts    := -p $(DEPLOY_PORT) -i $(SSH_KEY) \
                 -o StrictHostKeyChecking=accept-new \
                 -o ConnectTimeout=10
@@ -34,6 +47,10 @@ RSYNC        := rsync -az --progress --delete \
         traefik-reload traefik-logs \
         ollama-install ollama-configure-limit ollama-pull-models ollama-clean-models ollama-reset ollama-status ollama-setup ollama-logs \
         meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik meili-setup meili-start meili-stop meili-restart meili-status meili-logs meili-index-reset \
+        db-up db-down db-migrate db-import create-admin test-integration \
+        db-install db-provision db-remote-status db-remote-check db-migrate-remote db-import-remote \
+        db-backup-install db-backup-now db-backup-status db-backup-logs db-backup-list db-backup-pull \
+        db-restore-test db-restore \
         ssh ping help
 
 all: build
@@ -129,6 +146,41 @@ meili-reset:
 	docker compose up -d meilisearch
 	@echo "✓ Meilisearch volume wiped and restarted — app will re-index on next boot"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Database (local dev — docker compose)
+# ──────────────────────────────────────────────────────────────────────────────
+
+db-up:
+	@echo "▶ Starting local Postgres…"
+	docker compose up -d --wait postgres
+	@echo "✓ Postgres ready on 127.0.0.1:$(POSTGRES_PORT)"
+
+db-down:
+	@echo "▶ Stopping local Postgres…"
+	docker compose stop postgres
+	@echo "✓ Postgres stopped (data volume kept — use docker-down-v-style removal to wipe it)"
+
+db-migrate: db-up
+	@echo "▶ Applying migrations to local Postgres…"
+	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -migrate
+
+# One-time (idempotent) import of the legacy embedded JSON export into local Postgres.
+db-import: db-migrate
+	@echo "▶ Importing companies into local Postgres…"
+	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -import
+
+# Interactive: creates a staff account (super_admin) against local Postgres.
+# Prints a TOTP enrollment secret/URI you'll need to log in — see -create-admin.
+create-admin: db-up
+	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -create-admin
+
+# Integration tests are gated behind the "integration" build tag so `make test`
+# stays fast and DB-free. Add tests with `//go:build integration` as the
+# schema grows; this target is a no-op (passes trivially) until then.
+test-integration: db-migrate
+	@echo "▶ Running integration tests against local Postgres…"
+	DATABASE_URL="$(LOCAL_DATABASE_URL)" go test ./... -tags=integration -race -timeout 120s
+
 ping:
 	@echo "▶ pinging $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PORT)…"
 	@$(SSH) "echo '✓ connected as $(DEPLOY_USER) on $(DEPLOY_HOST)'"
@@ -173,21 +225,30 @@ deploy-full: deploy-service secrets-init deploy
 	@$(SSH) "sudo systemctl enable $(SERVICE)"
 	@echo "✓ $(SERVICE) enabled on boot"
 
-# Generates a shared MEILI_MASTER_KEY on the server (never leaves the host) and writes it to
-# both services' EnvironmentFile. Idempotent: does nothing if a key already exists.
+# Generates secrets on the server (never downloaded, never printed) and writes them to
+# EnvironmentFile(s). Idempotent per-key: only fills in whatever is missing, so re-running
+# after adding a new secret (e.g. DATABASE_URL) doesn't touch keys already in place.
 secrets-init:
-	@echo "▶ Ensuring MEILI_MASTER_KEY secret exists on $(DEPLOY_HOST)…"
+	@echo "▶ Ensuring secrets exist on $(DEPLOY_HOST)…"
 	@$(SSH) "sudo mkdir -p $(REMOTE_DIR) $(MEILI_DIR)/etc; \
-	  if [ ! -s $(REMOTE_DIR)/secrets.env ]; then \
+	  sudo touch $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env; \
+	  if ! sudo grep -q '^MEILI_MASTER_KEY=' $(REMOTE_DIR)/secrets.env; then \
 	    KEY=\$$(openssl rand -base64 48); \
-	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee $(REMOTE_DIR)/secrets.env >/dev/null; \
-	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee $(MEILI_DIR)/etc/secrets.env >/dev/null; \
-	    sudo chown root:root $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env; \
-	    sudo chmod 600 $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env; \
-	    echo '✓ generated a new MEILI_MASTER_KEY on the server (not downloaded, not printed)'; \
+	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee -a $(REMOTE_DIR)/secrets.env >/dev/null; \
+	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee -a $(MEILI_DIR)/etc/secrets.env >/dev/null; \
+	    echo '✓ generated MEILI_MASTER_KEY'; \
 	  else \
-	    echo '✓ secrets.env already present — leaving existing key in place'; \
-	  fi"
+	    echo '✓ MEILI_MASTER_KEY already present'; \
+	  fi; \
+	  if ! sudo grep -q '^DATABASE_URL=' $(REMOTE_DIR)/secrets.env; then \
+	    DBPASS=\$$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9'); \
+	    echo \"DATABASE_URL=postgres://$(DB_USER):\$$DBPASS@localhost:5432/$(DB_NAME)?sslmode=disable\" | sudo tee -a $(REMOTE_DIR)/secrets.env >/dev/null; \
+	    echo '✓ generated DATABASE_URL (Postgres password)'; \
+	  else \
+	    echo '✓ DATABASE_URL already present'; \
+	  fi; \
+	  sudo chown root:root $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env; \
+	  sudo chmod 600 $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env"
 
 # Full server bootstrap: Ollama + Meilisearch + app. Run once on a fresh server.
 deploy-all: ollama-setup meili-setup deploy-full
@@ -350,6 +411,118 @@ meili-index-reset:
 	@echo "✓ Meilisearch index wiped"
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Database (production — self-hosted PostgreSQL via systemd, not docker)
+# ──────────────────────────────────────────────────────────────────────────────
+
+db-install:
+	@echo "▶ Installing PostgreSQL $(PG_VERSION) + PostGIS on $(DEPLOY_HOST)…"
+	@$(SSH) "dpkg -s postgresql-$(PG_VERSION) >/dev/null 2>&1 && echo '✓ postgresql-$(PG_VERSION) already installed' || (sudo apt-get update -qq && sudo apt-get install -y postgresql-$(PG_VERSION) postgresql-$(PG_VERSION)-postgis-3)"
+	@$(SSH) "sudo systemctl enable --now postgresql"
+	@echo "✓ PostgreSQL installed and running"
+
+# Creates the app's role and database using the password secrets-init already generated
+# into secrets.env. Requires sudo on the host (CREATE ROLE/DATABASE need postgres superuser) —
+# gate scripts/db-provision.sh behind a dedicated sudoers entry rather than full root sudo.
+db-provision: secrets-init
+	@echo "▶ Provisioning database role and schema on $(DEPLOY_HOST)…"
+	@$(RSYNC) scripts/db-provision.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-provision.sh
+	@$(SSH) "chmod +x /tmp/db-provision.sh && sudo /tmp/db-provision.sh '$(DB_NAME)' '$(DB_USER)' '$(REMOTE_DIR)/secrets.env' && rm -f /tmp/db-provision.sh"
+	@echo "✓ database provisioned — run 'make db-migrate-remote' to apply schema"
+
+db-remote-status:
+	@$(SSH) "sudo systemctl status postgresql --no-pager -l || true"
+
+db-remote-check:
+	@echo "▶ Checking remote database and PostGIS…"
+	@$(SSH) "sudo -u postgres psql -d $(DB_NAME) -c 'SELECT postgis_version();' -c '\dt'"
+
+# Applies pending migrations using the already-deployed binary and the server's own
+# secrets.env — no credentials ever leave the host.
+db-migrate-remote:
+	@echo "▶ Applying migrations on $(DEPLOY_HOST)…"
+	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./secrets.env && set +a && ./$(BINARY) -migrate'"
+	@echo "✓ remote database is up to date"
+
+# One-time (idempotent) import of the legacy embedded JSON export into production. Only
+# needed once, when first cutting the app over from the embedded JSON to Postgres.
+db-import-remote:
+	@echo "▶ Importing companies on $(DEPLOY_HOST)…"
+	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./secrets.env && set +a && ./$(BINARY) -import'"
+	@echo "✓ import complete"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Database backups (production — systemd timer, runs as the postgres OS user)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# First-time (and idempotent re-run) install: script + systemd unit + timer, enabled.
+db-backup-install:
+	@echo "▶ Installing database backup script + timer on $(DEPLOY_HOST)…"
+	@$(SSH) "sudo mkdir -p $(REMOTE_DIR)/scripts $(BACKUP_DIR) && sudo chown postgres:postgres $(BACKUP_DIR)"
+	@$(RSYNC) scripts/db-backup.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-backup.sh
+	@$(SSH) "sudo mv /tmp/db-backup.sh $(REMOTE_DIR)/scripts/db-backup.sh && sudo chmod +x $(REMOTE_DIR)/scripts/db-backup.sh"
+	@$(RSYNC) deploy/systemd/congopro-bridge-db-backup.service $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/congopro-bridge-db-backup.service
+	@$(RSYNC) deploy/systemd/congopro-bridge-db-backup.timer $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/congopro-bridge-db-backup.timer
+	@$(SSH) "sudo mv /tmp/congopro-bridge-db-backup.service /tmp/congopro-bridge-db-backup.timer /etc/systemd/system/ && sudo systemctl daemon-reload"
+	@$(SSH) "sudo systemctl enable --now congopro-bridge-db-backup.timer"
+	@echo "✓ backup timer installed — next run: $$($(SSH) 'systemctl show congopro-bridge-db-backup.timer -p NextElapseUSecRealtime --value')"
+
+# Triggers an out-of-schedule backup run (the timer keeps its normal schedule).
+db-backup-now:
+	@echo "▶ Running an ad-hoc backup on $(DEPLOY_HOST)…"
+	@$(SSH) "sudo systemctl start congopro-bridge-db-backup.service"
+	@$(MAKE) db-backup-status
+
+db-backup-status:
+	@$(SSH) "sudo systemctl status congopro-bridge-db-backup.timer --no-pager -l || true"
+	@$(MAKE) db-backup-list
+
+db-backup-logs:
+	$(SSH) "sudo journalctl -u congopro-bridge-db-backup.service -f --no-pager"
+
+db-backup-list:
+	@$(SSH) "ls -lht $(BACKUP_DIR) 2>/dev/null || echo '(no backups yet)'"
+
+# Downloads every backup currently on the server into LOCAL_BACKUP_DIR (no --delete,
+# so older backups you've already pulled and the server has since rotated away stay put).
+db-backup-pull:
+	@mkdir -p $(LOCAL_BACKUP_DIR)
+	@echo "▶ Pulling backups from $(DEPLOY_HOST):$(BACKUP_DIR) → $(LOCAL_BACKUP_DIR)/…"
+	@rsync -az --progress -e "ssh $(_ssh_opts)" $(DEPLOY_USER)@$(DEPLOY_HOST):$(BACKUP_DIR)/ $(LOCAL_BACKUP_DIR)/
+	@echo "✓ backups pulled to $(LOCAL_BACKUP_DIR)/"
+
+# Restores a dump into a throwaway database on the LOCAL dev Postgres and verifies it —
+# proves a backup is actually restorable without going near production. Defaults to the
+# newest file in LOCAL_BACKUP_DIR; pass BACKUP_FILE=path/to/x.dump to test a specific one.
+db-restore-test: db-up
+	@FILE="$(BACKUP_FILE)"; \
+	if [ -z "$$FILE" ]; then \
+	  FILE=$$(ls -t $(LOCAL_BACKUP_DIR)/*.dump 2>/dev/null | head -1); \
+	fi; \
+	if [ -z "$$FILE" ]; then \
+	  echo "❌ no dump file found — run 'make db-backup-pull' first or pass BACKUP_FILE=..."; \
+	  exit 1; \
+	fi; \
+	echo "▶ testing restore of $$FILE against local dev Postgres…"; \
+	bash scripts/db-restore-test.sh "$$FILE"
+
+# DESTRUCTIVE: overwrites the live production database. Requires db-restore-test to have
+# been run first, and a typed confirmation on the server (ssh -t for the interactive prompt).
+# Defaults to the newest file in LOCAL_BACKUP_DIR; pass BACKUP_FILE=path/to/x.dump to pick one.
+db-restore:
+	@FILE="$(BACKUP_FILE)"; \
+	if [ -z "$$FILE" ]; then \
+	  FILE=$$(ls -t $(LOCAL_BACKUP_DIR)/*.dump 2>/dev/null | head -1); \
+	fi; \
+	if [ -z "$$FILE" ]; then \
+	  echo "❌ no dump file found — pass BACKUP_FILE=path/to/x.dump"; \
+	  exit 1; \
+	fi; \
+	echo "▶ uploading $$FILE → $(DEPLOY_HOST):/tmp/restore.dump…"; \
+	rsync -az --progress -e "ssh $(_ssh_opts)" "$$FILE" $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/restore.dump; \
+	$(RSYNC) scripts/db-restore-prod.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-restore-prod.sh; \
+	ssh -t $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST) "chmod +x /tmp/db-restore-prod.sh && sudo /tmp/db-restore-prod.sh '$(DB_NAME)' /tmp/restore.dump '$(SERVICE)'; rm -f /tmp/db-restore-prod.sh /tmp/restore.dump"
+
+# ──────────────────────────────────────────────────────────────────────────────
 
 help:
 	@echo ""
@@ -364,8 +537,29 @@ help:
 	@echo "  Meili:      meili-setup         First-time remote Meilisearch install"
 	@echo "              meili-index-reset   Wipe remote index (rebuilds on next start)"
 	@echo "  Ollama:     ollama-setup        Install + configure + pull models"
+	@echo "  DB (dev):   db-up/db-down       Start/stop local Postgres (docker compose)"
+	@echo "              db-migrate          Apply migrations to local Postgres"
+	@echo "              db-import           One-time: load the embedded JSON export into local Postgres"
+	@echo "              create-admin        Interactively create a staff account (super_admin)"
+	@echo "              test-integration    Run integration-tagged tests against local Postgres"
+	@echo "  DB (prod):  db-install          Install PostgreSQL + PostGIS via apt (idempotent)"
+	@echo "              db-provision        Create app role/database from secrets.env"
+	@echo "              db-migrate-remote   Apply migrations on the VPS"
+	@echo "              db-import-remote    One-time: load the embedded JSON export into production"
+	@echo "              db-remote-status    systemctl status postgresql"
+	@echo "              db-remote-check     Verify PostGIS + tables on the VPS"
+	@echo "  Backups:    db-backup-install   Install backup script + daily systemd timer"
+	@echo "              db-backup-now       Trigger an ad-hoc backup"
+	@echo "              db-backup-status    Timer status + list of backups on the VPS"
+	@echo "              db-backup-logs      Follow backup service logs"
+	@echo "              db-backup-list      List backups on the VPS"
+	@echo "              db-backup-pull      Download backups to ./backups/"
+	@echo "              db-restore-test     Restore a backup into a local throwaway DB and verify it"
+	@echo "              db-restore          DESTRUCTIVE: restore a backup onto production (confirmation required)"
 	@echo "  ────────────────────────────────────────────────────────"
 	@echo "  Key variables (set in .env or as env overrides):"
 	@echo "    DEPLOY_HOST, DEPLOY_USER, DEPLOY_PORT, SSH_KEY"
 	@echo "    REMOTE_DIR, MEILI_DIR, MEILI_VERSION, DOMAIN"
+	@echo "    POSTGRES_PORT, DB_NAME, DB_USER, PG_VERSION"
+	@echo "    BACKUP_DIR, BACKUP_KEEP, LOCAL_BACKUP_DIR, BACKUP_FILE"
 	@echo ""

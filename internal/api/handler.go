@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 
 	"congopro-bridge/internal/ads"
@@ -30,6 +31,7 @@ import (
 
 type AppEngine struct {
 	Engine *data.Engine
+	DB     *pgxpool.Pool
 }
 
 type ErrorResponse struct {

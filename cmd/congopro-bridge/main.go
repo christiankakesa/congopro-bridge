@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	golog "log"
 	"net/http"
 	"os"
@@ -15,11 +16,17 @@ import (
 	"congopro-bridge/internal/api"
 	"congopro-bridge/internal/config"
 	"congopro-bridge/internal/data"
+	"congopro-bridge/internal/db"
 	"congopro-bridge/internal/logger"
 	"congopro-bridge/internal/middlewares/ratelimiter"
 )
 
 func main() {
+	migrateFlag := flag.Bool("migrate", false, "apply pending database migrations and exit")
+	importFlag := flag.Bool("import", false, "import companies from the embedded JSON into postgres and exit")
+	createAdminFlag := flag.Bool("create-admin", false, "interactively create the first staff account and exit")
+	flag.Parse()
+
 	logLevel := logger.DetectLogLevel()
 	logType := logger.DetectLogType()
 	if logType == logger.Terminal {
@@ -28,18 +35,72 @@ func main() {
 	logger.Init(logType, logger.Options{Level: logLevel})
 
 	cfg := config.Load()
+	ctx := context.Background()
+
+	if *migrateFlag {
+		if cfg.DatabaseURL == "" {
+			log.Fatal().Msg("[migrate] DATABASE_URL is not set")
+		}
+		if err := db.Migrate(cfg.DatabaseURL); err != nil {
+			log.Fatal().Msgf("[migrate] failed: %v", err)
+		}
+		log.Info().Msg("[migrate] database is up to date")
+		return
+	}
+
+	if *importFlag {
+		if cfg.DatabaseURL == "" {
+			log.Fatal().Msg("[import] DATABASE_URL is not set")
+		}
+		pool, err := db.New(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Fatal().Msgf("[import] failed to connect: %v", err)
+		}
+		defer pool.Close()
+		n, err := data.ImportFromEmbeddedJSON(ctx, pool)
+		if err != nil {
+			log.Fatal().Msgf("[import] failed: %v", err)
+		}
+		log.Info().Msgf("[import] imported %d companies", n)
+		return
+	}
+
+	if *createAdminFlag {
+		if cfg.DatabaseURL == "" {
+			log.Fatal().Msg("[create-admin] DATABASE_URL is not set")
+		}
+		pool, err := db.New(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Fatal().Msgf("[create-admin] failed to connect: %v", err)
+		}
+		defer pool.Close()
+		if err := createAdmin(ctx, pool); err != nil {
+			log.Fatal().Msgf("[create-admin] failed: %v", err)
+		}
+		return
+	}
+
 	if cfg.MeiliMasterKey == "" {
 		log.Warn().Msg("[startup] MEILI_MASTER_KEY is empty — Meilisearch is running without authentication, anyone reachable on MEILI_URL has full read/write access. Set MEILI_MASTER_KEY except for local, network-isolated development.")
 	}
 	if cfg.AllowedOrigin == "*" {
 		log.Warn().Msg("[startup] ALLOWED_ORIGIN is \"*\" — any website can call the API cross-origin. Set ALLOWED_ORIGIN to a specific origin unless third-party cross-origin access is intentional.")
 	}
+	if cfg.DatabaseURL == "" {
+		log.Fatal().Msg("[startup] DATABASE_URL is not set")
+	}
 
 	ratelimiter.SetTrustedProxies(cfg.TrustedProxies)
 
 	ads.LoadAds()
 
-	engine := data.NewEngine(cfg)
+	pool, err := db.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatal().Msgf("[startup] failed to connect to database: %v", err)
+	}
+	defer pool.Close()
+
+	engine := data.NewEngine(cfg, pool)
 
 	go func() {
 		start := time.Now()
@@ -50,7 +111,7 @@ func main() {
 		log.Info().Msgf("[startup] indexing completed in %s", time.Since(start).Round(time.Millisecond))
 	}()
 
-	apiAppEngine := &api.AppEngine{Engine: engine}
+	apiAppEngine := &api.AppEngine{Engine: engine, DB: pool}
 
 	mux := http.NewServeMux()
 
@@ -87,6 +148,17 @@ func main() {
 
 	// Serves old company routes
 	mux.HandleFunc("GET /company/", apiAppEngine.WithSecurityHeaders(apiAppEngine.CompanyHandler))
+
+	// Admin (staff auth required beyond login itself)
+	adminLoginRL := ratelimiter.NewRateLimiter(10)
+	mux.HandleFunc("GET /admin/login", apiAppEngine.WithSecurityHeaders(apiAppEngine.AdminLoginFormHandler))
+	mux.HandleFunc("POST /admin/login", apiAppEngine.WithSecurityHeaders(adminLoginRL.WithRateLimit(apiAppEngine.AdminLoginHandler)))
+	mux.HandleFunc("POST /admin/logout", apiAppEngine.WithSecurityHeaders(apiAppEngine.AdminLogoutHandler))
+	mux.HandleFunc("GET /admin", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminCompaniesListHandler)))
+	mux.HandleFunc("GET /admin/companies/new", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminCompanyNewFormHandler)))
+	mux.HandleFunc("POST /admin/companies/new", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminCompanyCreateHandler)))
+	mux.HandleFunc("GET /admin/companies/{id}/edit", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminCompanyEditFormHandler)))
+	mux.HandleFunc("POST /admin/companies/{id}/edit", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminCompanyUpdateHandler)))
 
 	// Default routes
 	mux.HandleFunc("/", apiAppEngine.WithSecurityHeaders(apiAppEngine.FrontendHandler))

@@ -41,7 +41,7 @@ func TestGenerateNonce_IsUniquePerCall(t *testing.T) {
 
 func newTestAppEngine(allowedOrigin string) *AppEngine {
 	cfg := &config.Config{AllowedOrigin: allowedOrigin, MeiliIndexName: "test"}
-	return &AppEngine{Engine: data.NewEngine(cfg)}
+	return &AppEngine{Engine: data.NewEngine(cfg, nil)}
 }
 
 func TestWithCORS_EmptyAllowedOriginSendsNoCORSHeaders(t *testing.T) {
