@@ -150,5 +150,5 @@ make db-remote-status       # postgresql is active (running)
 make db-remote-check        # postgis_version() returns a version, \dt lists companies
 make meili-status           # meilisearch is active (running)
 make ollama-status           # ollama is active, models are pulled
-curl -sf https://$(DOMAIN)/api/v1/health   # app responds
+curl -sf https://$(DOMAIN)/api/v1/healthz  # app responds
 ```

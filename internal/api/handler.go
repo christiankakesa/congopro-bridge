@@ -208,7 +208,7 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (a *AppEngine) HealthHandler(w http.ResponseWriter, r *http.Request) {
+func (a *AppEngine) HealthzHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	select {

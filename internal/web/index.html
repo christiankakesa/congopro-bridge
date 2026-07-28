@@ -1029,7 +1029,7 @@
       }
       async function checkHealth() {
         try {
-          const res = await fetch(`${API_BASE}/api/v1/health`);
+          const res = await fetch(`${API_BASE}/api/v1/healthz`);
           const data = await res.json();
           // Any status other than "indexing" means the server has finished
           // starting up — "ready" or "degraded" (indexing failed but static

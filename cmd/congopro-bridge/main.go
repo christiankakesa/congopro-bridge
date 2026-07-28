@@ -144,7 +144,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/ads", apiAppEngine.WithCORS(adsRL.WithRateLimit(apiAppEngine.AdsHandler)))
 	mux.HandleFunc("GET /api/v1/content/", apiAppEngine.WithCORS(contentRL.WithRateLimit(apiAppEngine.ContentHandler)))
 	mux.HandleFunc("GET /api/v1/ads-preview-data", apiAppEngine.WithCORS(adsPreviewRL.WithRateLimit(apiAppEngine.AdsPreviewDataHandler)))
-	mux.HandleFunc("GET /api/v1/health", apiAppEngine.WithCORS(apiAppEngine.HealthHandler))
+	mux.HandleFunc("GET /api/v1/healthz", apiAppEngine.WithCORS(apiAppEngine.HealthzHandler))
 
 	// Serves old company routes
 	mux.HandleFunc("GET /company/", apiAppEngine.WithSecurityHeaders(apiAppEngine.CompanyHandler))
