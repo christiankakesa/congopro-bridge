@@ -416,7 +416,10 @@ meili-index-reset:
 
 db-install:
 	@echo "▶ Installing PostgreSQL $(PG_VERSION) + PostGIS on $(DEPLOY_HOST)…"
-	@$(SSH) "dpkg -s postgresql-$(PG_VERSION) >/dev/null 2>&1 && echo '✓ postgresql-$(PG_VERSION) already installed' || (sudo apt-get update -qq && sudo apt-get install -y postgresql-$(PG_VERSION) postgresql-$(PG_VERSION)-postgis-3)"
+	@$(SSH) "MISSING=''; \
+	  dpkg -s postgresql-$(PG_VERSION) >/dev/null 2>&1 || MISSING=\"\$$MISSING postgresql-$(PG_VERSION)\"; \
+	  dpkg -s postgresql-$(PG_VERSION)-postgis-3 >/dev/null 2>&1 || MISSING=\"\$$MISSING postgresql-$(PG_VERSION)-postgis-3\"; \
+	  if [ -n \"\$$MISSING\" ]; then sudo apt-get update -qq && sudo apt-get install -y \$$MISSING; else echo '✓ already installed'; fi"
 	@$(SSH) "sudo systemctl enable --now postgresql"
 	@echo "✓ PostgreSQL installed and running"
 

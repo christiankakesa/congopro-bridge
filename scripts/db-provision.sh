@@ -60,4 +60,12 @@ else
   echo "✓ created database ${DB_NAME}"
 fi
 
+# CREATE EXTENSION postgis needs superuser (or a role granted extension-install
+# rights) — ${DB_USER} deliberately isn't a superuser, so the app's own
+# migration (which also runs "CREATE EXTENSION IF NOT EXISTS postgis") would
+# fail with a permission error. Installing it here once, as postgres, makes
+# that migration statement a no-op for everyone after.
+sudo -u postgres psql -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS postgis;" >/dev/null
+echo "✓ postgis extension ready on ${DB_NAME}"
+
 echo "✓ provisioning complete — run 'make db-migrate-remote' to apply schema"
