@@ -113,7 +113,7 @@ ads:
   # Congopro Bridge — Ads Configuration (Recrutement Commerciaux)
   # ─────────────────────────────────────────────────────────────────
   - id: "recrutement-sales-kin-homepage"
-    active: true
+    active: false
     title: "Devenez Partenaire (35% Commission)"
     description: "Vendez nos solutions publicitaires. Indépendant, horaires flexibles, fort potentiel de revenus. Postulez en DM !"
     url: "https://www.linkedin.com/company/congopro/jobs"
