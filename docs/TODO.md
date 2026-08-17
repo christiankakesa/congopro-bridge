@@ -1,10 +1,13 @@
 # Tasks
 
+* Mimic Kora VPN Makefile with dev and prod
+* Make frontend AI gives insight on query result if he don't know what to answer
 * Research: instead of building a full BI backend for a B2B business, what about buulding a MCP server with paid access that is capable to build dashboard and report, or some customer can only chose to use the paid MCP server to use with their own BI tool.
 * Now, I need your help to elaborate a clear, concise, and solid description of everything required to make this big project go live.
 I mainly mean the backend architecture, infrastructure, and systems needed to turn this project into a real and successful platform.
 We will iterate together while you ask me questions, and I guide the architecture, technical decisions, and overall direction.
 Here are the bullet points I currently have to start with.
+  * i18n and i10n
   * CMS to manage:
     * ADS and ADS monetization
     * Company info: add, update, merge, de-duplicate, ...
@@ -15,7 +18,8 @@ Here are the bullet points I currently have to start with.
     * Is Telegram app capabilities good to build a support (ticketing) system app?
     * Is Telegram app capabilities good to build data management for the customers and the team
     * I need simple but secure technologies like rqlite as database cluster or pocketbase cluster to store all data and provide local data for all frontends. The goal is to build an African project and each countries will have their frontend with their filtered companies. I need to manage a paid subscription projects out of Arfica that sell or buy in Africa and need to listed as promoted buissiness in home page like ADS in search results.
-    * I will need to know protocole that are used to store official information for comapnies to be compatuble with .
+    * I will need to know protocole that are used to store official information for comapnies to be compatible with Google Addresse and other big competitors.
+    * Save db to S3 or other server via SSH
     * and more 
 * 
 * 
