@@ -50,22 +50,27 @@ Further reading: [ARCHITECTURE.md](docs/ARCHITECTURE.md) (current system),
 
 ## Local setup
 
-```bash
-make db-up          # start local Postgres (postgis:16-3.4) on 127.0.0.1:5433
-make db-migrate     # apply goose migrations (embedded in the binary)
-make db-import      # one-time: load the legacy embedded JSON into Postgres
-make create-admin   # interactively create the first staff account (TOTP setup)
+The one-command dev loop (first run pulls ~1 GB of Ollama models, once):
 
-make build          # compile CSS + templ + binary into ./build
-./build/congopro-bridge
+```bash
+make dev    # deps up (docker) → migrations → app on :8080 with hot reload
+make db-import    # once: load the legacy embedded JSON into local Postgres
+make create-admin # once: create the first staff account (TOTP enrollment)
 ```
 
-`DATABASE_URL` is required — the make targets set it for you
-(`postgres://congopro_bridge:congopro_bridge@localhost:5433/congopro_bridge`).
-There is deliberately no default credential baked into the binary.
+`make dev` watches `.templ`, `.go`, and Tailwind `input.css` files — every
+save regenerates templ code, recompiles the CSS, and rebuilds/restarts the
+binary via [air](https://github.com/air-verse/air) (install it with
+`go install github.com/air-verse/air@latest`; without it the app runs via
+`go run` with manual restarts). Ctrl+C stops the app but leaves the dockerised
+deps running for fast restarts; `make dev-down` stops the deps.
 
-To run the backing services in Docker too: `make docker-up` (Ollama models are
-pulled automatically by the `ollama-init` container).
+`DATABASE_URL` is required — `make dev` and the other `db-*` targets set it
+for you. There is deliberately no default credential baked into the binary.
+
+The manual equivalent, if you prefer separate steps: `make db-up` (local
+Postgres on 127.0.0.1:5433), `make db-migrate`, `make build`. To run the
+whole stack including the app in Docker: `make docker-up`.
 
 ## Configuration
 

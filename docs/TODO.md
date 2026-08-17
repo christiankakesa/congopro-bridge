@@ -2,10 +2,6 @@
 
 ## Now
 
-* Add a `make dev` local loop (Kora VPN-style): one target that starts deps
-  (`db-up`), applies migrations, regenerates templ/CSS on change, and runs the
-  binary. The production deploy side already exists (`make deploy`); local
-  iteration is still multi-step.
 * AI answer fallback: when the model has no grounded answer for a query, have
   it produce a useful insight from the search results themselves instead of a
   dead end.
@@ -42,6 +38,9 @@ From BACKEND_PROPOSAL.md §Open questions:
 
 ## Done (highlights — full history in git)
 
+* `make dev` local loop (Kora-style): deps via docker compose, migrations,
+  templ + Tailwind regeneration and hot-reload rebuilds in one target — see
+  `scripts/dev.sh` and `.air.toml`.
 * Postgres + PostGIS migration off embedded JSON; goose migrations embedded in
   the binary (`-migrate`, `-import`).
 * Admin Phase 1: session login + TOTP, roles, company list/create/edit with

@@ -47,7 +47,7 @@ RSYNC        := rsync -az --progress --delete \
         traefik-reload traefik-logs \
         ollama-install ollama-configure-limit ollama-pull-models ollama-clean-models ollama-reset ollama-status ollama-setup ollama-logs \
         meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik meili-setup meili-start meili-stop meili-restart meili-status meili-logs meili-index-reset \
-        db-up db-down db-migrate db-import create-admin test-integration \
+        db-up db-down db-migrate db-import create-admin test-integration dev dev-down \
         db-install db-provision db-remote-status db-remote-check db-migrate-remote db-import-remote \
         db-backup-install db-backup-now db-backup-status db-backup-logs db-backup-list db-backup-pull \
         db-restore-test db-restore \
@@ -180,6 +180,24 @@ create-admin: db-up
 test-integration: db-migrate
 	@echo "▶ Running integration tests against local Postgres…"
 	DATABASE_URL="$(LOCAL_DATABASE_URL)" go test ./... -tags=integration -race -timeout 120s
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Dev loop
+# ──────────────────────────────────────────────────────────────────────────────
+
+# One command for local iteration: starts the dockerised deps (postgres,
+# meilisearch, ollama), applies migrations, regenerates templ/CSS on change,
+# and runs the app with hot reload (air if installed, go run otherwise).
+# Ctrl+C stops app + watchers; deps keep running. First run pulls ~1 GB of
+# Ollama models once. See scripts/dev.sh.
+dev:
+	DATABASE_URL="$(LOCAL_DATABASE_URL)" bash scripts/dev.sh
+
+# Stops only the dev deps started by `make dev` (data volumes are kept).
+dev-down:
+	@echo "▶ Stopping dev deps…"
+	@docker compose stop postgres meilisearch ollama ollama-init
+	@echo "✓ dev deps stopped"
 
 ping:
 	@echo "▶ pinging $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PORT)…"
@@ -534,7 +552,9 @@ help:
 	@echo "  Bootstrap:  deploy-all          Fresh server: Ollama + Meilisearch + app"
 	@echo "  App:        deploy              Rebuild and deploy binary"
 	@echo "              deploy-full         First-time: installs systemd unit + deploy"
-	@echo "  Dev:        docker-up/down      Start/stop local stack"
+	@echo "  Dev:        dev                 One command: deps + migrations + templ/CSS watch + hot-reload app"
+	@echo "              dev-down            Stop the dev deps (postgres, meili, ollama; volumes kept)"
+	@echo "              docker-up/down      Start/stop the whole stack in docker (incl. app container)"
 	@echo "              templ               Regenerate *_templ.go from .templ sources"
 	@echo "              meili-reset         Wipe local Meilisearch index"
 	@echo "  Meili:      meili-setup         First-time remote Meilisearch install"

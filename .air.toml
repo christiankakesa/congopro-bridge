@@ -1,0 +1,38 @@
+# Hot-reload config for `make dev` (air v1.5x schema — see scripts/dev.sh).
+#
+# Air is the ONLY watcher: the build command regenerates templ code and
+# recompiles Tailwind CSS before every Go build, so a save of any input
+# (.templ, .go, input.css) produces a fully up-to-date binary in one step.
+# No background templ/tailwind watchers — `--watch` modes proved unreliable
+# when run detached (tailwindcss v4 dies without a TTY; templ logs buffer).
+#
+# Watched inputs: *.go (hand-written), *.templ, input.css.
+#
+# Build outputs vs. retriggering, as observed on air v1.52:
+#   - build/tmp/main  — safe: build/ is in exclude_dir (dir exclusions ARE
+#     honored for runtime events)
+#   - *_templ.go      — `templ generate` only rewrites generated files whose
+#     content changed, so a .templ save causes exactly one extra no-op build
+#     (~1s, bounded). exclude_file is kept for newer air versions that apply
+#     it to runtime events; v1.52 does not (file exclusions only apply during
+#     the initial scan).
+#   - style.min.css   — tailwindcss v4 skips writing when output is unchanged,
+#     so it never retriggers on its own.
+root = "."
+tmp_dir = "build/tmp"
+
+[build]
+cmd = "templ generate && tailwindcss -i ./internal/web/css/input.css -o ./internal/web/css/style.min.css --minify && go build -o ./build/tmp/main ./cmd/congopro-bridge"
+bin = "./build/tmp/main"
+# Debounce: one save of a .templ source is one event, but editors that write
+# via rename/temp files can produce bursts.
+delay = 500
+include_ext = ["go", "templ", "css"]
+exclude_file = ["_templ\\.go$", "style\\.min\\.css$"]
+exclude_dir = ["build", "backups", "docs", "deploy", "scripts"]
+# SIGINT first so in-flight requests drain, then hard-kill.
+send_interrupt = true
+kill_delay = 2000
+
+[log]
+time = true

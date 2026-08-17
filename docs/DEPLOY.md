@@ -85,9 +85,11 @@ yet; that may stop being true once destructive migrations show up).
 
 ## Database
 
-- **Local dev**: `make db-up` (starts Postgres in docker), `make db-migrate`
-  (applies migrations), `make test-integration` (runs `-tags=integration`
-  tests against it — currently a no-op until integration tests exist).
+- **Local dev**: `make dev` (one-command loop: deps + migrations + templ/CSS
+  regeneration + hot-reload app — see `scripts/dev.sh`), `make db-up` (starts
+  Postgres in docker), `make db-migrate` (applies migrations),
+  `make test-integration` (runs `-tags=integration` tests against it —
+  currently a no-op until integration tests exist).
 - **Production**: `make db-remote-check` verifies PostGIS and lists tables;
   `make db-remote-status` shows the systemd unit status.
 - Migrations live in `internal/db/migrations/*.sql` (goose format, embedded
