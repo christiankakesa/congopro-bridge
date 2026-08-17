@@ -6,9 +6,19 @@
 
 ## Next (Phase 2 — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* Customer accounts (email OTP) — needs the email-provider decision.
+* Customer accounts (email OTP over OVH EmailPro SMTP — sender ready and
+  proven (`internal/mail`, `make mail-test`, Mailpit capture via
+  `make mail-up`); OVH account created, SPF/DKIM/DMARC propagating. Still
+  needed: the customers table + the OTP flow itself).
 * Company claim/dispute workflow + admin queue.
 * Ads CMS replacing `ads.yml`, with sales-rep attribution.
+* Stripe integration for promoted listings + ads — **blocked on account
+  creation**. When the account exists we will need: the API keys
+  (`STRIPE_SECRET_KEY`), a webhook endpoint on our side (HTTPS, behind
+  Traefik), the webhook signing secret (`STRIPE_WEBHOOK_SECRET`), and
+  handling for at least `checkout.session.completed`,
+  `customer.subscription.updated`, and `customer.subscription.deleted`.
+  Test locally with the Stripe CLI (`stripe listen --forward-to`).
 * Telegram bot as notification/quick-action layer on top of the CMS.
 
 ## Later
@@ -21,13 +31,18 @@
 * Admin: company delete/archive and user management UI (roles exist in the
   schema; only company CRUD is exposed so far).
 
-## Decisions needed (blocking parts of Phase 2)
+## Decisions
 
-From BACKEND_PROPOSAL.md §Open questions:
+Recorded 2026-08-17 (details in [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md)):
 
-* Email provider for customer OTP (Resend / Brevo / SES)?
-* Payment processor for promoted listings (Stripe vs Flutterwave/Paystack)?
-* Expected company/staff scale over 6–12 months?
+* Email provider: **OVH EmailPro SMTP** (STARTTLS, AUTH PLAIN) — sender in
+  `internal/mail`; SPF/DKIM/DMARC setup required on the sending domain.
+* Payment processor: **Stripe** (account pending — webhook checklist under
+  Next).
+* Scale: **~10 staff over 12 months** — role enum stays, no permissions
+  matrix.
+
+Still open: Postgres hosting (same VPS vs small managed instance).
 
 ## Reference
 

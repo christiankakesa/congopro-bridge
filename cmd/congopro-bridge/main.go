@@ -89,6 +89,12 @@ func main() {
 	if cfg.DatabaseURL == "" {
 		log.Fatal().Msg("[startup] DATABASE_URL is not set")
 	}
+	// All-or-nothing SMTP contract: a half-configured account only fails
+	// later, when a customer is waiting for a code. Empty SMTP_HOST (email
+	// disabled) is valid.
+	if err := cfg.ValidateSMTP(); err != nil {
+		log.Fatal().Msgf("[startup] invalid SMTP configuration: %v", err)
+	}
 
 	ratelimiter.SetTrustedProxies(cfg.TrustedProxies)
 

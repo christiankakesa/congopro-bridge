@@ -1,11 +1,23 @@
--include .env
-export
+# NOTE: do NOT `-include .env` + `export` here. Make parses .env as Makefile
+# syntax and expands `$` sequences inside values — an SMTP password like
+# "ab$9kC$d2..." silently arrives as "ab" (observed: 12 chars in the file,
+# 4 by the time a make-spawned process read it) and the mail server answers
+# a baffling 535. The Go app loads .env itself (internal/config loadDotEnv,
+# with real environment variables winning), docker compose reads .env
+# natively, and the deploy targets below read the handful of keys they need
+# via the sed helper — none of which expand anything.
+#
+# .env carries no trailing comments after values (see .env.template), so the
+# extraction is a plain split on the first `=`. The `[^#]*#` form is kept so
+# older .env files with inline comments still work. The trailing sed strips
+# one layer of surrounding single or double quotes.
+_env_var  = $(shell sed -nE "s/^$1=([^#]*)#.*/\1/p; s/^$1=(.*)$$/\1/p" .env 2>/dev/null | sed -E "s/[[:space:]]*$$//; s/^'(.*)'$$/\1/; s/^\"(.*)\"$$/\1/" | head -1)
 
-DEPLOY_USER  ?= ops
-DEPLOY_HOST  ?= xxx.xxx.xxx.xxx
-DEPLOY_PORT  ?= 4242
-SSH_KEY      ?= $(HOME)/.ssh/id_ed25519
-REMOTE_DIR   ?= /opt/congopro-bridge
+DEPLOY_USER  ?= $(or $(call _env_var,DEPLOY_USER),ops)
+DEPLOY_HOST  ?= $(or $(call _env_var,DEPLOY_HOST),xxx.xxx.xxx.xxx)
+DEPLOY_PORT  ?= $(or $(call _env_var,DEPLOY_PORT),4242)
+SSH_KEY      ?= $(patsubst ~/%,$(HOME)/%,$(or $(call _env_var,SSH_KEY),$(HOME)/.ssh/id_ed25519))
+REMOTE_DIR   ?= $(or $(call _env_var,REMOTE_DIR),/opt/congopro-bridge)
 MEILI_DIR    ?= /opt/meilisearch
 MEILI_VERSION ?= v1.43.1
 IMAGE        ?= congopro-bridge
@@ -14,8 +26,8 @@ DOMAIN       ?= congopro.com
 CMD_PATH     := ./cmd/congopro-bridge
 BINARY       := congopro-bridge
 BUILD_DIR    := ./build
-GENERATIVE_MODEL ?= gemma3:1b
-EMBEDDING_MODEL ?= nomic-embed-text
+GENERATIVE_MODEL ?= $(or $(call _env_var,GENERATIVE_MODEL),gemma3:1b)
+EMBEDDING_MODEL ?= $(or $(call _env_var,EMBEDDING_MODEL),nomic-embed-text)
 SERVICE      := congopro-bridge
 TAILWIND_CLI := $(shell which tailwindcss)
 TEMPL_CLI    := $(shell which templ)
@@ -42,6 +54,7 @@ RSYNC        := rsync -az --progress --delete \
 
 .PHONY: all build build-local clean test templ \
         docker-build docker-push docker-save docker-run docker-up docker-down docker-down-v meili-reset \
+        mail-up mail-down mail-test \
         deploy deploy-binary deploy-config deploy-service deploy-full deploy-all secrets-init \
         service-start service-stop service-restart service-status service-logs \
         traefik-reload traefik-logs \
@@ -145,6 +158,29 @@ meili-reset:
 	docker volume rm congopro-bridge_meili_data
 	docker compose up -d meilisearch
 	@echo "✓ Meilisearch volume wiped and restarted — app will re-index on next boot"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Email (SMTP — OVH EmailPro in production, Mailpit locally)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Local capture: every email the app sends lands in Mailpit's web UI instead
+# of a real mailbox. The app reaches it with SMTP_HOST=localhost SMTP_PORT=1025
+# SMTP_TLS=none (no credentials — the sender refuses passwords in the clear).
+mail-up:
+	@echo "▶ Starting Mailpit (local email capture)…"
+	docker compose --profile dev up -d mail
+	@echo "✓ SMTP on 127.0.0.1:1025, web UI at http://localhost:8025"
+
+mail-down:
+	@echo "▶ Stopping Mailpit…"
+	docker compose stop mail
+	@echo "✓ Mailpit stopped"
+
+# Proves the SMTP account from .env works end-to-end — run this against the
+# real OVH account (and a real inbox) once, before anything depends on email.
+mail-test:
+	@if [ -z "$(TO)" ]; then echo "Usage: make mail-test TO=you@example.com" >&2; exit 2; fi
+	go run ./cmd/mail-test $(TO)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Database (local dev — docker compose)
@@ -557,6 +593,8 @@ help:
 	@echo "              docker-up/down      Start/stop the whole stack in docker (incl. app container)"
 	@echo "              templ               Regenerate *_templ.go from .templ sources"
 	@echo "              meili-reset         Wipe local Meilisearch index"
+	@echo "  Mail:      mail-up/down        Start/stop Mailpit (local email capture, UI :8025)"
+	@echo "              mail-test          Send one test email: make mail-test TO=you@example.com"
 	@echo "  Meili:      meili-setup         First-time remote Meilisearch install"
 	@echo "              meili-index-reset   Wipe remote index (rebuilds on next start)"
 	@echo "  Ollama:     ollama-setup        Install + configure + pull models"

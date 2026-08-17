@@ -103,14 +103,26 @@ Worth pursuing, but as a **later phase**, not a v1 requirement. A paid MCP serve
 ## Phased rollout
 
 1. **Foundation** — ✅ **shipped** (Postgres + PostGIS schema; company data migrated off the embedded JSON; staff auth + roles; admin CRUD for companies). One leftover: pointing the merge/dedupe tooling (`cmd/cleanr`) at Postgres rows instead of the legacy JSON — tracked in `TODO.md`.
-2. **Trust & revenue plumbing** — customer email-OTP auth; company claim/dispute workflow with an admin queue; ads CMS with sales-rep attribution. *(Blocked on the email-provider decision below.)*
+2. **Trust & revenue plumbing** — customer email-OTP auth; company claim/dispute workflow with an admin queue; ads CMS with sales-rep attribution. *(Email provider decided — see Decisions below.)*
 3. **Monetize promoted listings** — subscriptions + payment integration; Telegram bot as the notification/quick-action layer on top of the CMS (dispute alerts, merge approvals).
 4. **Opportunistic** — MCP/BI product, further multi-country tooling, geo-dedup automation.
 
-## Open questions (these need your call, not mine)
+## Decisions (recorded 2026-08-17)
 
-1. **Email provider** — Resend, Brevo, SES, or something else you already have a relationship with?
-2. **Postgres hosting** — same VPS as the app (cheapest, you already operate it), or a small managed instance (less ops burden, small monthly cost)?
-3. **Payment processor** — Stripe, Flutterwave/Paystack, or both depending on which side of a transaction is paying?
-4. **Expected scale over the next 6–12 months** — roughly how many companies and staff accounts? This sanity-checks "don't overbuild" — tell me if I'm wrong about the scale you're actually planning for.
-5. **Who's on staff right now** — even a rough headcount for sales/data-entry/support tells me whether the simple role enum is enough or whether you need finer-grained permissions from day one.
+1. **Email provider — DECIDED: OVH EmailPro SMTP** (STARTTLS, AUTH PLAIN).
+   The sender lives in `internal/mail`. Deliverability is the one risk the
+   original recommendation warned about, so it comes with obligations:
+   SPF, DKIM and DMARC records for the sending domain, and watching bounces
+   once OTP volume starts. If OTPs land in spam at scale, the decision to
+   revisit is the provider, not the code.
+2. **Payment processor — DECIDED: Stripe** (account creation pending).
+   Webhook + event integration is deferred until the account exists — see
+   the Stripe checklist in `TODO.md`.
+3. **Scale — DECIDED: ~10 staff over 12 months** (1–2 hires/month). The
+   fixed role enum in `users` stays; no permissions matrix. Plan the admin
+   UX for a team that grows steadily: onboarding, audit log, "who changed
+   this" everywhere.
+
+## Open questions (remaining)
+
+1. **Postgres hosting** — same VPS as the app (cheapest, you already operate it), or a small managed instance (less ops burden, small monthly cost)?

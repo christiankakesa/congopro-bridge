@@ -87,6 +87,11 @@ whole stack including the app in Docker: `make docker-up`.
 | `MEILI_INDEX_NAME` | `companies` | Search index name |
 | `ALLOWED_ORIGIN` | *(empty = no CORS)* | Allow a third-party origin to call the API |
 | `TRUSTED_PROXIES` | `127.0.0.1/32,::1/128` | Proxies allowed to set forwarding headers |
+| `SMTP_HOST` | *(empty = email disabled)* | SMTP server (OVH EmailPro: `ssl0.ovh.net`). All-or-nothing block — half-set is refused at boot |
+| `SMTP_PORT` | `587` | SMTP port (587 with `starttls`, 465 with `implicit`) |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | *(empty)* | Full mailbox address + password (required for `starttls`/`implicit`; must be **empty** for `none`) |
+| `SMTP_FROM` / `SMTP_FROM_NAME` | *(empty)* | Envelope sender — a mailbox actually owned on the domain |
+| `SMTP_TLS` | `starttls` | `starttls` \| `implicit` \| `none` (local capture via Mailpit, no credentials — see `make mail-up`) |
 
 ## CLI flags
 

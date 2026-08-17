@@ -16,6 +16,16 @@ cd "$(dirname "$0")/.."
 
 # Caller (Makefile) passes DATABASE_URL; keep the same default as the db-* targets.
 export DATABASE_URL="${DATABASE_URL:-postgres://congopro_bridge:congopro_bridge@localhost:5433/congopro_bridge?sslmode=disable}"
+
+# env_or_dotenv KEY: real environment first, then .env — parsed with sed, NOT
+# sourced through make, whose `-include` would expand `$` sequences in values
+# (the app does the same thing in internal/config loadDotEnv).
+env_or_dotenv() {
+	if [ -n "${!1:-}" ]; then printf '%s' "${!1}"; return; fi
+	sed -nE "s/^$1=([^#]*)#.*/\1/p; s/^$1=(.*)\$/\1/p" .env 2>/dev/null \
+		| sed -E "s/[[:space:]]*$//; s/^'(.*)'$/\1/; s/^\"(.*)\"$/\1/" | head -1
+}
+export PORT="${PORT:-$(env_or_dotenv PORT)}"
 export PORT="${PORT:-8080}"
 # The app runs natively and reaches Ollama via the published port, but
 # Meilisearch runs in a container and cannot see 127.0.0.1:11434 — it must
