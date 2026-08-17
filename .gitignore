@@ -2,4 +2,7 @@
 /.env
 /TODO.md
 .vscode/
+.claude/
+.zcode/
+.utmp/
 /backups/
