@@ -350,11 +350,17 @@ func MapsURLForRow(address1, address2, city, country string, lat, lon float64, h
 	return ValidateURL(raw)
 }
 
-// LocationPillAddressHTML mirrors renderRow()'s inline address spans inside
-// the visible location pill (distinct from the hidden AddressMetaHTML
-// below, which always renders regardless of whether the pill itself does).
+// LocationPillAddressHTML renders the inline address spans inside the
+// visible location pill (distinct from the hidden AddressMetaHTML below,
+// which always renders regardless of whether the pill itself does).
+//
+// The parts are joined with ", " OUTSIDE the spans: inline spans render with
+// no whitespace of their own, so without the separator the visible text ran
+// together ("GombeKinshasa"), while keeping it outside each span keeps the
+// itemprop values clean for microdata parsers.
 func LocationPillAddressHTML(address1, address2, city, country string) string {
 	var sb strings.Builder
+	first := true
 	for _, p := range []struct{ prop, val string }{
 		{"streetAddress", address1},
 		{"streetAddress", address2},
@@ -364,7 +370,11 @@ func LocationPillAddressHTML(address1, address2, city, country string) string {
 		if p.val == "" {
 			continue
 		}
+		if !first {
+			sb.WriteString(", ")
+		}
 		sb.WriteString(`<span itemprop="` + p.prop + `">` + html.EscapeString(p.val) + `</span>`)
+		first = false
 	}
 	return sb.String()
 }
