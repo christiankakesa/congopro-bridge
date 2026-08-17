@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -331,19 +332,19 @@ func (e *Engine) loadCompaniesFromDB(ctx context.Context) ([]Company, error) {
 // Meilisearch
 // ─────────────────────────────────────────────────────────────────────────────
 
-func (e *Engine) indexMeili(companies []Company) error {
-	log.Info().Msgf("[meili] pushing %d companies to index %q...", len(companies), e.Config.MeiliIndexName)
-
-	settingsURL := fmt.Sprintf("%s/indexes/%s/settings", strings.TrimSuffix(e.Config.MeiliURL, "/"), e.Config.MeiliIndexName)
-	cleanOllamaURL := strings.TrimSuffix(e.Config.OllamaURL, "/")
-	jsonSettingsStr := fmt.Sprintf(`{
+// embedderSettings builds the Meilisearch semantic-embedder settings JSON.
+// embedderURL is the Ollama endpoint FROM MEILISEARCH'S perspective (see
+// Config.OllamaEmbedderURL); model must match the embedding model Ollama
+// serves and the fixed 768 dimensions below (nomic-embed-text).
+func embedderSettings(embedderURL, model string) string {
+	return fmt.Sprintf(`{
         "embedders": {
             "default": {
                 "source": "rest",
                 "url": "%s/api/embeddings",
                 "request": {
-                    "model": "nomic-embed-text",
-                    "prompt": "{{text}}" 
+                    "model": "%s",
+                    "prompt": "{{text}}"
                 },
                 "response": {
                     "embedding": "{{embedding}}"
@@ -352,8 +353,14 @@ func (e *Engine) indexMeili(companies []Company) error {
                 "documentTemplate": "search_document: Company: {{doc.name}} | City: {{doc.city}} | Country: {{doc.country}} | Activity: {{doc.activity}} | Slogan: {{doc.slogan}} | Description: {{doc.description}}"
             }
         }
-    }`, cleanOllamaURL)
-	jsonSettings := []byte(jsonSettingsStr)
+    }`, strings.TrimSuffix(embedderURL, "/"), model)
+}
+
+func (e *Engine) indexMeili(companies []Company) error {
+	log.Info().Msgf("[meili] pushing %d companies to index %q...", len(companies), e.Config.MeiliIndexName)
+
+	settingsURL := fmt.Sprintf("%s/indexes/%s/settings", strings.TrimSuffix(e.Config.MeiliURL, "/"), e.Config.MeiliIndexName)
+	jsonSettings := []byte(embedderSettings(e.Config.OllamaEmbedderURL, e.Config.EmbeddingModel))
 	req, err := http.NewRequest("PATCH", settingsURL, bytes.NewBuffer(jsonSettings))
 	if err != nil {
 		return fmt.Errorf("create meili settings request: %w", err)
@@ -555,7 +562,10 @@ func (e *Engine) FindBySlug(slug string) (*Company, error) {
 
 func (e *Engine) GenerateAnswer(userQuery string, topResults []SearchResult) (string, error) {
 	if len(topResults) == 0 {
-		return "Désolé, je n'ai trouvé aucune entreprise pertinente pour répondre à votre question.", nil
+		return fmt.Sprintf(
+			"Aucune entreprise ne correspond à « %s ».\nEssayez un terme plus général (par exemple « restaurant » plutôt que « restaurant italien »), ou une autre ville.",
+			userQuery,
+		), nil
 	}
 
 	limit := 15
@@ -632,7 +642,133 @@ CONTEXTE (Entreprises trouvées) :
 	if err := json.Unmarshal(respBody, &out); err != nil {
 		return "", fmt.Errorf("decode ollama response: %w", err)
 	}
+
+	// The prompt orders the model to answer "je l'ignore" when the context
+	// doesn't ground an answer. That's a dead end for the user even though
+	// the search itself returned relevant companies — replace the brush-off
+	// with a deterministic insight computed from those results.
+	if looksLikeRefusal(out.Response) {
+		log.Info().Msgf("[ai] refusal for %q — falling back to result insight", userQuery)
+		return buildFallbackInsight(userQuery, topResults), nil
+	}
 	return out.Response, nil
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI answer fallback (deterministic, computed from search results)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// maxRefusalAnswerLen: refusal answers are one short sentence. Real answers
+// that merely CONTAIN a refusal phrase ("Désolé, il n'y a pas de X, mais
+// voici les Y les plus proches…") are longer and must be kept as-is.
+const maxRefusalAnswerLen = 120
+
+// frFold maps French accented lowercase letters to their ASCII base, so
+// refusal phrases match regardless of diacritics or case ("Trouvé" → "trouve").
+// Only lowercase forms are listed: the input is lowercased first, and Go's
+// ToLower already folds À→à etc. French diacritics are a small closed set —
+// no dependency on a Unicode-normalization package needed.
+var frFold = strings.NewReplacer(
+	"à", "a", "â", "a", "ä", "a",
+	"é", "e", "è", "e", "ê", "e", "ë", "e",
+	"î", "i", "ï", "i",
+	"ô", "o", "ö", "o",
+	"ù", "u", "û", "u", "ü", "u",
+	"ç", "c", "œ", "oe",
+)
+
+func foldFR(s string) string {
+	return frFold.Replace(strings.ToLower(s))
+}
+
+// refusalPhrases are matched against foldFR(answer). Keep high-precision
+// phrases only: the fallback replaces the model's answer, so a false
+// positive discards a usable answer. Recall matters less — an undetected
+// refusal just leaves today's behavior in place.
+var refusalPhrases = []string{
+	"je l'ignore", "je l ignore",
+	"je ne sais pas",
+	"je ne peux pas repondre",
+	"je n'ai pas trouve", "je n ai pas trouve",
+	"pas cette information", "aucune information",
+	"impossible de repondre",
+	"introuvable",
+	"i don't know", "i do not know",
+}
+
+func looksLikeRefusal(answer string) bool {
+	a := strings.TrimSpace(answer)
+	if len(a) == 0 {
+		// Empty model output is as useless as a refusal — same fallback.
+		return true
+	}
+	if len(a) > maxRefusalAnswerLen {
+		return false
+	}
+	folded := foldFR(a)
+	for _, p := range refusalPhrases {
+		if strings.Contains(folded, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// buildFallbackInsight produces a useful, grounded answer from the search
+// results themselves: how many companies matched, where they are, what they
+// do. Pure string assembly — no model call, no prompt-injection surface.
+func buildFallbackInsight(query string, results []SearchResult) string {
+	cityCount := map[string]int{}
+	activityCount := map[string]int{}
+	for _, r := range results {
+		if c := strings.TrimSpace(r.City); c != "" {
+			cityCount[c]++
+		}
+		if a := strings.TrimSpace(r.Activity); a != "" {
+			activityCount[a]++
+		}
+	}
+
+	var sb strings.Builder
+	unit := "entreprises"
+	if len(results) == 1 {
+		unit = "entreprise"
+	}
+	fmt.Fprintf(&sb, "Je n'ai pas de réponse sûre pour « %s ».\n", query)
+	fmt.Fprintf(&sb, "Votre recherche correspond cependant à %d %s", len(results), unit)
+	if cities := topCounted(cityCount, 3); len(cities) > 0 {
+		fmt.Fprintf(&sb, ", principalement à %s", strings.Join(cities, ", "))
+	}
+	if activities := topCounted(activityCount, 3); len(activities) > 0 {
+		fmt.Fprintf(&sb, " — activités : %s", strings.Join(activities, ", "))
+	}
+	sb.WriteString(".\nParcourez les résultats ci-dessous ou précisez votre recherche (secteur, ville).")
+	return sb.String()
+}
+
+// topCounted returns up to n "label (count)" entries ordered by count desc,
+// then label asc — the tie-break keeps the output deterministic.
+func topCounted(counts map[string]int, n int) []string {
+	if len(counts) == 0 || n <= 0 {
+		return nil
+	}
+	labels := make([]string, 0, len(counts))
+	for label := range counts {
+		labels = append(labels, label)
+	}
+	sort.Slice(labels, func(i, j int) bool {
+		if counts[labels[i]] != counts[labels[j]] {
+			return counts[labels[i]] > counts[labels[j]]
+		}
+		return labels[i] < labels[j]
+	})
+	if len(labels) > n {
+		labels = labels[:n]
+	}
+	for i, label := range labels {
+		labels[i] = fmt.Sprintf("%s (%d)", label, counts[label])
+	}
+	return labels
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

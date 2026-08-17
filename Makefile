@@ -141,8 +141,8 @@ docker-logs-app:
 
 meili-reset:
 	@echo "▶ Resetting Meilisearch index (keeping Ollama models)…"
-	docker compose stop meilisearch
-	docker volume rm congopro-bridge_meili_data 2>/dev/null || true
+	docker compose rm -sf meilisearch
+	docker volume rm congopro-bridge_meili_data
 	docker compose up -d meilisearch
 	@echo "✓ Meilisearch volume wiped and restarted — app will re-index on next boot"
 

@@ -17,6 +17,12 @@ cd "$(dirname "$0")/.."
 # Caller (Makefile) passes DATABASE_URL; keep the same default as the db-* targets.
 export DATABASE_URL="${DATABASE_URL:-postgres://congopro_bridge:congopro_bridge@localhost:5433/congopro_bridge?sslmode=disable}"
 export PORT="${PORT:-8080}"
+# The app runs natively and reaches Ollama via the published port, but
+# Meilisearch runs in a container and cannot see 127.0.0.1:11434 — it must
+# call the Ollama CONTAINER over the compose network instead, or the settings
+# task that installs the semantic embedder wedges forever and indexing never
+# finishes (Meilisearch processes tasks serially).
+export OLLAMA_EMBEDDER_URL="${OLLAMA_EMBEDDER_URL:-http://ollama:11434}"
 
 say() { printf '\033[1;36m▶ %s\033[0m\n' "$*"; }
 ok()  { printf '\033[1;32m✓ %s\033[0m\n' "$*"; }

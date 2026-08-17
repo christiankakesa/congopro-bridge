@@ -78,7 +78,8 @@ whole stack including the app in Docker: `make docker-up`.
 |---|---|---|
 | `DATABASE_URL` | *(none, required)* | Postgres connection string |
 | `PORT` | `8080` | Listen port |
-| `OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama base URL |
+| `OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama base URL (used by the app itself) |
+| `OLLAMA_EMBEDDER_URL` | *(same as `OLLAMA_URL`)* | Ollama URL as reached **by Meilisearch** — set to `http://ollama:11434` when Meilisearch runs in docker but the app runs natively (`make dev` sets this) |
 | `GENERATIVE_MODEL` | `gemma3:1b` | Ollama model for AI answers |
 | `EMBEDDING_MODEL` | `nomic-embed-text` | Ollama model for embeddings |
 | `MEILI_URL` | `http://127.0.0.1:7700` | Meilisearch base URL |

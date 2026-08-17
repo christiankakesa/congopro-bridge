@@ -2,9 +2,7 @@
 
 ## Now
 
-* AI answer fallback: when the model has no grounded answer for a query, have
-  it produce a useful insight from the search results themselves instead of a
-  dead end.
+* (nothing — pull from Next when ready)
 
 ## Next (Phase 2 — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
@@ -38,6 +36,13 @@ From BACKEND_PROPOSAL.md §Open questions:
 
 ## Done (highlights — full history in git)
 
+* AI answer fallback: when the model answers "je l'ignore", the user now gets
+  a grounded insight computed from the search results (count, top cities,
+  top activities) instead of a dead end — `internal/data/engine.go`.
+* `make dev` fixes found along the way: `OLLAMA_EMBEDDER_URL` split (Meilisearch
+  in docker can't reach 127.0.0.1 — the embedder URL must be compose-internal),
+  and `meili-reset` now actually wipes the volume (`compose rm -sf` — a stopped
+  container still pins its volumes, the old target never worked).
 * `make dev` local loop (Kora-style): deps via docker compose, migrations,
   templ + Tailwind regeneration and hot-reload rebuilds in one target — see
   `scripts/dev.sh` and `.air.toml`.

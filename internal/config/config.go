@@ -6,7 +6,14 @@ import (
 )
 
 type Config struct {
-	OllamaURL           string
+	OllamaURL string
+	// OllamaEmbedderURL is the Ollama endpoint Meilisearch should call for
+	// embeddings. Usually identical to OllamaURL, except when they live on
+	// different sides of a container boundary: with `make dev` the app runs
+	// natively (OllamaURL 127.0.0.1:11434, the published port) while
+	// Meilisearch runs in docker and must use the compose-internal
+	// http://ollama:11434 instead.
+	OllamaEmbedderURL   string
 	GenerativeModel     string
 	EmbeddingModel      string
 	AllowedOrigin       string
@@ -28,6 +35,9 @@ func Load() *Config {
 	cfg := defaults()
 	if ou := os.Getenv("OLLAMA_URL"); ou != "" {
 		cfg.OllamaURL = ou
+	}
+	if eu := os.Getenv("OLLAMA_EMBEDDER_URL"); eu != "" {
+		cfg.OllamaEmbedderURL = eu
 	}
 	if gm := os.Getenv("GENERATIVE_MODEL"); gm != "" {
 		cfg.GenerativeModel = gm
@@ -58,6 +68,12 @@ func Load() *Config {
 	}
 	if du := os.Getenv("DATABASE_URL"); du != "" {
 		cfg.DatabaseURL = du
+	}
+
+	// Separate embedder endpoint only makes sense when explicitly set;
+	// otherwise Meilisearch uses the same Ollama as the app itself.
+	if cfg.OllamaEmbedderURL == "" {
+		cfg.OllamaEmbedderURL = cfg.OllamaURL
 	}
 
 	return cfg
