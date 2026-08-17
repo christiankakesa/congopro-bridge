@@ -1,143 +1,55 @@
-# Tasks
+# TODO
 
-* Mimic Kora VPN Makefile with dev and prod
-* Make frontend AI gives insight on query result if he don't know what to answer
-* Research: instead of building a full BI backend for a B2B business, what about buulding a MCP server with paid access that is capable to build dashboard and report, or some customer can only chose to use the paid MCP server to use with their own BI tool.
-* Now, I need your help to elaborate a clear, concise, and solid description of everything required to make this big project go live.
-I mainly mean the backend architecture, infrastructure, and systems needed to turn this project into a real and successful platform.
-We will iterate together while you ask me questions, and I guide the architecture, technical decisions, and overall direction.
-Here are the bullet points I currently have to start with.
-  * i18n and i10n
-  * CMS to manage:
-    * ADS and ADS monetization
-    * Company info: add, update, merge, de-duplicate, ...
-    * GPS location for all entries in the CMS or ad-hoc script
-    * Users and permissions
-    * customers/clients to manage their data.
-    * Dispute systems for people that claim same companies
-    * Is Telegram app capabilities good to build a support (ticketing) system app?
-    * Is Telegram app capabilities good to build data management for the customers and the team
-    * I need simple but secure technologies like rqlite as database cluster or pocketbase cluster to store all data and provide local data for all frontends. The goal is to build an African project and each countries will have their frontend with their filtered companies. I need to manage a paid subscription projects out of Arfica that sell or buy in Africa and need to listed as promoted buissiness in home page like ADS in search results.
-    * I will need to know protocole that are used to store official information for comapnies to be compatible with Google Addresse and other big competitors.
-    * Save db to S3 or other server via SSH
-    * and more 
-* 
-* 
+## Now
 
-## DONE
+* Add a `make dev` local loop (Kora VPN-style): one target that starts deps
+  (`db-up`), applies migrations, regenerates templ/CSS on change, and runs the
+  binary. The production deploy side already exists (`make deploy`); local
+  iteration is still multi-step.
+* AI answer fallback: when the model has no grounded answer for a query, have
+  it produce a useful insight from the search results themselves instead of a
+  dead end.
 
-* Handle this kind of redirection: https://congopro.com/en?page=15&q=Real+Estate+Advisor&utf8=%E2%9C%93
-* Add Schema.org tags for company search results and company view.
-* Implement "loading active Homepage AD" with a very good and luxury or high design looking.
-* Build a social app banner and create a ADS campaign
-* Build new logo and web SEO logo (Daffa)
-* Make the internal ads feature print 1 ADS 75% of page load, and 2 ADS 25% of page load
-* Build /sitemap.xml.gz that adds static pages links (/, /help, /privacy; /terms) and /company/[name_seo]
-* design a new logo with Banana from Google.
-* build a resulsts like a moderne Google Search. No default companies shown on load.
-* add a coockie aceptance that says that we use partners sdk for security and analytics purpose and never sell your data. or something better.
-* add a simple mecanism of ads based on a yaml files with parameters like: active/inactive, perdiod, rotation time, etc...
-* create a make file with ssh, rsync capability: traefic dynamic entry, systemd service start
-* Handle query like:
-  * companies: (/(fr|en))?/company/congo-futur-sprl => query "name_seo" exact match
-  * Redirect to "/":
-    * subscriptions: (/(fr|en))?/subscriptions
-  * Pages:
-    * Same page:
-      * about: (/(fr|en))?/about
-      * contact: (/(fr|en))?/contact
-      * faq: (/(fr|en))?/faq
-      * help: (/(fr|en))?/help
-    * privacy: (/(fr|en))?/privacy
-    * terms: (/(fr|en))?/terms
-      var langCompanyPathRegex = regexp.MustCompile(`^(/(fr|en))?/company/congo-futur-sprl$`)
+## Next (Phase 2 — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-      func handler(w http.ResponseWriter, r *http.Request) {
-          if langCompanyPathRegex.MatchString(r.URL.Path) {
-              fmt.Fprintln(w, "Path matches!")
-          } else {
-              http.NotFound(w, r)
-          }
-      }
+* Customer accounts (email OTP) — needs the email-provider decision.
+* Company claim/dispute workflow + admin queue.
+* Ads CMS replacing `ads.yml`, with sales-rep attribution.
+* Telegram bot as notification/quick-action layer on top of the CMS.
 
-      matches := langCompanyPathRegex.FindStringSubmatch(r.URL.Path)
-      if matches != nil {
-          lang := matches[2] // "fr", "en", or empty string
-          // ...
-      }
+## Later
 
-* 
+* Research: paid MCP server / API for B2B customers to point their own BI
+  tools at their filtered data slice (Phase 4 in BACKEND_PROPOSAL.md — only
+  worth building once auth + billing exist).
+* Merge/dedupe tooling (`cmd/cleanr`) pointed at Postgres rows instead of the
+  legacy JSON file.
+* Admin: company delete/archive and user management UI (roles exist in the
+  schema; only company CRUD is exposed so far).
 
-## LinkedIn reposts
+## Decisions needed (blocking parts of Phase 2)
 
-Ces derniers jours de R&D marquent un tournant !
-Nous ne validons pas seulement une infrastructure technique, mais un modèle économique revu et adapté aux nouveaux besoins du marché.
+From BACKEND_PROPOSAL.md §Open questions:
 
-Le dossier d’architecture initial est bouclé.
-Mon équipe attend désormais le "Sprint Planning" pour lancer la roadmap et attaquer nos objectifs de front.
+* Email provider for customer OTP (Resend / Brevo / SES)?
+* Payment processor for promoted listings (Stripe vs Flutterwave/Paystack)?
+* Expected company/staff scale over 6–12 months?
 
-La stack est bâtie pour la performance (et rien d'autre) !
-Pour répondre aux exigences de scalabilité du projet, mes choix technologiques sont guidés par une règle simple : la performance brute.
+## Reference
 
-* Données & Stockage : Une architecture entièrement distribuée (base de données et stockage type S3).
-* Flux de données : Un broker de messages distribué. Ici, le scope est restreint : seuls les outils écrits en langages système (comme Redpanda ou NATS) ont droit de cité. Si ce n'est pas optimisé pour la performance système, ce n'est pas retenu.
-* Accessibilité : Une API Management robuste pour servir nos frontends (Web, Mobile, Desktop et bot Telegram).
+* PageSpeed (mobile): [report 1](https://pagespeed.web.dev/analysis/https-congopro-com/loz8e4kjae?hl=fr&form_factor=mobile),
+  [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
-Simplifier pour mieux scaler !
-L'expérience m'a appris que la simplicité est la sophistication suprême.
-Depuis mes premières notes, nous avons simplifié le pipeline de recherche :
+## Done (highlights — full history in git)
 
-* Avant : Trois briques distinctes (Full-text, Vectoriel avec traitements spécifiques, et Génératif via Ollama).
-* Maintenant : Une intégration plus fluide où la recherche sémantique (Vectorisation) est aussi déléguée à Ollama.
-  * Résultat : Moins de friction/code, plus de pertinence.
-
-La sécurité des prompts !
-Intégrer l'IA, c'est bien. La sécuriser, c'est indispensable.
-L'un des gros challenges à venir, qui méritera sans doute un podcast ou une série d'articles dédiés, est la sécurité autour des prompts IA (Prompt Injection, Data Leakage, etc.).
-Un sujet crucial pour garantir la confidentialité des données économiques.
-
-L'objectif final reste inchangé : fournir ce qui se fait de mieux pour l'analyse des données économiques locales.
-Nous arrivons avec des rapports B2B augmentés par notre IA générative pour transformer la donnée brute en levier de croissance.
-
-Let’s go ! 🚀
-
-## PageSpeed
-
-* https://pagespeed.web.dev/analysis/https-congopro-com/loz8e4kjae?hl=fr&form_factor=mobile
-* https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr
-
-## Sample prompt for a website
-
-Créer un site web moderne et responsive avec un design élégant et professionnel
-Présenter un catalogue de produits de beauté naturels avec des descriptions détaillées et des images de haute qualité
-Inclure un formulaire de commande simple et sécurisé pour permettre aux clients de passer commande en ligne
-Intégrer un bouton WhatsApp pour permettre aux clients de contacter facilement le site pour des questions ou des commandes
-
-Exigences techniques :
-Utiliser un framework de développement web moderne tel que NextJS
-Intégrer un backend écrit en Go et utilisant une base de données tel RQlite (SGBD) pour stocker les informations sur les produits et les commandes
-Assurer la sécurité du site avec des protocoles de cryptage et des mesures de protection contre les attaques
-
-Design et interface utilisateur :
-Créer un design moderne et élégant avec des couleurs et des typographies qui reflètent la marque
-Utiliser des images de haute qualité pour présenter les produits
-Créer un formulaire de commande simple et intuitif avec des champs pour les informations de paiement et de livraison
-Intégrer un bouton WhatsApp pour permettre aux clients de contacter facilement le site
-
-Fonctionnalités clés :
-Catalogue de produits avec des descriptions détaillées et des images de haute qualité
-Formulaire de commande simple et sécurisé
-Bouton WhatsApp pour contacter le site
-Intégration avec les réseaux sociaux pour partager les produits et les promotions
-
-Exemple de wireframe :
-* Page d'accueil :
-  Header avec logo et menu de navigation
-  Section de présentation des produits avec des images et des descriptions
-  Bouton de commande pour accéder au formulaire de commande
-* Page de catalogue :
-  Liste de produits avec des images et des descriptions
-  Filtres et tri pour faciliter la recherche de produits
-* Page de commande :
-  Formulaire de commande avec des champs pour les informations de paiement et de livraison
-  Bouton de paiement sécurisé
+* Postgres + PostGIS migration off embedded JSON; goose migrations embedded in
+  the binary (`-migrate`, `-import`).
+* Admin Phase 1: session login + TOTP, roles, company list/create/edit with
+  async Meilisearch reindex on write.
+* Hybrid search via Meilisearch + local Ollama AI answers (`/api/v1/ask`).
+* sitemap.xml.gz (static pages + company profiles), schema.org markup,
+  `/(fr|en)` i18n routing, legacy congopro.com redirect handling.
+* Cookie consent banner; YAML-driven ads with rotation.
+* Full deploy tooling: systemd + Traefik, secrets-init, daily backups with
+  tested-restore path (`db-restore-test`).
+* Logo, favicon pipeline, social banners, OG images.

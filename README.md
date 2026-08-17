@@ -1,47 +1,102 @@
 # Congopro Bridge 🔍
 
-A hybrid full-text + semantic search engine for the company directory, built in Go.
+A search engine and business directory for companies in the Democratic Republic
+of the Congo — server-rendered Go, mobile-first, built for low-bandwidth users.
+Live at [congopro.com](https://congopro.com).
 
 ## Architecture
 
-```
-companies.json
-     │
-     ├──► Bleve (in-memory BM25 full-text index)
-     │         name · activity · city · description · slogan
-     │
-     └──► Chromem-go (in-memory vector store)
-               local TF-IDF embeddings (512 dimensions, no API key needed)
+One Go binary. Three backing services. Postgres is the only source of truth;
+everything else is rebuildable.
 
-GET /api/v1/search?q=... → merge both engines (55% BM25 + 45% semantic) → ranked JSON
 ```
+PostgreSQL 16 + PostGIS          Meilisearch                Ollama
+(source of truth: companies,  ──►  (full-text search     ──►  (AI answers,
+ users, sessions)                   index, rebuildable)      embeddings)
+        │
+        │  sync on startup + on company writes (LoadAndIndex)
+        ▼
+   Meilisearch index "companies"
+
+public site (templ + htmx)      /admin (templ + htmx)
+  search, company profiles,       sessions + TOTP, roles,
+  static pages, ads, AI answers    company CRUD
+```
+
+- **Frontend** — server-rendered with [templ](https://github.com/a-h/templ) +
+  Tailwind CSS, interactivity via htmx. No client framework. CSS/JS/fonts are
+  self-hosted and served from the binary.
+- **Search** — Meilisearch (typo-tolerant full-text over name/activity/city/
+  description), synced from Postgres. `status = 'published'` only.
+- **AI answers** — a local Ollama model (`gemma3:1b` generative,
+  `nomic-embed-text` embeddings) summarizes search results. No external AI API.
+- **Auth** — session-based staff login with TOTP 2FA, roles
+  (`super_admin`, `ads_rep`, `data_editor`, `support`).
+- **Ops** — systemd + Traefik on a VPS in production; per-endpoint rate
+  limiting (with `TRUSTED_PROXIES` so forwarding headers can't be spoofed).
+
+Further reading: [ARCHITECTURE.md](docs/ARCHITECTURE.md) (current system),
+[BACKEND_PROPOSAL.md](docs/BACKEND_PROPOSAL.md) (roadmap),
+[DEPLOY.md](docs/DEPLOY.md) (production), [VISION.md](docs/VISION.md)
+(long-term direction).
 
 ## Prerequisites
 
 - Go 1.25+
-- Internet access for `go mod download` (one-time)
+- Docker (for Postgres, Meilisearch, Ollama via `docker-compose.yml`)
+- `templ` CLI (`go install github.com/a-h/templ/cmd/templ@latest`) and the
+  `tailwindcss` CLI on your PATH — or just use the make targets, which check
+  for both and tell you what's missing.
 
-## Setup
+## Local setup
 
 ```bash
-# 1. Download dependencies
-go mod download
+make db-up          # start local Postgres (postgis:16-3.4) on 127.0.0.1:5433
+make db-migrate     # apply goose migrations (embedded in the binary)
+make db-import      # one-time: load the legacy embedded JSON into Postgres
+make create-admin   # interactively create the first staff account (TOTP setup)
 
-# 2. Run
-go run cmd/congopro-bridge/main.go
-
-# 3. Open http://localhost:8080
+make build          # compile CSS + templ + binary into ./build
+./build/congopro-bridge
 ```
 
-Set `PORT` env var to change the listen port (default: 8080).
+`DATABASE_URL` is required — the make targets set it for you
+(`postgres://congopro_bridge:congopro_bridge@localhost:5433/congopro_bridge`).
+There is deliberately no default credential baked into the binary.
+
+To run the backing services in Docker too: `make docker-up` (Ollama models are
+pulled automatically by the `ollama-init` container).
+
+## Configuration
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | *(none, required)* | Postgres connection string |
+| `PORT` | `8080` | Listen port |
+| `OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama base URL |
+| `GENERATIVE_MODEL` | `gemma3:1b` | Ollama model for AI answers |
+| `EMBEDDING_MODEL` | `nomic-embed-text` | Ollama model for embeddings |
+| `MEILI_URL` | `http://127.0.0.1:7700` | Meilisearch base URL |
+| `MEILI_MASTER_KEY` | *(empty)* | Meilisearch API key (prod) |
+| `MEILI_INDEX_NAME` | `companies` | Search index name |
+| `ALLOWED_ORIGIN` | *(empty = no CORS)* | Allow a third-party origin to call the API |
+| `TRUSTED_PROXIES` | `127.0.0.1/32,::1/128` | Proxies allowed to set forwarding headers |
+
+## CLI flags
+
+| Flag | Purpose |
+|---|---|
+| `-migrate` | Apply pending migrations and exit |
+| `-import` | Upsert the embedded legacy JSON into Postgres and exit |
+| `-create-admin` | Interactively create the first staff account and exit |
 
 ## API
 
+All endpoints are rate-limited. `ALLOWED_ORIGIN` must be set for cross-origin
+browser use.
+
 ### `GET /api/v1/search?q=<query>`
 
-Returns up to 30 results sorted by hybrid relevance score.
-
-**Response:**
 ```json
 {
   "query": "restaurant kinshasa",
@@ -50,6 +105,7 @@ Returns up to 30 results sorted by hybrid relevance score.
     {
       "id": "5001fe28d964680200000305",
       "name": "DA SAFI DECOR",
+      "name_seo": "da-safi-decor",
       "activity": "Ameublement et mobilier",
       "city": "Kinshasa",
       "country": "Democratic Republic of the Congo",
@@ -60,28 +116,35 @@ Returns up to 30 results sorted by hybrid relevance score.
 }
 ```
 
-### `GET /api/v1/health`
+### `GET /api/v1/ask?q=<query>`
 
-Returns `{"status":"ready","companies":1534}` once indexing is complete,
-or `{"status":"indexing"}` (HTTP 503) while warming up.
+AI-generated answer (`{ "query": ..., "answer": ... }`) grounded in the
+current search results, computed by the local Ollama model.
 
-## Hybrid scoring
+### `GET /api/v1/healthz`
+
+`{"status":"ready","companies":1534}` once startup indexing is done.
+
+Also: `GET /api/v1/ads` (active ad campaigns, YAML-configured — see
+`internal/ads/ads.yml`), `GET /api/v1/content/{page}` (static pages as JSON).
+
+## Project layout
 
 ```
-score = 0.55 × normalised_bleve_score + 0.45 × normalised_semantic_similarity
+cmd/congopro-bridge/   app entrypoint + admin bootstrap
+cmd/cleanr/            data normalization tools (city/activity, link validation)
+cmd/geocoder/          GPS coordinates backfill
+internal/api/          HTTP handlers (public, API, admin)
+internal/data/         engine: Postgres load → Meilisearch index, Ollama calls
+internal/auth/         sessions, TOTP, password hashing
+internal/db/           goose migrations (embedded)
+internal/web/          templ templates, CSS, embedded static assets
+internal/ads/          YAML-driven ad campaigns
+deploy/                systemd units, Traefik config, Meilisearch config
 ```
 
-Both components are normalised to [0,1] before merging.
-Results are de-duplicated and sorted descending.
+## Deployment
 
-## Embedding approach
-
-No external API is required. A local TF-IDF-style embedding is used:
-
-1. At startup, the top-512 tokens by corpus frequency form the vocabulary.
-2. Each document/query is projected onto that vocabulary as a term-frequency vector.
-3. Vectors are L2-normalised before storing in Chromem-go.
-4. Cosine similarity is computed at query time.
-
-This gives meaningful semantic matching (synonyms, partial matches) while
-remaining entirely self-contained and instant to boot.
+Production runs on a VPS via systemd + Traefik (no docker). See
+[docs/DEPLOY.md](docs/DEPLOY.md) — bootstrap, day-to-day `make deploy`,
+backups with tested restores.

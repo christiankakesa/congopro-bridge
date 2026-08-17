@@ -1,71 +1,80 @@
-# Congopro Bridge (African Hub | African Bridges | Bridges)
+# Congopro Bridge — Architecture (current, as shipped)
 
-## 1. Vision Stratégique : L'Architecture "Event-Driven"
+One Go binary on one VPS, three backing services, server-rendered frontend.
+Deliberately boring: the build order and the reasoning behind every choice
+(Postgres over rqlite, no Kubernetes yet, etc.) live in
+[BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md).
 
-### A. Ingestion Souple (NATS JetStream)
+```
+                        ┌──────────────────────────┐
+                        │   PostgreSQL 16 + PostGIS │  ← source of truth
+                        │  companies · users ·      │
+                        │  sessions                 │
+                        └────────┬─────────────────┘
+                                 │ load published companies
+                                 ▼
+   ┌────────────────┐   ┌──────────────────┐   ┌────────────────┐
+   │  Meilisearch   │   │  Congopro Bridge │   │     Ollama     │
+   │  "companies"   │◄──┤  (Go binary)     ├──►│ gemma3:1b      │
+   │  full-text idx │   │                  │   │ nomic-embed-   │
+   │ (rebuildable)  │   │  templ + htmx    │   │ text           │
+   └────────────────┘   └────────┬─────────┘   └────────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+             public site                  /admin
+             search · company             sessions + TOTP · roles
+             profiles · ads ·             company CRUD
+             static pages · AI answers
+```
 
-Les données entrent par divers canaux (API, imports CSV massifs, Google Address).
+## Invariants
 
-* **NATS JetStream** agit comme une mémoire tampon persistante. Si 1 million de lignes arrivent d'un coup, NATS les stocke et les distribue aux workers Go à la vitesse qu'ils peuvent absorber.
-* **Résilience :** Aucun plantage de base de données ne peut causer de perte de données à l'entrée.
+- **Postgres is the only source of truth.** Meilisearch is a disposable,
+  rebuildable index synced *from* Postgres — never written to directly except
+  by the sync path (`Engine.LoadAndIndex` on startup, `Engine.Reload()`
+  fired asynchronously after admin writes, since Meilisearch's embedding step
+  can be slow). Only `status = 'published'` companies are indexed; drafts stay
+  hidden.
+- **No client framework.** templ components + Tailwind CSS + htmx for partial
+  updates. CSS, JS, fonts, and images are embedded in the binary and
+  self-hosted — the page weight budget is the product requirement
+  (low-bandwidth, mobile-first DRC audience).
+- **AI is local.** Ollama serves both the generative model (grounded answer
+  over current search results, `GET /api/v1/ask`) and embeddings. No external
+  AI API, no data leaves the VPS.
 
-### B. Enrichissement & Optimisation (Workers Go)
+## Runtime pieces
 
-Des programmes Go spécialisés consomment les messages de NATS :
+| Piece | Where | Notes |
+|---|---|---|
+| HTTP server | `cmd/congopro-bridge/main.go` | Go 1.25 `net/http` pattern routing (`GET/POST /path`), all routes in one place |
+| Handlers | `internal/api/` | public pages, JSON API, admin; every route wrapped with security headers |
+| Data engine | `internal/data/engine.go` | Postgres → Meilisearch sync, Ollama calls, sitemap cache (RWMutex-guarded) |
+| Auth | `internal/auth/` | bcrypt password hashing (72-byte guard), TOTP, DB-backed sessions |
+| Rate limiting | `internal/middlewares/ratelimiter/` | per-endpoint; `TRUSTED_PROXIES` stops forwarding-header spoofing |
+| Migrations | `internal/db/migrations/` | goose format, embedded via `go:embed`, applied by `<binary> -migrate` |
+| Ads | `internal/ads/ads.yml` | YAML campaigns (active/inactive, period, rotation); CMS replacement is Phase 2 |
+| Templates | `internal/web/templates/` | `.templ` sources; generated `_templ.go` files are committed |
 
-* **Worker Géo :** Calcule les coordonnées GPS.
-* **Worker Media :** Récupère les logos, les compresse en **WebP** et les stocke sur **S3/MinIO** pour minimiser la consommation de bande passante des utilisateurs (critique en Afrique).
+## Side tooling (offline jobs)
 
-## 2. Le Cœur de Données : Cohérence et Vitesse
+- `cmd/cleanr` — data normalization (city/activity normalizers, link
+  validation) against the legacy JSON export.
+- `cmd/geocoder` — GPS coordinates backfill.
+- `cmd/oid` — misc one-off tooling.
 
-Nous séparons la **Source de Vérité** de la **Performance de Recherche**.
+## Environments
 
-### A. rqlite (Source de Vérité & Consistance)
+- **Local dev** — docker-compose for Postgres (host port 5433), Meilisearch,
+  Ollama; the binary runs natively. `make db-up / db-migrate / db-import`.
+- **Production** — single VPS, systemd services + Traefik, no docker. Secrets
+  generated on-server (`make secrets-init`), daily `pg_dump` backups with a
+  tested-restore path. Full runbook: [DEPLOY.md](DEPLOY.md).
 
-* **Choix :** rqlite (SQLite distribué via Raft).
-* **Rôle :** Stocker les données officielles, les abonnements payants et les configurations publicitaires.
-* **Argument Investisseur :** Une consistance forte garantie par le protocole Raft. Même en cas de panne d'un serveur, les données restent intègres et identiques sur tout le cluster.
+## Where this goes next
 
-### B. Moteur de Recherche Hybride (Typesense/Meilisearch)
-
-* **Rôle :** Un index ultra-rapide en RAM synchronisé avec rqlite.
-* **Performance :** Recherche instantanée sur 13M d'entreprises, même avec des fautes de frappe ou des connexions 3G instables.
-
-### 3. Gestion Intelligente : Dé-duplication & Litiges
-
-Avec 13 millions d'entrées, la qualité de la donnée est votre plus grand actif.
-
-* **La Fusion (Merge) Périodique :** Un programme Go analyse la base de données (hebdomadairement/mensuellement). Il regroupe les entreprises par similarité (Nom proche + même zone GPS + même téléphone).
-* **Human-in-the-loop (Telegram) :** Le programme ne fusionne pas aveuglément les cas suspects. Il envoie une notification à l'équipe via une **Telegram Mini App**. Un modérateur valide la fusion d'un simple "Swipe" depuis son téléphone.
-
-## 4. Infrastructure : Scalabilité Continentale
-
-Le système est conçu pour être déployé pays par pays de manière isolée mais connectée.
-
-* **Kubernetes (K8s) :** Gère la couche applicative (APIs, Workers, Assistant IA). Permet de scaler horizontalement pendant les pics d'utilisation.
-* **VPS Managés :** Pour le stockage (rqlite, S3/MinIO). Les données restent sur des disques performants et isolés, facilitant la conformité aux lois locales sur la protection des données dans chaque pays africain.
-
-## 5. L'Expérience Utilisateur : Mobile-First & Telegram
-
-L'accès à la donnée doit être universel.
-
-* **Frontend Web (Go/Tailwind v4) :** Ultra-léger, optimisé PageSpeed (100/100) pour consommer le moins de "Data" possible.
-* **Telegram Mini App (TMA) :** Le "système d'exploitation" de facto en Afrique.
-* **Clients :** Gèrent leur profil et paient leurs abonnements via le bot.
-* **Équipe Support :** Reçoit les tickets de litiges et discute directement avec les propriétaires d'entreprises.
-
-## 6. Synthèse pour Investisseurs : Pourquoi ce projet va réussir
-
-| Pilier | Solution Technique | Avantage Concurrentiel |
-| --- | --- | --- |
-| **Volume** | NATS + rqlite | Capacité de 13M+ sans perte de performance. |
-| **Coût** | Go + SQLite + S3 | Frais d'infrastructure réduits de 60% vs solutions Cloud classiques. |
-| **Accessibilité** | Telegram + Web Hybride | Pénétration maximale du marché mobile africain. |
-| **IA** | Assistant IA local | Recherche contextuelle intelligente, unique sur le continent. |
-| **Confiance** | Système de claim/litige | Base de données vérifiée et certifiée, contrairement au scraping sauvage. |
-
-### Prochaines étapes suggérées :
-
-Prenez le temps de digérer cette structure. Elle est techniquement solide (Go/NATS/rqlite) tout en étant innovante sur le plan métier (TMA/IA).
-
-Une fois que vous l'aurez présentée, nous pourrons attaquer le **"Blueprinting"** détaillé des schémas de base de données (rqlite) et la définition des "Prototypes de Messages" pour NATS JetStream afin de commencer le développement des premiers Workers d'importation.
+Phases 2–4 (customer accounts, claims/disputes, ads CMS, subscriptions,
+Telegram notifications, MCP/BI product) are scoped and sequenced in
+[BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md). The long-term multi-country
+end-state is sketched in [VISION.md](VISION.md).

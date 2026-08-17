@@ -1,12 +1,20 @@
 # Congopro Bridge — Backend Architecture Proposal
 
-Status: **draft for review** — nothing here is built yet. This is meant to be read, argued with, and edited before anything gets implemented. Where I need a decision only you can make, I've said so explicitly under "Open questions" instead of guessing.
+Status: **actively used as the roadmap.** Phase 1 (Foundation) has shipped:
+Postgres + PostGIS schema, migration off the embedded JSON, staff auth with
+TOTP + roles, admin company CRUD, and the backup/restore tooling. Phases 2–4
+are still open — this document is now the build order for them. Where a
+decision only you can make is blocking, it's listed under "Open questions"
+instead of guessed.
 
-## How this relates to `docs/ARCHITECTURE.md`
+## How this relates to `docs/VISION.md`
 
-That document (NATS JetStream ingestion, rqlite Raft cluster, Kubernetes, S3/MinIO, 13M companies) reads like an investor-pitch vision of the platform at a much later stage than where the app actually is today: one Go binary, 1,500 companies embedded as a static JSON file, no database, no auth, no CMS, ads configured through a YAML file you edit by hand. None of that is a criticism — it's a reasonable thing to sketch out — but building toward *that* architecture now would mean solving distributed-systems problems (Raft consensus, K8s cluster ops, message-broker backpressure) you don't have yet, before solving the problems you actually have (there's no way for anyone but you to add a company, sell an ad, or log in).
+That document (NATS JetStream ingestion, rqlite Raft cluster, Kubernetes, S3/MinIO, 13M companies) is the investor-pitch vision of the platform at a much later stage. When this proposal was written, the app was one Go binary with 1,500 companies embedded as a static JSON file, no database, no auth, no CMS, and ads configured through a YAML file you edit by hand — building toward *that* architecture then would have meant solving distributed-systems problems (Raft consensus, K8s cluster ops, message-broker backpressure) before solving the problems that actually existed.
 
-This proposal is the "what do we actually build first" version. It's meant to supersede `ARCHITECTURE.md` as the working plan, not sit alongside it — I'd suggest archiving that doc as "long-term vision, revisit once we outgrow this" once you've reviewed this one.
+This proposal was the "what do we actually build first" version. It has since
+been renamed `VISION.md`, marked as aspirational, and superseded as the
+working plan by this document plus [ARCHITECTURE.md](ARCHITECTURE.md), which
+describes the system as shipped.
 
 ## Design principles
 
@@ -94,8 +102,8 @@ Worth pursuing, but as a **later phase**, not a v1 requirement. A paid MCP serve
 
 ## Phased rollout
 
-1. **Foundation** — Postgres + PostGIS schema; migrate company data off the embedded JSON; staff auth + roles; admin CRUD for companies (add/update, and your existing merge/dedupe tooling pointed at the DB instead of JSON).
-2. **Trust & revenue plumbing** — customer email-OTP auth; company claim/dispute workflow with an admin queue; ads CMS with sales-rep attribution.
+1. **Foundation** — ✅ **shipped** (Postgres + PostGIS schema; company data migrated off the embedded JSON; staff auth + roles; admin CRUD for companies). One leftover: pointing the merge/dedupe tooling (`cmd/cleanr`) at Postgres rows instead of the legacy JSON — tracked in `TODO.md`.
+2. **Trust & revenue plumbing** — customer email-OTP auth; company claim/dispute workflow with an admin queue; ads CMS with sales-rep attribution. *(Blocked on the email-provider decision below.)*
 3. **Monetize promoted listings** — subscriptions + payment integration; Telegram bot as the notification/quick-action layer on top of the CMS (dispute alerts, merge approvals).
 4. **Opportunistic** — MCP/BI product, further multi-country tooling, geo-dedup automation.
 
