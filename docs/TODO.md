@@ -49,9 +49,12 @@ lands in Gmail spam on reputation alone)
 
 * Register Google Postmaster Tools for congopro.com (DNS TXT verify) — the
   only visibility into Gmail placement.
-* Confirm DMARC `rua` aggregate reports actually arrive at ask@congopro.com.
-* Once reports show only aligned legit mail (a few weeks of OTP traffic):
-  step DMARC `p=none` → `p=quarantine; pct=25` → `p=reject`.
+* Confirm DMARC `rua` aggregate reports actually arrive at ask@congopro.com
+  and contain only OVH's sending IPs.
+* DMARC step-up in progress: `p=quarantine; pct=25` (set 2026-08-17).
+  Climb pct=50 → pct=100 as rua stays clean, then end state
+  `p=reject; sp=reject; rua=mailto:ask@congopro.com` (no pct).
+  `sp` stays unset until the end state — subdomains inherit `p`.
 * Revisit the provider decision ONLY if Postmaster shows good reputation
   after ~4–6 weeks and placement is still bad.
 
