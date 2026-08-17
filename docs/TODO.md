@@ -44,6 +44,17 @@ Recorded 2026-08-17 (details in [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md)):
 
 Still open: Postgres hosting (same VPS vs small managed instance).
 
+## Deliverability watch (OVH EmailPro — SPF/DKIM/DMARC all PASS, new domain
+lands in Gmail spam on reputation alone)
+
+* Register Google Postmaster Tools for congopro.com (DNS TXT verify) — the
+  only visibility into Gmail placement.
+* Confirm DMARC `rua` aggregate reports actually arrive at ask@congopro.com.
+* Once reports show only aligned legit mail (a few weeks of OTP traffic):
+  step DMARC `p=none` → `p=quarantine; pct=25` → `p=reject`.
+* Revisit the provider decision ONLY if Postmaster shows good reputation
+  after ~4–6 weeks and placement is still bad.
+
 ## Reference
 
 * PageSpeed (mobile): [report 1](https://pagespeed.web.dev/analysis/https-congopro-com/loz8e4kjae?hl=fr&form_factor=mobile),

@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Creates the congopro-bridge Postgres role and database on this host, using
-# the password `make secrets-init` already generated into secrets.env. Meant
+# the password `make secrets-init` already generated into congopro-bridge.env. Meant
 # to run as root on the VPS (invoked by `make db-provision`, which uploads
 # this file and runs it via sudo) — CREATE ROLE/DATABASE need postgres
 # superuser privileges, which is why this is a separate, sudoers-gated script
@@ -47,7 +47,7 @@ fi
 
 if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
   sudo -u postgres psql -c "ALTER ROLE \"${DB_USER}\" WITH LOGIN PASSWORD '${DB_PASSWORD}';" >/dev/null
-  echo "✓ role ${DB_USER} already existed — password synced from secrets.env"
+  echo "✓ role ${DB_USER} already existed — password synced from congopro-bridge.env"
 else
   sudo -u postgres psql -c "CREATE ROLE \"${DB_USER}\" WITH LOGIN PASSWORD '${DB_PASSWORD}';" >/dev/null
   echo "✓ created role ${DB_USER}"

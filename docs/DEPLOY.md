@@ -41,7 +41,7 @@ full list, or run `make help`).
                            /usr/bin/mkdir -p /opt/congopro-bridge*, \
                            /usr/bin/chown * /opt/congopro-bridge*, \
                            /usr/bin/chmod * /opt/congopro-bridge*, \
-                           /usr/bin/tee -a /opt/congopro-bridge/secrets.env, \
+                           /usr/bin/tee -a /opt/congopro-bridge/congopro-bridge.env, \
                            /opt/congopro-bridge/scripts/db-provision.sh, \
                            /opt/congopro-bridge/scripts/db-restore-prod.sh
   ```
@@ -58,7 +58,7 @@ Run once, in order, on a fresh server:
 make ollama-setup       # installs Ollama, pulls the generative + embedding models
 make meili-setup        # installs Meilisearch, config, systemd unit, Traefik route
 make db-install          # installs PostgreSQL + PostGIS via apt, enables the service
-make db-provision        # generates a DB password into secrets.env, creates role + database
+make db-provision        # generates a DB password into congopro-bridge.env, creates role + database
 make deploy-full         # uploads the binary, installs the app's systemd unit, starts it
 make db-migrate-remote   # applies schema migrations against the new database
 make db-import-remote    # one-time: loads the legacy embedded JSON export into Postgres
@@ -139,7 +139,7 @@ throwaway database, so testing a backup is cheap and safe to do often.
 `make secrets-init` (also run automatically by `db-provision` and
 `meili-setup`) generates `MEILI_MASTER_KEY` and `DATABASE_URL` directly on the
 server — they're never downloaded to your machine or printed to your
-terminal — and writes them to `/opt/congopro-bridge/secrets.env`
+terminal — and writes them to `/opt/congopro-bridge/congopro-bridge.env`
 (`chmod 600`, `root:root`), which the app's systemd unit loads via
 `EnvironmentFile=`. Re-running `secrets-init` after adding a new secret only
 fills in what's missing; it won't rotate existing keys.

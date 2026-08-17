@@ -18,6 +18,11 @@ DEPLOY_HOST  ?= $(or $(call _env_var,DEPLOY_HOST),xxx.xxx.xxx.xxx)
 DEPLOY_PORT  ?= $(or $(call _env_var,DEPLOY_PORT),4242)
 SSH_KEY      ?= $(patsubst ~/%,$(HOME)/%,$(or $(call _env_var,SSH_KEY),$(HOME)/.ssh/id_ed25519))
 REMOTE_DIR   ?= $(or $(call _env_var,REMOTE_DIR),/opt/congopro-bridge)
+# The app's systemd EnvironmentFile on the server (deploy/systemd/*.service
+# references the same path). Named after the service rather than
+# "secrets.env" so ownership is obvious in directory listings — the
+# secrets-init and db-* targets below are the single source of this name.
+APP_ENV_FILE := congopro-bridge.env
 MEILI_DIR    ?= /opt/meilisearch
 MEILI_VERSION ?= v1.43.1
 IMAGE        ?= congopro-bridge
@@ -281,28 +286,28 @@ deploy-full: deploy-service secrets-init deploy
 
 # Generates secrets on the server (never downloaded, never printed) and writes them to
 # EnvironmentFile(s). Idempotent per-key: only fills in whatever is missing, so re-running
-# after adding a new secret (e.g. DATABASE_URL) doesn't touch keys already in place.
+# after adding a new secret doesn't touch keys already in place.
 secrets-init:
 	@echo "▶ Ensuring secrets exist on $(DEPLOY_HOST)…"
 	@$(SSH) "sudo mkdir -p $(REMOTE_DIR) $(MEILI_DIR)/etc; \
-	  sudo touch $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env; \
-	  if ! sudo grep -q '^MEILI_MASTER_KEY=' $(REMOTE_DIR)/secrets.env; then \
+	  sudo touch $(REMOTE_DIR)/$(APP_ENV_FILE) $(MEILI_DIR)/etc/secrets.env; \
+	  if ! sudo grep -q '^MEILI_MASTER_KEY=' $(REMOTE_DIR)/$(APP_ENV_FILE); then \
 	    KEY=\$$(openssl rand -base64 48); \
-	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee -a $(REMOTE_DIR)/secrets.env >/dev/null; \
+	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee -a $(REMOTE_DIR)/$(APP_ENV_FILE) >/dev/null; \
 	    echo \"MEILI_MASTER_KEY=\$$KEY\" | sudo tee -a $(MEILI_DIR)/etc/secrets.env >/dev/null; \
 	    echo '✓ generated MEILI_MASTER_KEY'; \
 	  else \
 	    echo '✓ MEILI_MASTER_KEY already present'; \
 	  fi; \
-	  if ! sudo grep -q '^DATABASE_URL=' $(REMOTE_DIR)/secrets.env; then \
+	  if ! sudo grep -q '^DATABASE_URL=' $(REMOTE_DIR)/$(APP_ENV_FILE); then \
 	    DBPASS=\$$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9'); \
-	    echo \"DATABASE_URL=postgres://$(DB_USER):\$$DBPASS@localhost:5432/$(DB_NAME)?sslmode=disable\" | sudo tee -a $(REMOTE_DIR)/secrets.env >/dev/null; \
+	    echo \"DATABASE_URL=postgres://$(DB_USER):\$$DBPASS@localhost:5432/$(DB_NAME)?sslmode=disable\" | sudo tee -a $(REMOTE_DIR)/$(APP_ENV_FILE) >/dev/null; \
 	    echo '✓ generated DATABASE_URL (Postgres password)'; \
 	  else \
 	    echo '✓ DATABASE_URL already present'; \
 	  fi; \
-	  sudo chown root:root $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env; \
-	  sudo chmod 600 $(REMOTE_DIR)/secrets.env $(MEILI_DIR)/etc/secrets.env"
+	  sudo chown root:root $(REMOTE_DIR)/$(APP_ENV_FILE) $(MEILI_DIR)/etc/secrets.env; \
+	  sudo chmod 600 $(REMOTE_DIR)/$(APP_ENV_FILE) $(MEILI_DIR)/etc/secrets.env"
 
 # Full server bootstrap: Ollama + Meilisearch + app. Run once on a fresh server.
 deploy-all: ollama-setup meili-setup deploy-full
@@ -478,12 +483,12 @@ db-install:
 	@echo "✓ PostgreSQL installed and running"
 
 # Creates the app's role and database using the password secrets-init already generated
-# into secrets.env. Requires sudo on the host (CREATE ROLE/DATABASE need postgres superuser) —
+# into $(APP_ENV_FILE). Requires sudo on the host (CREATE ROLE/DATABASE need postgres superuser) —
 # gate scripts/db-provision.sh behind a dedicated sudoers entry rather than full root sudo.
 db-provision: secrets-init
 	@echo "▶ Provisioning database role and schema on $(DEPLOY_HOST)…"
 	@$(RSYNC) scripts/db-provision.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-provision.sh
-	@$(SSH) "chmod +x /tmp/db-provision.sh && sudo /tmp/db-provision.sh '$(DB_NAME)' '$(DB_USER)' '$(REMOTE_DIR)/secrets.env' && rm -f /tmp/db-provision.sh"
+	@$(SSH) "chmod +x /tmp/db-provision.sh && sudo /tmp/db-provision.sh '$(DB_NAME)' '$(DB_USER)' '$(REMOTE_DIR)/$(APP_ENV_FILE)' && rm -f /tmp/db-provision.sh"
 	@echo "✓ database provisioned — run 'make db-migrate-remote' to apply schema"
 
 db-remote-status:
@@ -494,17 +499,17 @@ db-remote-check:
 	@$(SSH) "sudo -u postgres psql -d $(DB_NAME) -c 'SELECT postgis_version();' -c '\dt'"
 
 # Applies pending migrations using the already-deployed binary and the server's own
-# secrets.env — no credentials ever leave the host.
+# $(APP_ENV_FILE) — no credentials ever leave the host.
 db-migrate-remote:
 	@echo "▶ Applying migrations on $(DEPLOY_HOST)…"
-	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./secrets.env && set +a && ./$(BINARY) -migrate'"
+	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -migrate'"
 	@echo "✓ remote database is up to date"
 
 # One-time (idempotent) import of the legacy embedded JSON export into production. Only
 # needed once, when first cutting the app over from the embedded JSON to Postgres.
 db-import-remote:
 	@echo "▶ Importing companies on $(DEPLOY_HOST)…"
-	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./secrets.env && set +a && ./$(BINARY) -import'"
+	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -import'"
 	@echo "✓ import complete"
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -604,7 +609,7 @@ help:
 	@echo "              create-admin        Interactively create a staff account (super_admin)"
 	@echo "              test-integration    Run integration-tagged tests against local Postgres"
 	@echo "  DB (prod):  db-install          Install PostgreSQL + PostGIS via apt (idempotent)"
-	@echo "              db-provision        Create app role/database from secrets.env"
+	@echo "              db-provision        Create app role/database from $(APP_ENV_FILE)"
 	@echo "              db-migrate-remote   Apply migrations on the VPS"
 	@echo "              db-import-remote    One-time: load the embedded JSON export into production"
 	@echo "              db-remote-status    systemctl status postgresql"
