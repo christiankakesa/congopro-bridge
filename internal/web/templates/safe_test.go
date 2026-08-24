@@ -10,21 +10,20 @@ import (
 
 func TestLocationPillAddressHTML(t *testing.T) {
 	tests := []struct {
-		name                  string
-		a1, a2, city, country string
-		want                  string
+		name         string
+		a1, a2, city string
+		want         string
 	}{
 		{
 			name: "all parts",
-			a1:   "12 Av. du Commerce", a2: "Gombe", city: "Kinshasa", country: "RD Congo",
+			a1:   "12 Av. du Commerce", a2: "Gombe", city: "Kinshasa",
 			want: `<span itemprop="streetAddress">12 Av. du Commerce</span>, ` +
 				`<span itemprop="streetAddress">Gombe</span>, ` +
-				`<span itemprop="addressLocality">Kinshasa</span>, ` +
-				`<span itemprop="addressCountry">RD Congo</span>`,
+				`<span itemprop="addressLocality">Kinshasa</span>`,
 		},
 		{
 			name: "empty parts skipped, no leading/trailing separators",
-			a1:   "", a2: "", city: "Kinshasa", country: "",
+			a1:   "", a2: "", city: "Kinshasa",
 			want: `<span itemprop="addressLocality">Kinshasa</span>`,
 		},
 		{
@@ -34,17 +33,20 @@ func TestLocationPillAddressHTML(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := LocationPillAddressHTML(tt.a1, tt.a2, tt.city, tt.country); got != tt.want {
+			if got := LocationPillAddressHTML(tt.a1, tt.a2, tt.city); got != tt.want {
 				t.Fatalf("got:\n%s\nwant:\n%s", got, tt.want)
 			}
 		})
 	}
 }
 
-// Regression: the visible location pill ran address parts together with no
-// separator ("GombeKinshasa"). Render one full row the way the search page
-// does and assert the pill separates its spans.
-func TestResultRowLocationPillSeparatesParts(t *testing.T) {
+// Regression tests for the visible location pill, rendered through the full
+// resultRow component the way the search page does:
+//  1. parts must be separated (they used to run together: "GombeKinshasa");
+//  2. country must NOT appear in the pill (DRC-only site, long raw value) —
+//     but must survive in the hidden schema.org block as a <meta>, so the
+//     structured data stays complete.
+func TestResultRowLocationPill(t *testing.T) {
 	sr := data.SearchResult{
 		Company: data.Company{
 			Name:         "Test Sprl",
@@ -52,6 +54,7 @@ func TestResultRowLocationPillSeparatesParts(t *testing.T) {
 			Address:      "12 Av. du Commerce",
 			AddressLine2: "Gombe",
 			City:         "Kinshasa",
+			Country:      "Democratic Republic of the Congo",
 		},
 	}
 	var buf strings.Builder
@@ -63,5 +66,11 @@ func TestResultRowLocationPillSeparatesParts(t *testing.T) {
 	if !strings.Contains(got, `<span itemprop="streetAddress">12 Av. du Commerce</span>, `+
 		`<span itemprop="streetAddress">Gombe</span>, <span itemprop="addressLocality">Kinshasa</span>`) {
 		t.Errorf("location pill parts not comma-separated in rendered row:\n%s", got)
+	}
+	if strings.Contains(got, `<span itemprop="addressCountry">`) {
+		t.Errorf("country must not render in the visible pill:\n%s", got)
+	}
+	if !strings.Contains(got, `<meta itemprop="addressCountry" content="Democratic Republic of the Congo"/>`) {
+		t.Errorf("country missing from the hidden schema.org block:\n%s", got)
 	}
 }

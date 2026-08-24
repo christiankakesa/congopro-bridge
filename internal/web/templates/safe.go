@@ -354,18 +354,21 @@ func MapsURLForRow(address1, address2, city, country string, lat, lon float64, h
 // visible location pill (distinct from the hidden AddressMetaHTML below,
 // which always renders regardless of whether the pill itself does).
 //
+// Country is deliberately NOT shown: the site is DRC-only, and the raw value
+// ("Democratic Republic of the Congo") made every pill long. It stays in the
+// hidden AddressMetaHTML block, so schema.org output is unaffected.
+//
 // The parts are joined with ", " OUTSIDE the spans: inline spans render with
 // no whitespace of their own, so without the separator the visible text ran
 // together ("GombeKinshasa"), while keeping it outside each span keeps the
 // itemprop values clean for microdata parsers.
-func LocationPillAddressHTML(address1, address2, city, country string) string {
+func LocationPillAddressHTML(address1, address2, city string) string {
 	var sb strings.Builder
 	first := true
 	for _, p := range []struct{ prop, val string }{
 		{"streetAddress", address1},
 		{"streetAddress", address2},
 		{"addressLocality", city},
-		{"addressCountry", country},
 	} {
 		if p.val == "" {
 			continue

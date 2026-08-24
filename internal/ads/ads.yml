@@ -30,15 +30,15 @@ x-labels-references:
 
   - sponsored:
       label: &sponsored_label "Sponsored"
-      color: &sponsored_color "#1a73e8"   # Bleu professionnel (confiance, style Google)
+      color: &sponsored_color "#1a73e8" # Bleu professionnel (confiance, style Google)
 
   - promote:
       label: &promote_label "Promote"
-      color: &promote_color "#137333"     # Vert assombri pour lisibilité (croissance)
+      color: &promote_color "#137333" # Vert assombri pour lisibilité (croissance)
 
   - featured:
       label: &featured_label "Featured"
-      color: &featured_color "#ea8600"    # Doré/Ambre assombri (mise en avant premium)
+      color: &featured_color "#ea8600" # Doré/Ambre assombri (mise en avant premium)
 
   - recommended:
       label: &recommended_label "Recommended"
@@ -46,59 +46,59 @@ x-labels-references:
 
   - trending:
       label: &trending_label "Trending"
-      color: &trending_color "#e65100"    # Orange dynamique à fort contraste (viral)
+      color: &trending_color "#e65100" # Orange dynamique à fort contraste (viral)
 
   - verified:
       label: &verified_label "Verified"
-      color: &verified_color "#00838f"    # Cyan/Sarcelle profond (fiabilité)
+      color: &verified_color "#00838f" # Cyan/Sarcelle profond (fiabilité)
 
   - top_choice:
       label: &top_choice_label "Top Choice"
-      color: &top_choice_color "#d32f2f"  # Rouge conversion (décision)
+      color: &top_choice_color "#d32f2f" # Rouge conversion (décision)
 
   - popular:
       label: &popular_label "Popular"
-      color: &popular_color "#8e24aa"     # Violet (engagement social)
+      color: &popular_color "#8e24aa" # Violet (engagement social)
 
   - premium:
       label: &premium_label "Premium"
-      color: &premium_color "#5e35b1"     # Violet profond (luxe)
+      color: &premium_color "#5e35b1" # Violet profond (luxe)
 
   - new:
       label: &new_label "New"
-      color: &new_color "#2e7d32"         # Vert émeraude (découverte, fraîcheur)
+      color: &new_color "#2e7d32" # Vert émeraude (découverte, fraîcheur)
 
   - business:
       label: &business_label "Business"
-      color: &business_color "#3949ab"    # Indigo (corporate)
+      color: &business_color "#3949ab" # Indigo (corporate)
 
   - local:
       label: &local_label "Local"
-      color: &local_color "#00695c"       # Sarcelle foncé (communauté)
+      color: &local_color "#00695c" # Sarcelle foncé (communauté)
 
   - partner:
       label: &partner_label "Partner"
-      color: &partner_color "#5d4037"     # Marron stable (partenariat)
+      color: &partner_color "#5d4037" # Marron stable (partenariat)
 
   - official:
       label: &official_label "Official"
-      color: &official_color "#1565c0"    # Bleu institutionnel
+      color: &official_color "#1565c0" # Bleu institutionnel
 
   - hot:
       label: &hot_label "Hot"
-      color: &hot_color "#d84315"         # Rouge-orange sombre (urgence/activité)
+      color: &hot_color "#d84315" # Rouge-orange sombre (urgence/activité)
 
   - exclusive:
       label: &exclusive_label "Exclusive"
-      color: &exclusive_color "#ad1457"   # Magenta (exclusivité)
+      color: &exclusive_color "#ad1457" # Magenta (exclusivité)
 
   - top_rated:
       label: &top_rated_label "Top Rated"
-      color: &top_rated_color "#1b5e20"   # Vert très sombre (qualité/réputation)
+      color: &top_rated_color "#1b5e20" # Vert très sombre (qualité/réputation)
 
   - ad:
       label: &ad_label "Ad"
-      color: &ad_color "#5f6368"          # Gris neutre moderne
+      color: &ad_color "#5f6368" # Gris neutre moderne
 
 # ─────────────────────────────────────────────────────────────────
 # Congopro Bridge — Premium Ads Campaign
@@ -109,20 +109,145 @@ rotation_sec: 18
 max_per_page: 2
 
 ads:
+  - id: "larose-homepage-featured"
+    active: true
+    title: "La Rose d'Afrique - Waridi wa Kemet"
+    description: "Découvrez le nouveau roman captivant de C.F. Kakesa. Une œuvre littéraire puissante qui explore l'âme et l'histoire de l'Afrique."
+    url: "https://larosedafrique.com/"
+    display_url: "larosedafrique.com"
+    label: *featured_label
+    color: *featured_color
+    period:
+      start: "2026-08-21"
+      end: "2026-12-31"
+    weight: 10
+    placement: "homepage"
+    keywords: []
+  - id: "larose-livre-afrique"
+    active: true
+    title: "La Rose d'Afrique - Waridi wa Kemet"
+    description: "Plongez dans une nouvelle œuvre littéraire de C.F. Kakesa. Un voyage captivant au cœur de l'Afrique à découvrir absolument."
+    url: "https://larosedafrique.com/"
+    display_url: "larosedafrique.com"
+    label: *new_label
+    color: *new_color
+    period:
+      start: "2026-08-21"
+      end: "2026-12-31"
+    weight: 5
+    placement: "search_results"
+    keywords:
+      - "livre"
+      - "roman"
+      - "littérature"
+      - "afrique"
+      - "congo"
+      - "lecture"
+      - "culture"
+      - "kakesa"
+      - "waridi wa kemet"
+      - "rose"
+
+  - id: "nihaopass-homepage"
+    active: true
+    title: "China Made Simple for Foreigners"
+    description: "Master WeChat Pay, Alipay, Didi, and more. Free guides, real tips, no stress - your ultimate China travel companion."
+    url: "https://nihaopass.com"
+    display_url: "nihaopass.com"
+    label: *featured_label
+    color: *featured_color
+    period:
+      start: "2026-08-19"
+      end: "2026-12-31"
+    weight: 10
+    placement: "homepage"
+    keywords: []
+  - id: "nihaopass-travel-guide"
+    active: true
+    title: "China Travel Guide 2026"
+    description: "Set up Alipay, WeChat Pay & Didi before you go. Free step-by-step guides for foreign travelers. No guesswork."
+    url: "https://nihaopass.com"
+    display_url: "nihaopass.com"
+    label: *recommended_label
+    color: *recommended_color
+    period:
+      start: "2026-08-19"
+      end: "2026-12-31"
+    weight: 5
+    placement: "search_results"
+    keywords:
+      - "china travel"
+      - "travel guide"
+      - "alipay"
+      - "wechat pay"
+      - "didi"
+      - "foreigner"
+      - "visa"
+      - "trip"
+      - "beijing"
+      - "shanghai"
+      - "payment"
+      - "tourist"
+      - "china trip"
+      - "travel tips"
+      - "chinese apps"
+
+  - id: "getemojisnap-homepage"
+    active: true
+    title: "GetEmojiSnap : Copiez vos Emojis"
+    description: "Catalogue gratuit d'émojis à copier-coller. Parfait pour vos réseaux, messages et documents. 100% gratuit, sans inscription."
+    url: "https://getemojisnap.com"
+    display_url: "getemojisnap.com"
+    label: *featured_label
+    color: *featured_color
+    period:
+      start: "2026-08-18"
+      end: "2026-12-31"
+    weight: 10
+    placement: "homepage"
+    keywords: []
+  - id: "getemoji-emoji-copy-paste"
+    active: true
+    title: "GetEmoji: Copy & Paste Emojis"
+    description: "Free and easy emoji catalog. Browse, copy, and paste emojis for your social posts, messages, and documents. No sign-up needed."
+    url: "https://getemoji.com/"
+    display_url: "getemoji.com"
+    label: *featured_label
+    color: *featured_color
+    period:
+      start: "2026-08-18"
+      end: "2026-12-31"
+    weight: 5
+    placement: "search_results"
+    keywords:
+      - "emoji"
+      - "emojis"
+      - "emoticon"
+      - "emoticons"
+      - "symbol"
+      - "symbols"
+      - "smiley"
+      - "smileys"
+      - "copy paste"
+      - "social media"
+      - "messaging"
+      - "text"
+      - "character"
+      - "unicode"
+
   # ─────────────────────────────────────────────────────────────────
   # Congopro Bridge — Ads Configuration (Recrutement Commerciaux)
   # ─────────────────────────────────────────────────────────────────
   - id: "recrutement-sales-kin-homepage"
-    active: false
+    active: true
     title: "Devenez Partenaire (35% Commission)"
     description: "Vendez nos solutions publicitaires. Indépendant, horaires flexibles, fort potentiel de revenus. Postulez en DM !"
     url: "https://www.linkedin.com/company/congopro/jobs"
     display_url: "linkedin.com/company/congopro/jobs"
     label: "OPPORTUNITÉ"
     color: "#FF5722"
-    weight: 10
+    weight: 5
     placement: "homepage"
-
   - id: "recrutement-sales-kin-search"
     active: true
     title: "Congopro recrute des Commerciaux à Kinshasa"
@@ -170,10 +295,10 @@ ads:
     color: *verified_color
     period:
       start: "2026-05-09"
-      end: "2026-08-31"
-    weight: 10
+      end: "2026-09-30"
+    weight: 8
     keywords: []
-  
+
   - id: "heritier-vietcongobridge-free-congopro-partnership"
     active: true
     title: "VietCongo Bridge : Fret Vietnam - RDC"
@@ -184,8 +309,8 @@ ads:
     color: *verified_color
     period:
       start: "2026-05-14"
-      end: "2026-08-31"
-    weight: 10
+      end: "2026-09-30"
+    weight: 8
     keywords: []
 
   - id: "congopro-business-discovery"

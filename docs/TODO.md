@@ -1,17 +1,20 @@
 # TODO
 
+Later: 
+  * add a contact form: must add support lnk (Telegram) in contact page
+  * remove Support link from the footer add a contact link
+  * From /help, /privacy, /terms change the telegram link to contact page link
+  * From Homepage, ← Back to home link must not appears as we already are at homepage
+
 ## Now
 
 * (nothing — pull from Next when ready)
 
 ## Next (Phase 2 — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* Customer accounts (email OTP over OVH EmailPro SMTP — sender ready and
-  proven (`internal/mail`, `make mail-test`, Mailpit capture via
-  `make mail-up`); OVH account created, SPF/DKIM/DMARC propagating. Still
-  needed: the customers table + the OTP flow itself).
-* Company claim/dispute workflow + admin queue.
 * Ads CMS replacing `ads.yml`, with sales-rep attribution.
+* Surface "verified owner" on public company profiles (data exists since
+  claims landed; display is a deliberate separate step).
 * Stripe integration for promoted listings + ads — **blocked on account
   creation**. When the account exists we will need: the API keys
   (`STRIPE_SECRET_KEY`), a webhook endpoint on our side (HTTPS, behind
@@ -65,6 +68,20 @@ lands in Gmail spam on reputation alone)
 
 ## Done (highlights — full history in git)
 
+* Company claims / dispute workflow (2026-08-24): customers claim companies
+  from the profile page (`Réclamer`), staff arbitrate in `/admin/claims`
+  (approve/reject with note, one form two `formaction` buttons), approval
+  durably sets `companies.claimed_by_customer_id`; login gained `?next=`
+  redirects; decision emails to claimants. Migration 00004, `internal/claims`,
+  partial unique indexes arbitrate concurrency (one pending / one approved
+  per company).
+* Customer accounts (2026-08-18): passwordless email-OTP login under
+  `/account` — `customers`/`customer_sessions`/`otp_codes` (migration 00003),
+  `internal/customers`, auto-create on first verified login, 10-min codes
+  (SHA-256 at rest, 5 attempts, 60s cooldown, atomic single-use), 30-day
+  sessions, SameSite=Strict cookie, OVH EmailPro + Mailpit capture, rate
+  limits on both POSTs. Includes the repo's first integration tests
+  (`make test-integration`).
 * AI answer fallback: when the model answers "je l'ignore", the user now gets
   a grounded insight computed from the search results (count, top cities,
   top activities) instead of a dead end — `internal/data/engine.go`.

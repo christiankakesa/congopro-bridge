@@ -1,8 +1,13 @@
 /build/
 /.env
 /TODO.md
-.vscode/
-.claude/
-.zcode/
-.utmp/
 /backups/
+
+# editor
+*.swp
+.utmp/
+.idea/
+.vscode/
+.zcode/
+.claude/*
+!.claude/skills/

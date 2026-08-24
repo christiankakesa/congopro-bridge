@@ -18,6 +18,7 @@ import (
 	"congopro-bridge/internal/data"
 	"congopro-bridge/internal/db"
 	"congopro-bridge/internal/logger"
+	"congopro-bridge/internal/mail"
 	"congopro-bridge/internal/middlewares/ratelimiter"
 )
 
@@ -119,6 +120,16 @@ func main() {
 
 	apiAppEngine := &api.AppEngine{Engine: engine, DB: pool}
 
+	// Transactional email (customer OTP). Empty SMTP_HOST disables email —
+	// account login then answers 503 instead of half-working.
+	if mailCfg, enabled := cfg.MailConfig(); enabled {
+		apiAppEngine.Mailer = mail.SMTPSender{Config: mailCfg}
+		apiAppEngine.MailEnabled = true
+		log.Info().Msgf("[startup] email enabled via %s:%d (SMTP_TLS=%s)", mailCfg.Host, mailCfg.Port, mailCfg.TLSMode)
+	} else {
+		log.Info().Msg("[startup] email disabled (SMTP_HOST empty) — /account login will return 503")
+	}
+
 	mux := http.NewServeMux()
 
 	// Static
@@ -165,6 +176,24 @@ func main() {
 	mux.HandleFunc("POST /admin/companies/new", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminCompanyCreateHandler)))
 	mux.HandleFunc("GET /admin/companies/{id}/edit", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminCompanyEditFormHandler)))
 	mux.HandleFunc("POST /admin/companies/{id}/edit", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminCompanyUpdateHandler)))
+	mux.HandleFunc("GET /admin/claims", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimsListHandler)))
+	mux.HandleFunc("POST /admin/claims/{id}/approve", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimApproveHandler)))
+	mux.HandleFunc("POST /admin/claims/{id}/reject", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimRejectHandler)))
+
+	// Customer accounts (passwordless email OTP)
+	otpRequestRL := ratelimiter.NewRateLimiter(5) // sending mail costs money
+	otpVerifyRL := ratelimiter.NewRateLimiter(10) // per-code attempt cap is the real guard
+	mux.HandleFunc("GET /account", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireCustomerAuth(apiAppEngine.AccountDashboardHandler)))
+	mux.HandleFunc("GET /account/login", apiAppEngine.WithSecurityHeaders(apiAppEngine.AccountLoginPageHandler))
+	mux.HandleFunc("POST /account/login", apiAppEngine.WithSecurityHeaders(otpRequestRL.WithRateLimit(apiAppEngine.AccountRequestCodeHandler)))
+	mux.HandleFunc("GET /account/verify", apiAppEngine.WithSecurityHeaders(apiAppEngine.AccountVerifyPageHandler))
+	mux.HandleFunc("POST /account/verify", apiAppEngine.WithSecurityHeaders(otpVerifyRL.WithRateLimit(apiAppEngine.AccountVerifyCodeHandler)))
+	mux.HandleFunc("POST /account/logout", apiAppEngine.WithSecurityHeaders(apiAppEngine.AccountLogoutHandler))
+
+	// Customer claims on companies (behind customer auth)
+	claimSubmitRL := ratelimiter.NewRateLimiter(5)
+	mux.HandleFunc("GET /account/claim", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireCustomerAuth(apiAppEngine.AccountClaimFormHandler)))
+	mux.HandleFunc("POST /account/claim", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireCustomerAuth(claimSubmitRL.WithRateLimit(apiAppEngine.AccountClaimSubmitHandler))))
 
 	// Default routes
 	mux.HandleFunc("/", apiAppEngine.WithSecurityHeaders(apiAppEngine.FrontendHandler))

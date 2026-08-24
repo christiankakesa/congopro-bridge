@@ -25,6 +25,7 @@ import (
 	"congopro-bridge/internal/ads"
 	"congopro-bridge/internal/constants"
 	"congopro-bridge/internal/data"
+	"congopro-bridge/internal/mail"
 	"congopro-bridge/internal/web"
 	"congopro-bridge/internal/web/templates"
 )
@@ -32,6 +33,12 @@ import (
 type AppEngine struct {
 	Engine *data.Engine
 	DB     *pgxpool.Pool
+	// Mailer sends transactional email (customer OTP codes). nil when email
+	// is not configured — account features then degrade to a clean 503
+	// instead of half-working. MailEnabled mirrors "not nil" for template
+	// logic without interface-nil pitfalls.
+	Mailer      mail.Mailer
+	MailEnabled bool
 }
 
 type ErrorResponse struct {

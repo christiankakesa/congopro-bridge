@@ -75,7 +75,7 @@ func resultRow(sr data.SearchResult) templ.Component {
 		mapsLink := MapsURLForRow(c.Address, c.AddressLine2, c.City, c.Country, lat, lon, hasLocation)
 		showLocationPill := hasFullLocation && mapsLink != ""
 
-		locationPillAddress := LocationPillAddressHTML(c.Address, c.AddressLine2, c.City, c.Country)
+		locationPillAddress := LocationPillAddressHTML(c.Address, c.AddressLine2, c.City)
 		geoMeta := GeoMetaHTML(lat, lon, hasLocation)
 		addressMeta := AddressMetaHTML(c.Address, c.AddressLine2, c.City, c.Country)
 
