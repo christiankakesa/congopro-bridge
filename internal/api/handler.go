@@ -26,6 +26,7 @@ import (
 	"congopro-bridge/internal/constants"
 	"congopro-bridge/internal/data"
 	"congopro-bridge/internal/mail"
+	"congopro-bridge/internal/promotions"
 	"congopro-bridge/internal/web"
 	"congopro-bridge/internal/web/templates"
 )
@@ -42,6 +43,12 @@ type AppEngine struct {
 	// logic without interface-nil pitfalls.
 	Mailer      mail.Mailer
 	MailEnabled bool
+
+	// Stripe promoted listings. StripeCheckout nil or StripeEnabled false
+	// disables the promote endpoints (clean 503).
+	StripeCheckout      CheckoutCreator
+	StripeEnabled       bool
+	StripeWebhookSecret string
 }
 
 type ErrorResponse struct {
@@ -165,7 +172,7 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		if htmxReq {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusServiceUnavailable)
-			templates.SearchResultsFragment("", nil, 0, "server still indexing, please retry").Render(r.Context(), w)
+			templates.SearchResultsFragment("", nil, 0, "server still indexing, please retry", nil).Render(r.Context(), w)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -201,7 +208,7 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		if searchErr != "" {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-		templates.SearchResultsFragment(q, results, len(results), searchErr).Render(r.Context(), w)
+		templates.SearchResultsFragment(q, results, len(results), searchErr, a.promotedSet(r, results)).Render(r.Context(), w)
 		return
 	}
 
@@ -384,7 +391,11 @@ func (a *AppEngine) CompanyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=300") // 5 minutes
 
-	if err := templates.CompanyPage(title, canonicalURL(r), nonce, cssHash, company).Render(r.Context(), w); err != nil {
+	promoted, err := promotions.IsPromoted(r.Context(), a.DB, company.ID)
+	if err != nil {
+		log.Error().Msgf("[company] promoted lookup: %v", err)
+	}
+	if err := templates.CompanyPage(title, canonicalURL(r), nonce, cssHash, company, promoted).Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[templates] render company page %q: %v", slug, err)
 	}
 }

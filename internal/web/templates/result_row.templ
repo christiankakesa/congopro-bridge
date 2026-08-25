@@ -9,7 +9,7 @@ import (
 
 // resultRow is a Go port of the frontend's renderRow(): one row in a
 // multi-result search results list.
-templ resultRow(sr data.SearchResult) {
+templ resultRow(sr data.SearchResult, promoted bool) {
 	{{
 		c := sr.Company
 		name := c.Name
@@ -75,6 +75,9 @@ templ resultRow(sr data.SearchResult) {
 				<a href={ templ.URL("/company/" + c.NameSeo) } target="_self" class="result-title hover:underline flex-1 min-w-0">
 					<span itemprop="name">{ name }</span>
 				</a>
+				if promoted {
+					<span class="shrink-0 mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Promu</span>
+				}
 				if hasScore {
 					<span class="score-badge shrink-0 mt-1">{ fmt.Sprintf("%d%%", scorePct) }</span>
 				}

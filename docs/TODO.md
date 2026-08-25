@@ -14,14 +14,10 @@ Later:
 
 * Surface "verified owner" on public company profiles (data exists since
   claims landed; display is a deliberate separate step).
-* Stripe integration for promoted listings + ads — **blocked on account
-  creation**. When the account exists we will need: the API keys
-  (`STRIPE_SECRET_KEY`), a webhook endpoint on our side (HTTPS, behind
-  Traefik), the webhook signing secret (`STRIPE_WEBHOOK_SECRET`), and
-  handling for at least `checkout.session.completed`,
-  `customer.subscription.updated`, and `customer.subscription.deleted`.
-  Test locally with the Stripe CLI (`stripe listen --forward-to`).
 * Telegram bot as notification/quick-action layer on top of the CMS.
+* Promoted-listing ranking (pin/badge-weight in Meilisearch) — v1 ships
+  badges only.
+* Admin revenue view (promotions + ads attribution).
 
 ## Later
 
@@ -67,6 +63,13 @@ lands in Gmail spam on reputation alone)
 
 ## Done (highlights — full history in git)
 
+* Stripe promoted listings (2026-08-25): ownership-gated (approved claim
+  required) monthly subscriptions via Stripe Checkout — migration 00006
+  (`promotions`), `internal/promotions`, webhook
+  `POST /webhooks/stripe` (signature-verified, idempotent appliers) for
+  checkout.session.completed / subscription.updated / deleted, "Promu"
+  badges on profiles + result rows, `/account/promote` with price display.
+  All-or-nothing `STRIPE_*` env keys.
 * Ads CMS (2026-08-25): campaigns in Postgres (migration 00005), editable in
   `/admin/ads` without redeploy — global settings incl. the live kill
   switch, campaign CRUD with sales attribution (sold_by / customer / price),

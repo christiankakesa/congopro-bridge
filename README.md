@@ -37,8 +37,9 @@ public site (templ + htmx)      /admin (templ + htmx)
 
 Further reading: [ARCHITECTURE.md](docs/ARCHITECTURE.md) (current system),
 [BACKEND_PROPOSAL.md](docs/BACKEND_PROPOSAL.md) (roadmap),
-[DEPLOY.md](docs/DEPLOY.md) (production), [VISION.md](docs/VISION.md)
-(long-term direction).
+[DEPLOY.md](docs/DEPLOY.md) (production),
+[PROMOTIONS.md](docs/PROMOTIONS.md) (Stripe promoted listings),
+[VISION.md](docs/VISION.md) (long-term direction).
 
 ## Prerequisites
 
@@ -92,6 +93,9 @@ whole stack including the app in Docker: `make docker-up`.
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | *(empty)* | Full mailbox address + password (required for `starttls`/`implicit`; must be **empty** for `none`) |
 | `SMTP_FROM` / `SMTP_FROM_NAME` | *(empty)* | Envelope sender — a mailbox actually owned on the domain |
 | `SMTP_TLS` | `starttls` | `starttls` \| `implicit` \| `none` (local capture via Mailpit, no credentials — see `make mail-up`) |
+| `STRIPE_SECRET_KEY` | *(empty = disabled)* | Stripe key for promoted listings — all three Stripe keys required together |
+| `STRIPE_WEBHOOK_SECRET` | *(empty)* | Signing secret for `POST /webhooks/stripe` (locally: `stripe listen --forward-to localhost:8090/webhooks/stripe`) |
+| `STRIPE_PRICE_ID` | *(empty)* | Monthly recurring Price of the "Mise en avant" product |
 
 ## CLI flags
 

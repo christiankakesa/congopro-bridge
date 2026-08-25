@@ -114,6 +114,9 @@ func main() {
 	if err := cfg.ValidateSMTP(); err != nil {
 		log.Fatal().Msgf("[startup] invalid SMTP configuration: %v", err)
 	}
+	if err := cfg.ValidateStripe(); err != nil {
+		log.Fatal().Msgf("[startup] invalid Stripe configuration: %v", err)
+	}
 
 	ratelimiter.SetTrustedProxies(cfg.TrustedProxies)
 
@@ -152,6 +155,17 @@ func main() {
 		log.Info().Msgf("[startup] email enabled via %s:%d (SMTP_TLS=%s)", mailCfg.Host, mailCfg.Port, mailCfg.TLSMode)
 	} else {
 		log.Info().Msg("[startup] email disabled (SMTP_HOST empty) — /account login will return 503")
+	}
+
+	// Promoted listings (Stripe). All-or-nothing keys; none disables the
+	// promote endpoints cleanly.
+	if cfg.StripeEnabled() {
+		apiAppEngine.StripeCheckout = api.NewStripeService(cfg.StripeSecretKey, cfg.StripePriceID)
+		apiAppEngine.StripeEnabled = true
+		apiAppEngine.StripeWebhookSecret = cfg.StripeWebhookSecret
+		log.Info().Msgf("[startup] Stripe enabled (price %s)", cfg.StripePriceID)
+	} else {
+		log.Info().Msg("[startup] Stripe not configured — promoted listings disabled")
 	}
 
 	mux := http.NewServeMux()
@@ -219,6 +233,15 @@ func main() {
 	mux.HandleFunc("GET /account/verify", apiAppEngine.WithSecurityHeaders(apiAppEngine.AccountVerifyPageHandler))
 	mux.HandleFunc("POST /account/verify", apiAppEngine.WithSecurityHeaders(otpVerifyRL.WithRateLimit(apiAppEngine.AccountVerifyCodeHandler)))
 	mux.HandleFunc("POST /account/logout", apiAppEngine.WithSecurityHeaders(apiAppEngine.AccountLogoutHandler))
+
+	// Promoted listings (customer auth; checkout opens a Stripe session)
+	promoteCheckoutRL := ratelimiter.NewRateLimiter(5)
+	mux.HandleFunc("GET /account/promote", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireCustomerAuth(apiAppEngine.AccountPromotePageHandler)))
+	mux.HandleFunc("POST /account/promote", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireCustomerAuth(promoteCheckoutRL.WithRateLimit(apiAppEngine.AccountPromoteCheckoutHandler))))
+
+	// Stripe webhook — BARE registration: signature verification needs the
+	// raw body, so no middleware may parse the request first.
+	mux.HandleFunc("POST /webhooks/stripe", apiAppEngine.StripeWebhookHandler)
 
 	// Customer claims on companies (behind customer auth)
 	claimSubmitRL := ratelimiter.NewRateLimiter(5)

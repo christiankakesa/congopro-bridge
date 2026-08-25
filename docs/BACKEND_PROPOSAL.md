@@ -103,7 +103,7 @@ Worth pursuing, but as a **later phase**, not a v1 requirement. A paid MCP serve
 ## Phased rollout
 
 1. **Foundation** — ✅ **shipped** (Postgres + PostGIS schema; company data migrated off the embedded JSON; staff auth + roles; admin CRUD for companies). One leftover: pointing the merge/dedupe tooling (`cmd/cleanr`) at Postgres rows instead of the legacy JSON — tracked in `TODO.md`.
-2. **Trust & revenue plumbing** — ✅ **customer email-OTP auth shipped** (2026-08-18: `/account` login, `internal/customers`, migration 00003; verified end-to-end against OVH EmailPro and Mailpit). Also shipped: company claim/dispute workflow with an admin queue (2026-08-24), and the ads CMS with sales attribution (2026-08-25) — **Phase 2 complete**. Phase 3 (subscriptions + Stripe + Telegram) is next.
+2. **Trust & revenue plumbing** — ✅ **customer email-OTP auth shipped** (2026-08-18: `/account` login, `internal/customers`, migration 00003; verified end-to-end against OVH EmailPro and Mailpit). Also shipped: company claim/dispute workflow with an admin queue (2026-08-24), and the ads CMS with sales attribution (2026-08-25) — **Phase 2 complete**. Phase 3 started: Stripe promoted-listing subscriptions shipped (2026-08-25 — ownership-gated checkout, webhook lifecycle, badges). Remaining in Phase 3: Telegram bot.
 3. **Monetize promoted listings** — subscriptions + payment integration; Telegram bot as the notification/quick-action layer on top of the CMS (dispute alerts, merge approvals).
 4. **Opportunistic** — MCP/BI product, further multi-country tooling, geo-dedup automation.
 

@@ -3,6 +3,7 @@ package templates
 import (
 	"congopro-bridge/internal/claims"
 	"congopro-bridge/internal/customers"
+	"congopro-bridge/internal/promotions"
 )
 
 // Customer account pages under /account: passwordless email-OTP login and a
@@ -282,3 +283,95 @@ func claimRelationshipLabel(r string) string {
 	}
 }
 
+
+templ AccountPromotePage(nonce, email string, eligible []promotions.EligibleCompany, current []promotions.Promotion, priceStr string, ok, canceled bool) {
+	@AccountLayout("Mise en avant", nonce, email) {
+		<div class="max-w-lg mt-8">
+			<h1 class="text-xl font-sora font-semibold text-gray-900 mb-1">Mise en avant</h1>
+			<p class="text-sm text-gray-500 mb-6">
+				Votre entreprise apparaît avec un badge «&nbsp;Promu&nbsp;» sur sa fiche et dans les résultats.
+				if priceStr != "" {
+					{ priceStr }, sans engagement — résiliable à tout moment.
+				}
+			</p>
+
+			if ok {
+				<div class="mb-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3">
+					Paiement confirmé — votre mise en avant est active (l'activation peut prendre quelques secondes).
+				</div>
+			}
+			if canceled {
+				<div class="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm px-4 py-3">
+					Paiement annulé — aucun montant n'a été prélevé.
+				</div>
+			}
+
+			if len(current) > 0 {
+				<h2 class="text-base font-sora font-semibold text-gray-900 mt-6 mb-3">Mes mises en avant</h2>
+				<div class="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100 mb-6">
+					for _, pr := range current {
+						<div class="px-4 py-3 flex items-center justify-between gap-3">
+							<div class="min-w-0">
+								<p class="text-sm font-medium text-gray-900 truncate">{ pr.CompanyName }</p>
+								if pr.CurrentPeriodEnd != nil && pr.Status != "canceled" {
+									<p class="text-xs text-gray-400 mt-0.5">Renouvellement le { pr.CurrentPeriodEnd.Format("02/01/2006") }</p>
+								}
+							</div>
+							@promoStatusBadge(pr.Status)
+						</div>
+					}
+				</div>
+			}
+
+			<h2 class="text-base font-sora font-semibold text-gray-900 mt-6 mb-3">Promouvoir une entreprise</h2>
+			if len(eligible) > 0 {
+				<div class="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
+					for _, co := range eligible {
+						{{ citySuffix := ""; if co.City != "" { citySuffix = " · " + co.City } }}
+						<div class="px-4 py-3 flex items-center justify-between gap-3">
+							<div class="min-w-0">
+								<p class="text-sm font-medium text-gray-900 truncate">{ co.Name }</p>
+								if co.Activity != "" || co.City != "" {
+									<p class="text-xs text-gray-400 mt-0.5 truncate">{ co.Activity + citySuffix }</p>
+								}
+							</div>
+							<form method="post" action="/account/promote" class="shrink-0">
+								<input type="hidden" name="company_slug" value={ co.NameSeo }/>
+								<button
+									type="submit"
+									class="rounded-lg bg-gray-900 hover:bg-gray-800 text-white text-xs font-medium px-3.5 py-2 transition-colors"
+								>
+									Promouvoir
+								</button>
+							</form>
+						</div>
+					}
+				</div>
+				<p class="mt-3 text-xs text-gray-400">Le paiement est traité par Stripe. Aucune donnée bancaire ne transite par Congopro.</p>
+			} else {
+				<div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-500">
+					Aucune entreprise éligible. Pour promouvoir une entreprise, réclamez-la d'abord depuis sa fiche
+					(<span class="text-gray-700">«&nbsp;Réclamer&nbsp;»</span>) et attendez la validation de notre équipe.
+				</div>
+			}
+		</div>
+	}
+}
+
+func promoStatusBadgeStyle(status string) (string, string) {
+	switch status {
+	case "active":
+		return "Active", "bg-green-50 text-green-700 border border-green-200"
+	case "past_due":
+		return "Paiement en attente", "bg-yellow-50 text-yellow-700 border border-yellow-200"
+	case "pending":
+		return "En cours", "bg-blue-50 text-blue-700 border border-blue-200"
+	default:
+		return "Résiliée", "bg-gray-100 text-gray-500 border border-gray-200"
+	}
+}
+
+templ promoStatusBadge(status string) {
+	{{ label, cls := promoStatusBadgeStyle(status) }}
+	<span class={ "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap " + cls }>{ label }</span>
+}

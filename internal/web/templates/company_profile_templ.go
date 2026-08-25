@@ -19,7 +19,7 @@ import (
 // page — the true-SSR replacement for the old client-side flow where
 // /company/{slug} served the generic SPA shell and JS resolved the company
 // via a "-company-slug:" search-endpoint hack.
-func CompanyPage(title, canonicalURL, nonce, cssVersion string, c *data.Company) templ.Component {
+func CompanyPage(title, canonicalURL, nonce, cssVersion string, c *data.Company, promoted bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -60,7 +60,7 @@ func CompanyPage(title, canonicalURL, nonce, cssVersion string, c *data.Company)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = companyProfile(c).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = companyProfile(c, promoted).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -125,7 +125,7 @@ func companyTopBar() templ.Component {
 // callers embedding this in a page that already has the SPA's global
 // delegated .js-share-btn click handler (search results) don't need it;
 // the standalone CompanyPage does and includes it separately.
-func companyProfile(c *data.Company) templ.Component {
+func companyProfile(c *data.Company, promoted bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {

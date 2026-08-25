@@ -11,12 +11,12 @@ import (
 // renderResults(): the primary body swaps into #resultsList, while
 // #statsBar and #emptyState update themselves via out-of-band swaps so a
 // single response can drive all three regions like the original JS did.
-templ SearchResultsFragment(q string, results []data.SearchResult, total int, errMsg string) {
+templ SearchResultsFragment(q string, results []data.SearchResult, total int, errMsg string, promoted map[string]bool) {
 	if errMsg == "" && len(results) == 1 {
-		@companyProfile(&results[0].Company)
+		@companyProfile(&results[0].Company, promoted[results[0].Company.ID])
 	} else if errMsg == "" && len(results) > 1 {
 		for _, r := range results {
-			@resultRow(r)
+			@resultRow(r, promoted[r.Company.ID])
 		}
 	}
 	<div id="statsBar" hx-swap-oob="outerHTML" class={ statsBarClass(errMsg, results) }>

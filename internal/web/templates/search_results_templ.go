@@ -19,7 +19,7 @@ import (
 // renderResults(): the primary body swaps into #resultsList, while
 // #statsBar and #emptyState update themselves via out-of-band swaps so a
 // single response can drive all three regions like the original JS did.
-func SearchResultsFragment(q string, results []data.SearchResult, total int, errMsg string) templ.Component {
+func SearchResultsFragment(q string, results []data.SearchResult, total int, errMsg string, promoted map[string]bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -41,13 +41,13 @@ func SearchResultsFragment(q string, results []data.SearchResult, total int, err
 		}
 		ctx = templ.ClearChildren(ctx)
 		if errMsg == "" && len(results) == 1 {
-			templ_7745c5c3_Err = companyProfile(&results[0].Company).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = companyProfile(&results[0].Company, promoted[results[0].Company.ID]).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else if errMsg == "" && len(results) > 1 {
 			for _, r := range results {
-				templ_7745c5c3_Err = resultRow(r).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = resultRow(r, promoted[r.Company.ID]).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

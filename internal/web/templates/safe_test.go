@@ -58,7 +58,7 @@ func TestResultRowLocationPill(t *testing.T) {
 		},
 	}
 	var buf strings.Builder
-	if err := resultRow(sr).Render(context.Background(), &buf); err != nil {
+	if err := resultRow(sr, false).Render(context.Background(), &buf); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	got := buf.String()

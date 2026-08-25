@@ -63,6 +63,8 @@ make deploy-full         # uploads the binary, installs the app's systemd unit, 
 make db-migrate-remote   # applies schema migrations against the new database
 make db-import-remote    # one-time: loads the legacy embedded JSON export into Postgres
 make db-import-ads-remote # one-time: ads CMS cutover, loads the legacy ads.yml campaigns
+make service-restart      # REQUIRED after db-import-ads-remote: the serving snapshot
+                          # loads at boot; the import CLI cannot reload a running process
 make db-backup-install   # installs the daily backup timer
 ```
 

@@ -54,6 +54,7 @@ Deliberately boring: the build order and the reasoning behind every choice
 | Auth | `internal/auth/` | bcrypt password hashing (72-byte guard), TOTP, DB-backed sessions |
 | Rate limiting | `internal/middlewares/ratelimiter/` | per-endpoint; `TRUSTED_PROXIES` stops forwarding-header spoofing |
 | Migrations | `internal/db/migrations/` | goose format, embedded via `go:embed`, applied by `<binary> -migrate` |
+| Promoted listings | `internal/promotions` + `promotions` table | Stripe Checkout subscriptions gated on approved claims; webhook (`/webhooks/stripe`) drives lifecycle; badges on profile/results |
 | Ads | `internal/ads` + `ads`/`ads_settings` tables | DB-backed CMS (`/admin/ads`), in-memory serving snapshot reloaded on admin writes; `ads.yml` remains only as the one-time `-import-ads` source |
 | Templates | `internal/web/templates/` | `.templ` sources; generated `_templ.go` files are committed |
 

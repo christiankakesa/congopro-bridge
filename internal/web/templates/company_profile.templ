@@ -11,11 +11,11 @@ import (
 // page — the true-SSR replacement for the old client-side flow where
 // /company/{slug} served the generic SPA shell and JS resolved the company
 // via a "-company-slug:" search-endpoint hack.
-templ CompanyPage(title, canonicalURL, nonce, cssVersion string, c *data.Company) {
+templ CompanyPage(title, canonicalURL, nonce, cssVersion string, c *data.Company, promoted bool) {
 	@Layout(title, canonicalURL, nonce, cssVersion) {
 		@companyTopBar()
 		<main class="px-4 sm:px-6 pt-5 pb-20 sm:ml-[172px]">
-			@companyProfile(c)
+			@companyProfile(c, promoted)
 		</main>
 		@shareButtonScript(nonce)
 		@viewItemTrackingScript(nonce)
@@ -66,7 +66,7 @@ templ companyTopBar() {
 // callers embedding this in a page that already has the SPA's global
 // delegated .js-share-btn click handler (search results) don't need it;
 // the standalone CompanyPage does and includes it separately.
-templ companyProfile(c *data.Company) {
+templ companyProfile(c *data.Company, promoted bool) {
 	{{
 		name := c.Name
 		if name == "" {

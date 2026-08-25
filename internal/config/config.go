@@ -45,6 +45,18 @@ type Config struct {
 	SMTPFrom     string
 	SMTPFromName string
 	SMTPTLSMode  string // starttls | implicit | none (see internal/mail)
+
+	// Stripe — all-or-nothing like SMTP: any key set means all three are
+	// required (secret, webhook signing secret, price id for the promote
+	// plan); none set disables promoted listings cleanly.
+	StripeSecretKey     string
+	StripeWebhookSecret string
+	StripePriceID       string
+}
+
+// StripeEnabled reports whether promoted listings (Stripe) are configured.
+func (c *Config) StripeEnabled() bool {
+	return c.StripeSecretKey != ""
 }
 
 // MailConfig returns the SMTP account for sending, and whether email is
@@ -71,6 +83,24 @@ func (c *Config) MailConfig() (mail.Config, bool) {
 		FromAddress: c.SMTPFrom,
 		FromName:    c.SMTPFromName,
 	}, true
+}
+
+// ValidateStripe enforces the all-or-nothing Stripe contract at boot:
+// any key set requires all three; none set is valid (feature disabled).
+func (c *Config) ValidateStripe() error {
+	n := 0
+	for _, v := range []string{c.StripeSecretKey, c.StripeWebhookSecret, c.StripePriceID} {
+		if v != "" {
+			n++
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	if n != 3 {
+		return fmt.Errorf("config: Stripe requires STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_PRICE_ID together (%d of 3 set)", n)
+	}
+	return nil
 }
 
 // ValidateSMTP enforces the all-or-nothing SMTP contract at boot: a
@@ -193,6 +223,10 @@ func Load() *Config {
 	cfg.SMTPFrom = unquote(os.Getenv("SMTP_FROM"))
 	cfg.SMTPFromName = unquote(os.Getenv("SMTP_FROM_NAME"))
 	cfg.SMTPTLSMode = unquote(os.Getenv("SMTP_TLS"))
+
+	cfg.StripeSecretKey = unquote(os.Getenv("STRIPE_SECRET_KEY"))
+	cfg.StripeWebhookSecret = unquote(os.Getenv("STRIPE_WEBHOOK_SECRET"))
+	cfg.StripePriceID = unquote(os.Getenv("STRIPE_PRICE_ID"))
 
 	// Separate embedder endpoint only makes sense when explicitly set;
 	// otherwise Meilisearch uses the same Ollama as the app itself.
