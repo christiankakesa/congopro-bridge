@@ -150,7 +150,7 @@ internal/data/         engine: Postgres load → Meilisearch index, Ollama calls
 internal/auth/         sessions, TOTP, password hashing
 internal/db/           goose migrations (embedded)
 internal/web/          templ templates, CSS, embedded static assets
-internal/ads/          YAML-driven ad campaigns
+internal/ads/          ads CMS: DB-backed campaigns + in-memory serving snapshot
 deploy/                systemd units, Traefik config, Meilisearch config
 ```
 

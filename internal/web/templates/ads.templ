@@ -45,12 +45,12 @@ func adAccentStyle(color string) string {
 // hx-trigger="every Ns" attribute carried in the fragment. #resultsLabel
 // updates via an out-of-band swap since it's a sibling element ads own the
 // visibility of, not search.
-templ AdsResultsFragment(q string, slots []ads.AdWire) {
+templ AdsResultsFragment(q string, slots []ads.AdWire, rotationSec int) {
 	<div
 		id="adContainer"
 		class={ templ.KV("hidden", len(slots) == 0), "w-full mb-2" }
 		hx-get={ "/api/v1/ads?q=" + url.QueryEscape(q) }
-		hx-trigger={ fmt.Sprintf("every %ds", ads.AdsConfig.RotationSec) }
+		hx-trigger={ fmt.Sprintf("every %ds", rotationSec) }
 		hx-swap="outerHTML"
 	>
 		for _, ad := range slots {

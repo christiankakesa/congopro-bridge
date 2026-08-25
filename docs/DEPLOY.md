@@ -62,6 +62,7 @@ make db-provision        # generates a DB password into congopro-bridge.env, cre
 make deploy-full         # uploads the binary, installs the app's systemd unit, starts it
 make db-migrate-remote   # applies schema migrations against the new database
 make db-import-remote    # one-time: loads the legacy embedded JSON export into Postgres
+make db-import-ads-remote # one-time: ads CMS cutover, loads the legacy ads.yml campaigns
 make db-backup-install   # installs the daily backup timer
 ```
 

@@ -53,7 +53,7 @@ func adAccentStyle(color string) string {
 // hx-trigger="every Ns" attribute carried in the fragment. #resultsLabel
 // updates via an out-of-band swap since it's a sibling element ads own the
 // visibility of, not search.
-func AdsResultsFragment(q string, slots []ads.AdWire) templ.Component {
+func AdsResultsFragment(q string, slots []ads.AdWire, rotationSec int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -110,9 +110,9 @@ func AdsResultsFragment(q string, slots []ads.AdWire) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("every %ds", ads.AdsConfig.RotationSec))
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("every %ds", rotationSec))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/ads.templ`, Line: 53, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/ads.templ`, Line: 53, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {

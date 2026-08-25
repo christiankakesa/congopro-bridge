@@ -10,9 +10,8 @@ Later:
 
 * (nothing — pull from Next when ready)
 
-## Next (Phase 2 — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
+## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* Ads CMS replacing `ads.yml`, with sales-rep attribution.
 * Surface "verified owner" on public company profiles (data exists since
   claims landed; display is a deliberate separate step).
 * Stripe integration for promoted listings + ads — **blocked on account
@@ -68,6 +67,13 @@ lands in Gmail spam on reputation alone)
 
 ## Done (highlights — full history in git)
 
+* Ads CMS (2026-08-25): campaigns in Postgres (migration 00005), editable in
+  `/admin/ads` without redeploy — global settings incl. the live kill
+  switch, campaign CRUD with sales attribution (sold_by / customer / price),
+  label presets, keyword textarea. Serving semantics preserved byte-for-byte
+  from ads.yml (keyword priority, weighting, 75/25, rotation), locked by
+  unit tests. Cutover: `make db-import-ads` locally,
+  `make db-import-ads-remote` in production.
 * Company claims / dispute workflow (2026-08-24): customers claim companies
   from the profile page (`Réclamer`), staff arbitrate in `/admin/claims`
   (approve/reject with note, one form two `formaction` buttons), approval

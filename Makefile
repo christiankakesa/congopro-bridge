@@ -65,8 +65,8 @@ RSYNC        := rsync -az --progress --delete \
         traefik-reload traefik-logs \
         ollama-install ollama-configure-limit ollama-pull-models ollama-clean-models ollama-reset ollama-status ollama-setup ollama-logs \
         meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik meili-setup meili-start meili-stop meili-restart meili-status meili-logs meili-index-reset \
-        db-up db-down db-migrate db-import create-admin test-integration dev dev-down \
-        db-install db-provision db-remote-status db-remote-check db-migrate-remote db-import-remote \
+        db-up db-down db-migrate db-import db-import-ads create-admin test-integration dev dev-down \
+        db-install db-provision db-remote-status db-remote-check db-migrate-remote db-import-remote db-import-ads-remote \
         db-backup-install db-backup-now db-backup-status db-backup-logs db-backup-list db-backup-pull \
         db-restore-test db-restore \
         ssh ping help
@@ -209,6 +209,11 @@ db-migrate: db-up
 db-import: db-migrate
 	@echo "▶ Importing companies into local Postgres…"
 	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -import
+
+# One-time (idempotent) import of the legacy embedded ads.yml into local Postgres.
+db-import-ads: db-migrate
+	@echo "▶ Importing ad campaigns into local Postgres…"
+	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -import-ads
 
 # Interactive: creates a staff account (super_admin) against local Postgres.
 # Prints a TOTP enrollment secret/URI you'll need to log in — see -create-admin.
@@ -512,6 +517,13 @@ db-import-remote:
 	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -import'"
 	@echo "✓ import complete"
 
+# One-time (idempotent) import of the legacy ads.yml campaigns into production —
+# the ads CMS cutover step. Settings row is seeded only (never clobbered).
+db-import-ads-remote:
+	@echo "▶ Importing ad campaigns on $(DEPLOY_HOST)…"
+	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -import-ads'"
+	@echo "✓ import complete"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Database backups (production — systemd timer, runs as the postgres OS user)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -606,12 +618,14 @@ help:
 	@echo "  DB (dev):   db-up/db-down       Start/stop local Postgres (docker compose)"
 	@echo "              db-migrate          Apply migrations to local Postgres"
 	@echo "              db-import           One-time: load the embedded JSON export into local Postgres"
+	@echo "              db-import-ads       One-time: load the legacy ads.yml campaigns into local Postgres"
 	@echo "              create-admin        Interactively create a staff account (super_admin)"
 	@echo "              test-integration    Run integration-tagged tests against local Postgres"
 	@echo "  DB (prod):  db-install          Install PostgreSQL + PostGIS via apt (idempotent)"
 	@echo "              db-provision        Create app role/database from $(APP_ENV_FILE)"
 	@echo "              db-migrate-remote   Apply migrations on the VPS"
 	@echo "              db-import-remote    One-time: load the embedded JSON export into production"
+	@echo "              db-import-ads-remote  One-time: ads CMS cutover (load legacy campaigns)"
 	@echo "              db-remote-status    systemctl status postgresql"
 	@echo "              db-remote-check     Verify PostGIS + tables on the VPS"
 	@echo "  Backups:    db-backup-install   Install backup script + daily systemd timer"

@@ -33,6 +33,9 @@ import (
 type AppEngine struct {
 	Engine *data.Engine
 	DB     *pgxpool.Pool
+	// Ads is the in-memory serving snapshot of the ads CMS; nil disables
+	// ad endpoints entirely (only in tests — main.go always wires one).
+	Ads *ads.Store
 	// Mailer sends transactional email (customer OTP codes). nil when email
 	// is not configured — account features then degrade to a clean 503
 	// instead of half-working. MailEnabled mirrors "not nil" for template
@@ -404,7 +407,8 @@ func (a *AppEngine) AdsHandler(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	now := time.Now()
 
-	eAds := ads.EligibleAds(q, now)
+	st := a.Ads.Settings()
+	eAds := a.Ads.EligibleAds(q, now)
 
 	if eAds == nil {
 		eAds = []ads.AdWire{}
@@ -415,7 +419,7 @@ func (a *AppEngine) AdsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 75% of the time show 1 AD, 25% of the time show the configured MaxPerPage
-	var maxAdsPerPage = ads.AdsConfig.MaxPerPage
+	maxAdsPerPage := st.MaxPerPage
 	if maxAdsPerPage > 1 {
 		if rand.Intn(100) < 75 { // 75% (0 to 74)
 			maxAdsPerPage = 1
@@ -426,11 +430,11 @@ func (a *AppEngine) AdsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if isHTMXRequest(r) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if !ads.AdsConfig.Active {
+		if !st.Active {
 			if q == "" {
 				templates.HomepageAdFragment(nil).Render(r.Context(), w)
 			} else {
-				templates.AdsResultsFragment(q, nil).Render(r.Context(), w)
+				templates.AdsResultsFragment(q, nil, st.RotationSec).Render(r.Context(), w)
 			}
 			return
 		}
@@ -443,13 +447,13 @@ func (a *AppEngine) AdsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		slots := templates.SelectAdSlots(eAds, maxAdsPerPage)
-		templates.AdsResultsFragment(q, slots).Render(r.Context(), w)
+		templates.AdsResultsFragment(q, slots, st.RotationSec).Render(r.Context(), w)
 		return
 	}
 
 	resp := ads.AdResponse{
-		Active:      ads.AdsConfig.Active,
-		RotationSec: ads.AdsConfig.RotationSec,
+		Active:      st.Active,
+		RotationSec: st.RotationSec,
 		MaxPerPage:  maxAdsPerPage,
 		Ads:         eAds,
 	}

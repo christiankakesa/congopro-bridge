@@ -25,6 +25,7 @@ import (
 func main() {
 	migrateFlag := flag.Bool("migrate", false, "apply pending database migrations and exit")
 	importFlag := flag.Bool("import", false, "import companies from the embedded JSON into postgres and exit")
+	importAdsFlag := flag.Bool("import-ads", false, "import campaigns from the legacy embedded ads.yml into postgres and exit")
 	createAdminFlag := flag.Bool("create-admin", false, "interactively create the first staff account and exit")
 	flag.Parse()
 
@@ -66,6 +67,23 @@ func main() {
 		return
 	}
 
+	if *importAdsFlag {
+		if cfg.DatabaseURL == "" {
+			log.Fatal().Msg("[import-ads] DATABASE_URL is not set")
+		}
+		pool, err := db.New(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Fatal().Msgf("[import-ads] failed to connect: %v", err)
+		}
+		defer pool.Close()
+		n, err := ads.ImportLegacyYAML(ctx, pool)
+		if err != nil {
+			log.Fatal().Msgf("[import-ads] failed: %v", err)
+		}
+		log.Info().Msgf("[import-ads] imported %d campaigns", n)
+		return
+	}
+
 	if *createAdminFlag {
 		if cfg.DatabaseURL == "" {
 			log.Fatal().Msg("[create-admin] DATABASE_URL is not set")
@@ -99,8 +117,6 @@ func main() {
 
 	ratelimiter.SetTrustedProxies(cfg.TrustedProxies)
 
-	ads.LoadAds()
-
 	pool, err := db.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal().Msgf("[startup] failed to connect to database: %v", err)
@@ -108,6 +124,14 @@ func main() {
 	defer pool.Close()
 
 	engine := data.NewEngine(cfg, pool)
+
+	// Ads CMS snapshot: loaded once here, reloaded by admin writes. A load
+	// failure must not take the site down — serve with ads off instead.
+	adsStore, err := ads.NewStore(ctx, pool)
+	if err != nil {
+		log.Error().Msgf("[startup] ads store load failed — serving with ads off: %v", err)
+		adsStore = ads.DisabledStore()
+	}
 
 	go func() {
 		start := time.Now()
@@ -118,7 +142,7 @@ func main() {
 		log.Info().Msgf("[startup] indexing completed in %s", time.Since(start).Round(time.Millisecond))
 	}()
 
-	apiAppEngine := &api.AppEngine{Engine: engine, DB: pool}
+	apiAppEngine := &api.AppEngine{Engine: engine, DB: pool, Ads: adsStore}
 
 	// Transactional email (customer OTP). Empty SMTP_HOST disables email —
 	// account login then answers 503 instead of half-working.
@@ -179,6 +203,12 @@ func main() {
 	mux.HandleFunc("GET /admin/claims", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimsListHandler)))
 	mux.HandleFunc("POST /admin/claims/{id}/approve", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimApproveHandler)))
 	mux.HandleFunc("POST /admin/claims/{id}/reject", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimRejectHandler)))
+	mux.HandleFunc("GET /admin/ads", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdsListHandler)))
+	mux.HandleFunc("POST /admin/ads/settings", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdsSettingsHandler)))
+	mux.HandleFunc("GET /admin/ads/new", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdNewFormHandler)))
+	mux.HandleFunc("POST /admin/ads/new", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdCreateHandler)))
+	mux.HandleFunc("GET /admin/ads/{id}/edit", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdEditFormHandler)))
+	mux.HandleFunc("POST /admin/ads/{id}/edit", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdUpdateHandler)))
 
 	// Customer accounts (passwordless email OTP)
 	otpRequestRL := ratelimiter.NewRateLimiter(5) // sending mail costs money
