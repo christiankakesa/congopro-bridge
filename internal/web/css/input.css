@@ -55,6 +55,8 @@
   --danger: #b91c1c;
   --danger-soft: #fdecec;
   --glass: rgba(255, 255, 255, 0.78);
+  --logo-a: #be0203;           /* wordmark "Congopro" + mark (exact charte red) */
+  --logo-b: #374151;           /* wordmark "Bridge." (exact charte gray) */
   --shadow-card:
     0 1px 2px rgba(28, 33, 40, 0.04),
     0 8px 24px -10px rgba(28, 33, 40, 0.14);
@@ -80,6 +82,8 @@
   --danger: #f26d6d;
   --danger-soft: #391418;
   --glass: rgba(23, 26, 33, 0.78);
+  --logo-a: #ffffff;           /* designer's inverse (white) variant on dark */
+  --logo-b: #ffffff;
   --shadow-card:
     0 1px 2px rgba(0, 0, 0, 0.4),
     0 10px 28px -12px rgba(0, 0, 0, 0.55);
@@ -126,6 +130,23 @@ body {
 
 .font-sora {
   font-family: var(--font-display);
+}
+
+/* Official wordmark: Sora SemiBold at the charte's measured tracking
+   (-0.079em, matched against the designer's outlined master) — live text
+   instead of 14 KB of embedded paths, so it stays selectable and free.
+   The negative margin cancels the trailing letter's tracking. */
+.wordmark {
+  letter-spacing: -0.079em;
+  margin-right: 0.079em;
+}
+
+/* Official logo colors — exact charte values, not theme accents */
+.logo-a {
+  color: var(--logo-a);
+}
+.logo-b {
+  color: var(--logo-b);
 }
 
 /* ── Shared components ───────────────────────────────────────────── */
@@ -582,4 +603,129 @@ mark {
   .admin-toast {
     animation: toast-out 0.01s linear 8s forwards;
   }
+}
+
+/* Hero category chips */
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.hero-chip:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── Admin table avatar, filter chips, save bar, field errors ── */
+.admin-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: hsl(var(--av-h, 210) 55% 92%);
+  color: hsl(var(--av-h, 210) 50% 32%);
+}
+[data-theme='dark'] .admin-avatar {
+  background: hsl(var(--av-h, 210) 40% 24%);
+  color: hsl(var(--av-h, 210) 55% 78%);
+}
+
+.admin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.125rem;
+  padding: 0 0.875rem;
+  border-radius: 9999px;
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.admin-chip:hover {
+  background: var(--sunken);
+}
+.admin-chip-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--card);
+}
+.admin-chip-active:hover {
+  background: var(--ink);
+}
+
+.admin-savebar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--glass);
+  box-shadow: var(--shadow-card);
+}
+@supports ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
+  .admin-savebar {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
+.field-input-error {
+  border-color: var(--danger);
+}
+.field-input-error:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+/* Toggle switch (checkbox + track/knob) */
+.switch-track {
+  width: 2.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--line);
+  padding: 3px;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+.switch-knob {
+  display: block;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: var(--card);
+  transition: transform 0.15s ease;
+}
+.switch-input:checked + .switch-track {
+  background: var(--positive);
+}
+.switch-input:checked + .switch-track .switch-knob {
+  transform: translateX(1rem);
+}
+.switch-input:focus-visible + .switch-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

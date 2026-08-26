@@ -43,6 +43,7 @@ type AdminAdFormData struct {
 type AdminCompanyRow struct {
 	ID        string
 	Name      string
+	Activity  string
 	City      string
 	Country   string
 	Status    string
@@ -75,6 +76,7 @@ type AdminCompanyFormData struct {
 	Status       string
 	Lon          string
 	Lat          string
+	UpdatedAt    string
 }
 
 // AdminNav is the per-request chrome state every admin page carries:

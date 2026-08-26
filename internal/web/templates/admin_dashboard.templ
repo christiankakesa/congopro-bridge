@@ -9,6 +9,7 @@ import (
 // AdminDashboardStats backs the /admin landing page tiles.
 type AdminDashboardStats struct {
 	CompaniesTotal     int
+	CompaniesNewMonth  int
 	CompaniesPublished int
 	CompaniesDraft     int
 	CompaniesDisputed  int
@@ -24,7 +25,7 @@ templ AdminDashboard(nonce string, nav AdminNav, stats AdminDashboardStats) {
 			<h1 class="text-xl font-sora font-semibold text-ink">Tableau de bord</h1>
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-			@statTile("Entreprises", formatTotal(stats.CompaniesTotal), publishedShare(stats), "/admin/companies", false)
+			@statTileTrend("Entreprises", formatTotal(stats.CompaniesTotal), publishedShare(stats), "/admin/companies", stats.CompaniesNewMonth)
 			@statTile("Brouillons", formatTotal(stats.CompaniesDraft), litigesNote(stats.CompaniesDisputed), "/admin/companies", false)
 			@statTile("Réclamations en attente", formatTotal(nav.PendingClaims), "à traiter", "/admin/claims", nav.PendingClaims > 0)
 			@statTile("Campagnes actives", formatTotal(stats.AdsActive), "sur "+formatTotal(stats.AdsTotal)+" campagnes", "/admin/ads", false)
@@ -57,6 +58,23 @@ templ AdminDashboard(nonce string, nav AdminNav, stats AdminDashboardStats) {
 			}
 		</section>
 	}
+}
+
+// statTileTrend is the companies tile: same shape as statTile plus a
+// green "+N ce mois" line when anything was created in the last 30 days.
+templ statTileTrend(label, value, sub, href string, newThisMonth int) {
+	<a href={ templ.URL(href) } class="block rounded-2xl border border-line bg-surface-raised shadow-card p-4 transition-colors hover:bg-surface-sunken">
+		<p class="text-xs font-medium text-ink-faint">{ label }</p>
+		<p class="font-sora font-semibold text-[26px] text-ink mt-1">{ value }</p>
+		if newThisMonth > 0 {
+			<p class="mt-0.5 flex items-center gap-1 text-xs font-medium text-positive">
+				<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M9 7h8v8"></path></svg>
+				+{ formatTotal(newThisMonth) } ce mois
+			</p>
+		} else if sub != "" {
+			<p class="text-xs text-ink-muted mt-0.5">{ sub }</p>
+		}
+	</a>
 }
 
 templ statTile(label, value, sub, href string, alert bool) {

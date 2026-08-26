@@ -71,6 +71,12 @@ func (a *AppEngine) AdminDashboardHandler(w http.ResponseWriter, r *http.Request
 	}
 	rows.Close()
 
+	if err := a.DB.QueryRow(r.Context(),
+		`SELECT count(*) FROM companies WHERE created_at >= now() - interval '30 days'`,
+	).Scan(&stats.CompaniesNewMonth); err != nil {
+		log.Error().Msgf("[admin] dashboard new-companies count: %v", err)
+	}
+
 	stats.AdsSystemOn = a.Ads.Settings().Active
 
 	pending, err := claims.ListForAdmin(r.Context(), a.DB, "pending")

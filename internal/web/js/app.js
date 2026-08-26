@@ -171,6 +171,22 @@ topInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") searchOnEnter(topInput);
 });
 
+// Hero: the round search button and the category chips run a search the
+// same way Enter does.
+document.getElementById("homeSearchBtn").addEventListener("click", () => {
+  searchOnEnter(homeInput);
+});
+document.getElementById("topSearchBtn").addEventListener("click", () => {
+  searchOnEnter(topInput);
+});
+document.querySelectorAll("[data-search-chip]").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    homeInput.value = chip.getAttribute("data-search-chip");
+    homeClear.classList.remove("hidden");
+    searchOnEnter(homeInput);
+  });
+});
+
 document.body.addEventListener("htmx:beforeRequest", (e) => {
   const elt = e.detail.elt;
   if (elt !== homeInput && elt !== topInput) return;

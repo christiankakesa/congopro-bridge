@@ -112,7 +112,7 @@ templ HomepageAdFragment(homeAd *ads.AdWire) {
 			safeURL = ValidateURL(homeAd.URL)
 		}
 	}}
-	<div id="homepageAdContainer" class={ templ.KV("hidden", safeURL == ""), "w-full max-w-[584px] space-y-4" } hx-get="/api/v1/ads?q=" hx-swap="outerHTML">
+	<div id="homepageAdContainer" class={ templ.KV("hidden", safeURL == ""), "mt-6 w-full max-w-[584px] space-y-4" } hx-get="/api/v1/ads?q=" hx-swap="outerHTML">
 		if safeURL != "" {
 			@premiumHomepageAd(*homeAd, safeURL)
 		}

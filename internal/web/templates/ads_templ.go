@@ -359,7 +359,7 @@ func HomepageAdFragment(homeAd *ads.AdWire) templ.Component {
 		if homeAd != nil {
 			safeURL = ValidateURL(homeAd.URL)
 		}
-		var templ_7745c5c3_Var20 = []any{templ.KV("hidden", safeURL == ""), "w-full max-w-[584px] space-y-4"}
+		var templ_7745c5c3_Var20 = []any{templ.KV("hidden", safeURL == ""), "mt-6 w-full max-w-[584px] space-y-4"}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var20...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

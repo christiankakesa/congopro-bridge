@@ -22,6 +22,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"congopro-bridge/internal/ads"
+	"congopro-bridge/internal/claims"
 	"congopro-bridge/internal/constants"
 	"congopro-bridge/internal/data"
 	"congopro-bridge/internal/mail"
@@ -386,7 +387,11 @@ func (a *AppEngine) CompanyHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Msgf("[company] promoted lookup: %v", err)
 	}
-	if err := templates.CompanyPage(title, canonicalURL(r), nonce, cssHash, company, promoted).Render(r.Context(), w); err != nil {
+	verified, err := claims.IsClaimed(r.Context(), a.DB, company.ID)
+	if err != nil {
+		log.Error().Msgf("[company] claim lookup: %v", err)
+	}
+	if err := templates.CompanyPage(title, canonicalURL(r), nonce, cssHash, company, promoted, verified).Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[templates] render company page %q: %v", slug, err)
 	}
 }
@@ -544,7 +549,7 @@ func (a *AppEngine) serveSPA(w http.ResponseWriter, r *http.Request, title strin
 
 	nonce, _ := r.Context().Value(constants.NonceKey).(string)
 
-	if err := templates.HomePage(title, canonicalURL(r), nonce, cssHash).Render(r.Context(), w); err != nil {
+	if err := templates.HomePage(title, canonicalURL(r), nonce, cssHash, len(a.Engine.Companies())).Render(r.Context(), w); err != nil {
 		log.Error().Err(err).Msg("render home page")
 	}
 }

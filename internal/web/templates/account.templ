@@ -21,19 +21,27 @@ templ AccountLayout(title, nonce, email string) {
 			@commonHead(nonce, CSSVersion)
 		</head>
 		<body class="bg-surface text-ink antialiased min-h-full flex flex-col">
-			if email != "" {
-				<header class="bg-surface-raised border-b border-line">
-					<div class="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-						<a href="/" class="font-sora font-semibold text-ink">Congopro</a>
-						<div class="flex items-center gap-4 text-sm">
-							<span class="text-ink-faint">{ email }</span>
+			<!-- The brand lockup is the way back to the site and renders for
+			     signed-out visitors too (login/verify) — without it those pages
+			     are a dead end. Identity and logout stay signed-in only. -->
+			<header class="bg-surface-raised border-b border-line">
+				<div class="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+					<a href="/" preload="mousedown" class="flex items-center gap-2 shrink-0" aria-label="Congopro Bridge — retour à l'accueil">
+						@brandMark("w-6 h-6 logo-a")
+						<span class="wordmark font-sora font-semibold text-[17px]">
+							<span class="logo-a">Congopro</span> <span class="logo-b">Bridge.</span>
+						</span>
+					</a>
+					if email != "" {
+						<div class="flex items-center gap-4 text-sm min-w-0">
+							<span class="text-ink-faint truncate">{ email }</span>
 							<form method="post" action="/account/logout">
-								<button type="submit" class="text-ink-faint hover:text-ink">Déconnexion</button>
+								<button type="submit" class="text-ink-faint hover:text-ink shrink-0">Déconnexion</button>
 							</form>
 						</div>
-					</div>
-				</header>
-			}
+					}
+				</div>
+			</header>
 			<main class="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-8">
 				{ children... }
 			</main>

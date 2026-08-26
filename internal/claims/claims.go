@@ -286,3 +286,17 @@ func CountPending(ctx context.Context, db *pgxpool.Pool) (int, error) {
 	err := db.QueryRow(ctx, `SELECT count(*) FROM company_claims WHERE status = 'pending'`).Scan(&n)
 	return n, err
 }
+
+// IsClaimed reports whether a company has an approved owner — the signal
+// behind the public "Fiche vérifiée" badge.
+func IsClaimed(ctx context.Context, db *pgxpool.Pool, companyID string) (bool, error) {
+	var claimed bool
+	err := db.QueryRow(ctx,
+		`SELECT claimed_by_customer_id IS NOT NULL FROM companies WHERE id = $1`,
+		companyID,
+	).Scan(&claimed)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return claimed, err
+}

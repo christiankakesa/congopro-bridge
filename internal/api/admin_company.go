@@ -26,23 +26,62 @@ func nonceFrom(r *http.Request) string {
 	return nonce
 }
 
-const adminPageSize = 50
-
 func (a *AppEngine) AdminCompaniesListHandler(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	status := r.URL.Query().Get("status")
+	if !validStatuses[status] {
+		status = ""
+	}
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
 		page = 1
 	}
-	offset := (page - 1) * adminPageSize
+	offset := (page - 1) * templates.AdminPageSize
 
-	rows, err := a.DB.Query(r.Context(), `
-		SELECT id, name, city, country, status, updated_at
+	// Counts drive the filter chips and the "1–50 sur N" range line; they
+	// respect the search term but not the status filter, so every chip shows
+	// how many rows it would reveal.
+	var counts templates.AdminCompanyCounts
+	countRows, err := a.DB.Query(r.Context(), `
+		SELECT status, count(*)
 		FROM companies
 		WHERE $1 = '' OR name ILIKE '%' || $1 || '%'
+		GROUP BY status
+	`, q)
+	if err != nil {
+		log.Error().Msgf("[admin] count companies: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	for countRows.Next() {
+		var s string
+		var n int
+		if err := countRows.Scan(&s, &n); err != nil {
+			countRows.Close()
+			log.Error().Msgf("[admin] scan company count: %v", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		counts.Total += n
+		switch s {
+		case "published":
+			counts.Published = n
+		case "draft":
+			counts.Draft = n
+		case "disputed":
+			counts.Disputed = n
+		}
+	}
+	countRows.Close()
+
+	rows, err := a.DB.Query(r.Context(), `
+		SELECT id, name, activity, city, country, status, updated_at
+		FROM companies
+		WHERE ($1 = '' OR name ILIKE '%' || $1 || '%')
+		  AND ($4 = '' OR status = $4)
 		ORDER BY updated_at DESC
 		LIMIT $2 OFFSET $3
-	`, q, adminPageSize+1, offset)
+	`, q, templates.AdminPageSize+1, offset, status)
 	if err != nil {
 		log.Error().Msgf("[admin] list companies: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -54,7 +93,7 @@ func (a *AppEngine) AdminCompaniesListHandler(w http.ResponseWriter, r *http.Req
 	for rows.Next() {
 		var row templates.AdminCompanyRow
 		var updatedAt time.Time
-		if err := rows.Scan(&row.ID, &row.Name, &row.City, &row.Country, &row.Status, &updatedAt); err != nil {
+		if err := rows.Scan(&row.ID, &row.Name, &row.Activity, &row.City, &row.Country, &row.Status, &updatedAt); err != nil {
 			log.Error().Msgf("[admin] scan company row: %v", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
@@ -68,26 +107,26 @@ func (a *AppEngine) AdminCompaniesListHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	hasNext := len(list) > adminPageSize
+	hasNext := len(list) > templates.AdminPageSize
 	if hasNext {
-		list = list[:adminPageSize]
+		list = list[:templates.AdminPageSize]
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if isHTMXRequest(r) {
-		if err := templates.AdminCompaniesTable(q, list, page, hasNext).Render(r.Context(), w); err != nil {
+		if err := templates.AdminCompaniesTable(q, status, counts, list, page, hasNext).Render(r.Context(), w); err != nil {
 			log.Error().Msgf("[admin] render companies table: %v", err)
 		}
 		return
 	}
-	if err := templates.AdminCompaniesList(nonceFrom(r), a.adminNav(r), q, list, page, hasNext).Render(r.Context(), w); err != nil {
+	if err := templates.AdminCompaniesList(nonceFrom(r), a.adminNav(r), q, status, counts, list, page, hasNext).Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[admin] render companies list: %v", err)
 	}
 }
 
 func (a *AppEngine) AdminCompanyNewFormHandler(w http.ResponseWriter, r *http.Request) {
 	form := templates.AdminCompanyFormData{Status: "draft"}
-	if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), form, false, "").Render(r.Context(), w); err != nil {
+	if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), form, false, "", nil).Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[admin] render new company form: %v", err)
 	}
 }
@@ -109,7 +148,9 @@ type companyFormInput struct {
 
 var validStatuses = map[string]bool{"draft": true, "published": true, "disputed": true}
 
-func parseCompanyForm(r *http.Request) (companyFormInput, string) {
+// parseCompanyForm returns per-field errors keyed by input name so the
+// form can mark the offending field instead of only showing a banner.
+func parseCompanyForm(r *http.Request) (companyFormInput, map[string]string) {
 	form := templates.AdminCompanyFormData{
 		Name:         strings.TrimSpace(r.FormValue("name")),
 		NameSeo:      strings.TrimSpace(r.FormValue("name_seo")),
@@ -136,24 +177,44 @@ func parseCompanyForm(r *http.Request) (companyFormInput, string) {
 		Lat:          strings.TrimSpace(r.FormValue("lat")),
 	}
 
+	errs := map[string]string{}
 	if form.Name == "" {
-		return companyFormInput{form: form}, "Le nom est obligatoire."
+		errs["name"] = "Le nom est obligatoire."
 	}
 	if !validStatuses[form.Status] {
-		return companyFormInput{form: form}, "Statut invalide."
+		errs["status"] = "Statut invalide."
+	}
+	if form.Email != "" && !strings.Contains(form.Email, "@") {
+		errs["email"] = "Adresse e-mail invalide."
+	}
+	if form.Website != "" && !strings.HasPrefix(form.Website, "http://") && !strings.HasPrefix(form.Website, "https://") {
+		errs["website"] = "L'URL doit commencer par https://."
 	}
 
 	var lon, lat any
 	if form.Lon != "" || form.Lat != "" {
 		lonF, errLon := strconv.ParseFloat(form.Lon, 64)
 		latF, errLat := strconv.ParseFloat(form.Lat, 64)
-		if errLon != nil || errLat != nil {
-			return companyFormInput{form: form}, "Longitude/latitude invalides — laissez les deux champs vides ou remplissez les deux."
+		switch {
+		case errLon != nil && errLat != nil:
+			errs["lon"] = "Coordonnée invalide."
+			errs["lat"] = "Coordonnée invalide."
+		case errLon != nil:
+			errs["lon"] = "Longitude invalide."
+		case errLat != nil:
+			errs["lat"] = "Latitude invalide."
+		case form.Lon == "" || form.Lat == "":
+			errs["lon"] = "Remplissez les deux coordonnées ou aucune."
+			errs["lat"] = "Remplissez les deux coordonnées ou aucune."
+		default:
+			lon, lat = lonF, latF
 		}
-		lon, lat = lonF, latF
 	}
 
-	return companyFormInput{form: form, lon: lon, lat: lat}, ""
+	if len(errs) > 0 {
+		return companyFormInput{form: form}, errs
+	}
+	return companyFormInput{form: form, lon: lon, lat: lat}, nil
 }
 
 func (a *AppEngine) AdminCompanyCreateHandler(w http.ResponseWriter, r *http.Request) {
@@ -161,10 +222,10 @@ func (a *AppEngine) AdminCompanyCreateHandler(w http.ResponseWriter, r *http.Req
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	input, errMsg := parseCompanyForm(r)
-	if errMsg != "" {
+	input, fieldErrs := parseCompanyForm(r)
+	if len(fieldErrs) > 0 {
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, false, errMsg).Render(r.Context(), w); err != nil {
+		if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, false, "Corrigez les champs signalés ci-dessous.", fieldErrs).Render(r.Context(), w); err != nil {
 			log.Error().Msgf("[admin] render new company form: %v", err)
 		}
 		return
@@ -199,7 +260,7 @@ func (a *AppEngine) AdminCompanyCreateHandler(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		log.Error().Msgf("[admin] insert company: %v", err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		if rerr := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, false, "Erreur lors de l'enregistrement — vérifiez le slug (doit être unique).").Render(r.Context(), w); rerr != nil {
+		if rerr := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, false, "Erreur lors de l'enregistrement — vérifiez le slug (doit être unique).", map[string]string{"name_seo": "Ce slug est peut-être déjà utilisé."}).Render(r.Context(), w); rerr != nil {
 			log.Error().Msgf("[admin] render new company form: %v", rerr)
 		}
 		return
@@ -221,7 +282,7 @@ func (a *AppEngine) AdminCompanyEditFormHandler(w http.ResponseWriter, r *http.R
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), *form, true, "").Render(r.Context(), w); err != nil {
+	if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), *form, true, "", nil).Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[admin] render edit company form: %v", err)
 	}
 }
@@ -230,23 +291,25 @@ func (a *AppEngine) loadCompanyForm(r *http.Request, id string) (*templates.Admi
 	var form templates.AdminCompanyFormData
 	var statsShow int
 	var lon, lat *float64
+	var updatedAt time.Time
 	err := a.DB.QueryRow(r.Context(), `
 		SELECT id, name, name_seo, activity, city, country, description, slogan,
 		       website, email, phone, address_line_1, address_line_2, twitter,
 		       facebook, linkedin, instagram, tiktok, whatsapp, youtube,
-		       stats_show, status, ST_X(location::geometry), ST_Y(location::geometry)
+		       stats_show, status, ST_X(location::geometry), ST_Y(location::geometry), updated_at
 		FROM companies WHERE id = $1
 	`, id).Scan(
 		&form.ID, &form.Name, &form.NameSeo, &form.Activity, &form.City, &form.Country,
 		&form.Description, &form.Slogan, &form.Website, &form.Email, &form.Phone,
 		&form.AddressLine1, &form.AddressLine2, &form.Twitter, &form.Facebook,
 		&form.LinkedIn, &form.Instagram, &form.TikTok, &form.Whatsapp, &form.Youtube,
-		&statsShow, &form.Status, &lon, &lat,
+		&statsShow, &form.Status, &lon, &lat, &updatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
 	form.StatsShow = statsShow != 0
+	form.UpdatedAt = updatedAt.Format("02/01/2006 15:04")
 	if lon != nil {
 		form.Lon = strconv.FormatFloat(*lon, 'f', -1, 64)
 	}
@@ -262,11 +325,11 @@ func (a *AppEngine) AdminCompanyUpdateHandler(w http.ResponseWriter, r *http.Req
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	input, errMsg := parseCompanyForm(r)
+	input, fieldErrs := parseCompanyForm(r)
 	input.form.ID = id
-	if errMsg != "" {
+	if len(fieldErrs) > 0 {
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, true, errMsg).Render(r.Context(), w); err != nil {
+		if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, true, "Corrigez les champs signalés ci-dessous.", fieldErrs).Render(r.Context(), w); err != nil {
 			log.Error().Msgf("[admin] render edit company form: %v", err)
 		}
 		return
@@ -293,7 +356,7 @@ func (a *AppEngine) AdminCompanyUpdateHandler(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		log.Error().Msgf("[admin] update company %s: %v", id, err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		if rerr := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, true, "Erreur lors de l'enregistrement — vérifiez le slug (doit être unique).").Render(r.Context(), w); rerr != nil {
+		if rerr := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, true, "Erreur lors de l'enregistrement — vérifiez le slug (doit être unique).", map[string]string{"name_seo": "Ce slug est peut-être déjà utilisé."}).Render(r.Context(), w); rerr != nil {
 			log.Error().Msgf("[admin] render edit company form: %v", rerr)
 		}
 		return
