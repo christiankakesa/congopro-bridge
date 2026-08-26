@@ -61,7 +61,7 @@ func SiteFooter() templ.Component {
 func siteFooterHTML() string {
 	year := strconv.Itoa(time.Now().Year())
 	link := func(href, label string) string {
-		return `<a href="` + href + `" class="hover:text-ink hover:underline transition-colors">` + label + `</a>`
+		return `<a href="` + href + `" preload="mousedown" class="hover:text-ink hover:underline transition-colors">` + label + `</a>`
 	}
 	return "© " + year + " Congopro · " +
 		`<a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-ink hover:underline transition-colors">Support</a> · ` +

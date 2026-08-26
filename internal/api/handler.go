@@ -675,6 +675,12 @@ func AppJSHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, "app.js", startupTime, bytes.NewReader(web.AppJS))
 }
 
+func PreloadJSHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	http.ServeContent(w, r, "preload.min.js", startupTime, bytes.NewReader(web.PreloadJS))
+}
+
 // isHTMXRequest reports whether r was issued by htmx (as opposed to a
 // programmatic JSON API consumer). Used to content-negotiate between the
 // existing JSON contract and a server-rendered HTML fragment from the same

@@ -163,7 +163,7 @@ func resultRow(sr data.SearchResult, promoted bool) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" target=\"_self\" class=\"result-title hover:underline flex-1 min-w-0\"><span itemprop=\"name\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" target=\"_self\" preload=\"mousedown\" class=\"result-title hover:underline flex-1 min-w-0\"><span itemprop=\"name\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

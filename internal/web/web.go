@@ -25,6 +25,9 @@ var HtmxJS []byte
 //go:embed js/app.js
 var AppJS []byte
 
+//go:embed js/preload.min.js
+var PreloadJS []byte
+
 //go:embed fonts/*.woff2
 var FontsFS embed.FS
 

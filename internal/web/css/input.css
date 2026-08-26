@@ -487,3 +487,50 @@ mark {
   border-top: 1px solid var(--line);
   margin: 2rem 0;
 }
+
+/* ── Snap-speed layer ──────────────────────────────────────────────
+   Cross-document view transitions make results ↔ profile ↔ static
+   navigations feel app-like (Chrome/Android — the dominant browser for
+   our audience; a no-op elsewhere). Same-document swaps get the htmx
+   transition:true path plus an opacity fade fallback. All motion
+   respects prefers-reduced-motion below. */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 160ms;
+}
+
+#resultsList.htmx-swapping {
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+
+/* Shimmer skeleton (first search paint + reusable) */
+.skl {
+  background: linear-gradient(90deg, var(--sunken) 25%, var(--line) 50%, var(--sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 7px;
+}
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .skl,
+  .animate-pulse {
+    animation: none;
+  }
+}

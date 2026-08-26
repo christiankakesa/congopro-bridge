@@ -30,7 +30,7 @@ templ HomePage(title, canonicalURL, nonce, cssVersion string) {
 		        <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
 		        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
 		      </svg>
-		      <input id="homeInput" name="q" type="text" aria-label="Rechercher une entreprise, un service ou un professionnel" placeholder="Que recherchez-vous aujourd'hui ?" autocomplete="off" spellcheck="false" class="flex-1 text-base text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0" hx-get="/api/v1/search" hx-target="#resultsList" hx-swap="innerHTML" hx-sync="this:replace" hx-replace-url="true" hx-trigger="input delay:260ms" />
+		      <input id="homeInput" name="q" type="text" aria-label="Rechercher une entreprise, un service ou un professionnel" placeholder="Que recherchez-vous aujourd'hui ?" autocomplete="off" spellcheck="false" class="flex-1 text-base text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0" hx-get="/api/v1/search" hx-target="#resultsList" hx-swap="innerHTML transition:true" hx-sync="this:replace" hx-replace-url="true" hx-trigger="input delay:260ms" />
 		      <button id="homeClear" class="hidden text-ink-faint hover:text-ink transition-colors shrink-0" aria-label="Effacer la recherche">
 		        <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
 		          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
@@ -65,7 +65,7 @@ templ HomePage(title, canonicalURL, nonce, cssVersion string) {
 		          <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
 		          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
 		        </svg>
-		        <input id="topInput" name="q" type="text" aria-label="Modifier votre recherche" autocomplete="off" spellcheck="false" class="flex-1 text-sm text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0" hx-get="/api/v1/search" hx-target="#resultsList" hx-swap="innerHTML" hx-sync="this:replace" hx-replace-url="true" hx-trigger="input delay:260ms" />
+		        <input id="topInput" name="q" type="text" aria-label="Modifier votre recherche" autocomplete="off" spellcheck="false" class="flex-1 text-sm text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0" hx-get="/api/v1/search" hx-target="#resultsList" hx-swap="innerHTML transition:true" hx-sync="this:replace" hx-replace-url="true" hx-trigger="input delay:260ms" />
 		        <button id="topClear" class="hidden text-ink-faint hover:text-ink transition-colors shrink-0" aria-label="Effacer la recherche et revenir à l'accueil">
 		          <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
 		            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
@@ -112,7 +112,12 @@ templ HomePage(title, canonicalURL, nonce, cssVersion string) {
 		      <div id="aiContent" class="hidden text-ink text-sm leading-relaxed"></div>
 		    </div>
 
-		    <div id="resultsList" class="w-full" aria-live="polite"></div>
+		    <div id="searchSkeleton" class="hidden" aria-hidden="true">
+			<div class="result-row"><div class="skl" style="width:44px;height:44px;border-radius:12px;"></div><div class="result-body pt-1 space-y-2"><div class="skl h-3.5 w-2/5"></div><div class="skl h-3 w-3/5"></div><div class="skl h-3 w-11/12"></div></div></div>
+			<div class="result-row"><div class="skl" style="width:44px;height:44px;border-radius:12px;"></div><div class="result-body pt-1 space-y-2"><div class="skl h-3.5 w-1/3"></div><div class="skl h-3 w-1/2"></div><div class="skl h-3 w-4/5"></div></div></div>
+			<div class="result-row" style="opacity:.55;"><div class="skl" style="width:44px;height:44px;border-radius:12px;"></div><div class="result-body pt-1 space-y-2"><div class="skl h-3.5 w-2/5"></div><div class="skl h-3 w-2/5"></div><div class="skl h-3 w-3/4"></div></div></div>
+		</div>
+		<div id="resultsList" class="w-full" aria-live="polite"></div>
 
 		    <div id="emptyState" class="hidden pt-4">
 		      <p class="no-results-title" id="emptyTitle"></p>
@@ -128,6 +133,7 @@ templ HomePage(title, canonicalURL, nonce, cssVersion string) {
 		  </main>
 		</div>
 		<script nonce={ nonce } src="/js/htmx.min.js"></script>
+		<script nonce={ nonce } src="/js/preload.min.js"></script>
 		<script nonce={ nonce } src={ "/js/app.js?h=" + AppJSVersion }></script>
 	}
 }

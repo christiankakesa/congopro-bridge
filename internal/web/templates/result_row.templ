@@ -70,7 +70,7 @@ templ resultRow(sr data.SearchResult, promoted bool) {
 		<div class="result-favicon" style={ fmt.Sprintf("--av-h:%d", hue) } aria-hidden="true">{ ini }</div>
 		<div class="result-body">
 			<div class="flex items-start gap-2 flex-wrap">
-				<a href={ templ.URL("/company/" + c.NameSeo) } target="_self" class="result-title hover:underline flex-1 min-w-0">
+				<a href={ templ.URL("/company/" + c.NameSeo) } target="_self" preload="mousedown" class="result-title hover:underline flex-1 min-w-0">
 					<span itemprop="name">{ name }</span>
 				</a>
 				if promoted {

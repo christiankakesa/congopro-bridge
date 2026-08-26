@@ -107,7 +107,7 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 				gtag("config", "G-VS32J060KG");
 			</script>
 		</head>
-		<body class="bg-surface text-ink antialiased min-h-screen flex flex-col overflow-x-hidden">
+		<body class="bg-surface text-ink antialiased min-h-screen flex flex-col overflow-x-hidden" hx-ext="preload">
 			<div class="flex-1 w-full flex flex-col">
 				{ children... }
 			</div>

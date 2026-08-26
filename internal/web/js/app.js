@@ -92,6 +92,7 @@ function showHome() {
   resultsPage.classList.add("hidden");
   homepage.style.display = "flex";
   resultsList.innerHTML = "";
+  document.getElementById("searchSkeleton").classList.add("hidden");
   document.getElementById("statsBar")?.classList.add("hidden");
   document.getElementById("resultsLabel")?.classList.add("hidden");
   stopAdRotation();
@@ -178,6 +179,11 @@ document.body.addEventListener("htmx:beforeRequest", (e) => {
   const fromHome = elt === homeInput;
   showResults(q, fromHome);
   setLoading(true, fromHome);
+  // First paint after arriving from the hero: shimmer skeleton instead of a
+  // blank column. Subsequent searches keep the old results visible instead.
+  if (resultsList.children.length === 0) {
+    document.getElementById("searchSkeleton").classList.remove("hidden");
+  }
 });
 
 document.body.addEventListener("htmx:afterRequest", (e) => {
@@ -188,6 +194,7 @@ document.body.addEventListener("htmx:afterRequest", (e) => {
 
 document.body.addEventListener("htmx:afterSwap", (e) => {
   if (e.detail.target !== resultsList) return;
+  document.getElementById("searchSkeleton").classList.add("hidden");
   const q = lastSearchQuery;
 
   const items = resultsList.querySelectorAll("[data-item-id]");
