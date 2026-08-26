@@ -75,21 +75,13 @@ const defaultTitle = "Congopro | Moteur de recherche boosté à l'IA"
 var (
 	startupTime    = time.Now()
 	cssHash        string
-	indexTmpl      *template.Template
 	adsPreviewTmpl *template.Template
-	footerHTML     template.HTML
 )
 
 func init() {
 	cssHash = templates.CSSVersion
-	indexTmpl = template.Must(template.New("index").Parse(string(web.IndexHTML)))
 	adsPreviewTmpl = template.Must(template.New("ads-preview").Parse(string(web.AdsPreviewHTML)))
 
-	var footerBuf bytes.Buffer
-	if err := templates.SiteFooter().Render(context.Background(), &footerBuf); err != nil {
-		panic(fmt.Sprintf("render site footer: %v", err))
-	}
-	footerHTML = template.HTML(footerBuf.String())
 }
 
 func (a *AppEngine) WithCORS(h http.HandlerFunc) http.HandlerFunc {
@@ -552,20 +544,9 @@ func (a *AppEngine) serveSPA(w http.ResponseWriter, r *http.Request, title strin
 
 	nonce, _ := r.Context().Value(constants.NonceKey).(string)
 
-	data := struct {
-		CSSVersion   string
-		Title        string
-		Nonce        string
-		CanonicalURL string
-		Footer       template.HTML
-	}{
-		CSSVersion:   cssHash,
-		Title:        title,
-		Nonce:        nonce,
-		CanonicalURL: canonicalURL(r),
-		Footer:       footerHTML,
+	if err := templates.HomePage(title, canonicalURL(r), nonce, cssHash).Render(r.Context(), w); err != nil {
+		log.Error().Err(err).Msg("render home page")
 	}
-	indexTmpl.Execute(w, data)
 }
 
 func FaviconHandler(w http.ResponseWriter, r *http.Request) {
@@ -686,6 +667,12 @@ func HtmxJSHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeContent(w, r, "htmx.min.js", startupTime, bytes.NewReader(web.HtmxJS))
+}
+
+func AppJSHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	http.ServeContent(w, r, "app.js", startupTime, bytes.NewReader(web.AppJS))
 }
 
 // isHTMXRequest reports whether r was issued by htmx (as opposed to a

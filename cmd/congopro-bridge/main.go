@@ -178,6 +178,7 @@ func main() {
 	mux.HandleFunc("GET /images/", api.ImagesHandler)
 	mux.HandleFunc("GET /css/style.min.css", api.TailwindCssHandler)
 	mux.HandleFunc("GET /js/htmx.min.js", api.HtmxJSHandler)
+	mux.HandleFunc("GET /js/app.js", api.AppJSHandler)
 
 	// Static pages
 	mux.HandleFunc("GET /help", apiAppEngine.WithSecurityHeaders(apiAppEngine.HelpHandler))

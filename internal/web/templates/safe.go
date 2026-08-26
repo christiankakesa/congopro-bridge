@@ -165,7 +165,7 @@ func CityCountryHTML(city, country string) string {
 	if len(parts) == 0 {
 		return ""
 	}
-	return `<span class="text-gray-500 block mt-0.5">` + strings.Join(parts, ", ") + `</span>`
+	return `<span class="text-ink-faint block mt-0.5">` + strings.Join(parts, ", ") + `</span>`
 }
 
 // DomainFromURL extracts a display-friendly hostname (no "www.") from an

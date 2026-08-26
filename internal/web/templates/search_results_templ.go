@@ -171,9 +171,9 @@ func emptyStateFragment(q, errMsg string, results []data.SearchResult) templ.Com
 			title = "Une erreur est survenue"
 			subtitle = errMsg
 		}
-		class := "hidden pt-4 max-w-[652px]"
+		class := "hidden pt-4"
 		if show {
-			class = "pt-4 max-w-[652px]"
+			class = "pt-4"
 		}
 		var templ_7745c5c3_Var7 = []any{class}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var7...)
@@ -219,7 +219,7 @@ func emptyStateFragment(q, errMsg string, results []data.SearchResult) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p><hr class=\"mt-6 border-[#f0f0f0]\"><p class=\"mt-4 text-sm text-gray-500\">Suggestions :</p><ul class=\"mt-2 text-sm text-gray-500 list-disc list-inside space-y-1\"><li>Vérifiez l'orthographe de tous les mots.</li><li>Essayez des mots-clés différents ou moins nombreux.</li><li>Essayez des mots-clés plus généraux.</li></ul></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p><hr class=\"mt-6 border-line\"><p class=\"mt-4 text-sm text-ink-faint\">Suggestions :</p><ul class=\"mt-2 text-sm text-ink-faint list-disc list-inside space-y-1\"><li>Vérifiez l'orthographe de tous les mots.</li><li>Essayez des mots-clés différents ou moins nombreux.</li><li>Essayez des mots-clés plus généraux.</li></ul></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

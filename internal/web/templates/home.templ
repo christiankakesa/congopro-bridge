@@ -1,0 +1,133 @@
+package templates
+
+// HomePage is the templ port of the retired index.html SPA shell: the
+// homepage hero and the results view in one page, driven by htmx and
+// /js/app.js (the SPA coordinator extracted from index.html's inline
+// script). Every element ID below is part of the contract with app.js and
+// with the oob fragments in search_results.templ / ads.templ — keep them
+// stable. Footer, scroll-to-top and cookie consent come from Layout.
+templ HomePage(title, canonicalURL, nonce, cssVersion string) {
+	@Layout(title, canonicalURL, nonce, cssVersion) {
+		<div id="homepage" class="relative w-full flex flex-col items-center justify-center flex-1 px-4">
+		  <div class="mb-8 select-none text-center">
+		    <span class="font-sora font-semibold text-4xl sm:text-[52px] md:text-[64px] tracking-tight leading-none flex items-center justify-center gap-2 sm:gap-3">
+		      <span>
+		        <span class="font-sora text-accent">C</span><span class="font-sora text-accent">o</span><span class="font-sora text-accent">n</span><span class="font-sora text-accent">g</span><span class="font-sora text-accent">o</span><span class="font-sora text-accent">p</span><span class="font-sora text-accent">r</span><span class="font-sora text-accent">o</span>
+		        <span class="font-sora text-ink-muted"> Bridge.</span>
+		      </span>
+		      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-accent">
+		        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+		      </svg>
+		    </span>
+		  </div>
+
+		  <div class="w-full max-w-[584px] space-y-4">
+		    <div class="search-box flex items-center gap-2 px-4 py-3 w-full">
+		      <svg id="homeSearchIcon" class="w-5 h-5 text-ink-faint shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+		        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+		      </svg>
+		      <svg id="homeSpinner" class="spinner w-5 h-5 text-accent shrink-0 hidden" fill="none" viewBox="0 0 24 24">
+		        <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+		        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+		      </svg>
+		      <input id="homeInput" name="q" type="text" aria-label="Rechercher une entreprise, un service ou un professionnel" placeholder="Que recherchez-vous aujourd'hui ?" autocomplete="off" spellcheck="false" class="flex-1 text-base text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0" hx-get="/api/v1/search" hx-target="#resultsList" hx-swap="innerHTML" hx-sync="this:replace" hx-replace-url="true" hx-trigger="input delay:260ms" />
+		      <button id="homeClear" class="hidden text-ink-faint hover:text-ink transition-colors shrink-0" aria-label="Effacer la recherche">
+		        <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+		          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+		        </svg>
+		      </button>
+		    </div>
+		    <p id="homeStatus" class="text-center text-sm text-ink-faint min-h-[1.25rem]"></p>
+		  </div>
+
+		  <div id="homepageAdContainer" class="hidden w-full max-w-[584px] space-y-4"></div>
+		</div>
+
+		<div id="resultsPage" class="hidden w-full flex-1">
+		  <div id="topBar" class="px-4 sm:px-6 py-3 w-full">
+		    <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 max-w-5xl">
+		      <a id="logoLink" href="#" class="font-sora text-[24px] sm:text-[26px] tracking-tight shrink-0 select-none leading-none flex items-center gap-1.5" aria-label="Congopro Bridge - retour à l'accueil">
+		        <span>
+		          <span class="font-sora text-accent">C</span><span class="font-sora text-accent">o</span><span class="font-sora text-accent">n</span><span class="font-sora text-accent">g</span><span class="font-sora text-accent">o</span><span class="font-sora text-accent">p</span><span class="font-sora text-accent">r</span><span class="font-sora text-accent">o</span>
+		          <span class="font-sora text-ink-muted text-[20px] sm:text-[22px]">
+		            Bridge.</span>
+		        </span>
+		        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6 text-accent">
+		          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+		        </svg>
+		      </a>
+
+		      <div class="search-box w-full sm:flex-1 max-w-[584px] flex items-center gap-2 px-4 py-2">
+		        <svg id="topSearchIcon" class="w-4 h-4 text-ink-faint shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+		          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+		        </svg>
+		        <svg id="topSpinner" class="spinner w-4 h-4 text-accent shrink-0 hidden" fill="none" viewBox="0 0 24 24">
+		          <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+		          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+		        </svg>
+		        <input id="topInput" name="q" type="text" aria-label="Modifier votre recherche" autocomplete="off" spellcheck="false" class="flex-1 text-sm text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0" hx-get="/api/v1/search" hx-target="#resultsList" hx-swap="innerHTML" hx-sync="this:replace" hx-replace-url="true" hx-trigger="input delay:260ms" />
+		        <button id="topClear" class="hidden text-ink-faint hover:text-ink transition-colors shrink-0" aria-label="Effacer la recherche et revenir à l'accueil">
+		          <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+		            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+		          </svg>
+		        </button>
+		      </div>
+		    </div>
+		  </div>
+
+		  <main class="px-4 sm:px-6 pt-5 pb-20 w-full max-w-2xl mx-auto">
+		    <div id="statsBar" class="hidden"></div>
+		    <div id="adContainer" class="hidden w-full mb-2"></div>
+		    <div id="resultsLabel" class="section-label hidden">Résultats</div>
+
+		    <div id="aiOverview" class="hidden mb-6 bg-surface-raised border border-line rounded-2xl shadow-card p-5">
+		      <div class="flex items-center gap-2 mb-3 text-accent">
+		        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+		          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+		        </svg>
+		        <span class="font-semibold text-sm uppercase tracking-wide">Assistant IA</span>
+		      </div>
+
+		      <button id="aiTriggerBtn" class="hidden flex items-center gap-2 px-4 py-2 bg-surface-raised text-accent font-medium text-sm rounded-lg shadow-sm border border-line hover:bg-accent-soft transition-colors">
+		        Générer une synthèse avec l'IA
+		      </button>
+
+		      <div id="aiLoading" class="hidden flex-col gap-4 w-full">
+		        <div class="flex items-center gap-3 text-accent text-sm font-medium">
+		          <svg class="spinner w-4 h-4" fill="none" viewBox="0 0 24 24">
+		            <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+		            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+		          </svg>
+		          Génération de la synthèse en cours...
+		        </div>
+
+		        <div class="animate-pulse flex flex-col gap-3 w-full pl-7">
+		          <div class="h-3.5 bg-surface-sunken rounded-full w-full"></div>
+		          <div class="h-3.5 bg-surface-sunken rounded-full w-[92%]"></div>
+		          <div class="h-3.5 bg-surface-sunken rounded-full w-[85%]"></div>
+		          <div class="h-3.5 bg-surface-sunken rounded-full w-[40%]"></div>
+		        </div>
+		      </div>
+
+		      <div id="aiContent" class="hidden text-ink text-sm leading-relaxed"></div>
+		    </div>
+
+		    <div id="resultsList" class="w-full" aria-live="polite"></div>
+
+		    <div id="emptyState" class="hidden pt-4">
+		      <p class="no-results-title" id="emptyTitle"></p>
+		      <p class="no-results-sub" id="emptySubtitle"></p>
+		      <hr class="mt-6 border-line" />
+		      <p class="mt-4 text-sm text-ink-faint">Suggestions :</p>
+		      <ul class="mt-2 text-sm text-ink-faint list-disc list-inside space-y-1">
+		        <li>Vérifiez l'orthographe de tous les mots.</li>
+		        <li>Essayez des mots-clés différents ou moins nombreux.</li>
+		        <li>Essayez des mots-clés plus généraux.</li>
+		      </ul>
+		    </div>
+		  </main>
+		</div>
+		<script nonce={ nonce } src="/js/htmx.min.js"></script>
+		<script nonce={ nonce } src={ "/js/app.js?h=" + AppJSVersion }></script>
+	}
+}

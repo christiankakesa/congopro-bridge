@@ -42,7 +42,7 @@ func SiteFooter() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<footer class=\"w-full text-xs text-gray-400 text-center px-4 py-6 mt-auto shrink-0\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<footer class=\"w-full text-xs text-ink-faint text-center px-4 py-6 mt-auto shrink-0\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -61,10 +61,10 @@ func SiteFooter() templ.Component {
 func siteFooterHTML() string {
 	year := strconv.Itoa(time.Now().Year())
 	link := func(href, label string) string {
-		return `<a href="` + href + `" class="hover:text-gray-600 hover:underline transition-colors">` + label + `</a>`
+		return `<a href="` + href + `" class="hover:text-ink hover:underline transition-colors">` + label + `</a>`
 	}
 	return "© " + year + " Congopro · " +
-		`<a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 hover:underline transition-colors">Support</a> · ` +
+		`<a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-ink hover:underline transition-colors">Support</a> · ` +
 		link("/help", "Aide") + " · " +
 		link("/account", "Mon compte") + " · " +
 		link("/privacy", "Confidentialité") + " · " +

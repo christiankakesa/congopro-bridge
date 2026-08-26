@@ -18,29 +18,17 @@ templ AccountLayout(title, nonce, email string) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title } · Congopro</title>
 			<meta name="robots" content="noindex,nofollow"/>
-			<meta name="color-scheme" content="light dark"/>
-			<script nonce={ nonce }>
-				(function () {
-					try {
-						var t = localStorage.getItem("cp_theme");
-						if (t !== "dark" && t !== "light") t = "light";
-						document.documentElement.dataset.theme = t;
-					} catch (e) {}
-				})();
-			</script>
-			<link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
-			<link rel="preload" href="/fonts/sora-600.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
-			<link rel="stylesheet" href={ "/css/style.min.css?h=" + CSSVersion }/>
+			@commonHead(nonce, CSSVersion)
 		</head>
-		<body class="bg-white text-gray-900 antialiased min-h-full flex flex-col">
+		<body class="bg-surface text-ink antialiased min-h-full flex flex-col">
 			if email != "" {
-				<header class="bg-white border-b border-gray-200">
+				<header class="bg-surface-raised border-b border-line">
 					<div class="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-						<a href="/" class="font-sora font-semibold text-gray-900">Congopro</a>
+						<a href="/" class="font-sora font-semibold text-ink">Congopro</a>
 						<div class="flex items-center gap-4 text-sm">
-							<span class="text-gray-500">{ email }</span>
+							<span class="text-ink-faint">{ email }</span>
 							<form method="post" action="/account/logout">
-								<button type="submit" class="text-gray-500 hover:text-gray-900">Déconnexion</button>
+								<button type="submit" class="text-ink-faint hover:text-ink">Déconnexion</button>
 							</form>
 						</div>
 					</div>
@@ -57,10 +45,10 @@ templ AccountLayout(title, nonce, email string) {
 templ AccountLoginPage(nonce, errorMsg, next string) {
 	@AccountLayout("Connexion", nonce, "") {
 		<div class="max-w-sm mx-auto mt-16">
-			<h1 class="text-xl font-sora font-semibold text-gray-900 mb-2">Mon compte</h1>
-			<p class="text-sm text-gray-500 mb-6">Recevez un code de connexion par email — pas de mot de passe.</p>
+			<h1 class="text-xl font-sora font-semibold text-ink mb-2">Mon compte</h1>
+			<p class="text-sm text-ink-faint mb-6">Recevez un code de connexion par email — pas de mot de passe.</p>
 			if errorMsg != "" {
-				<div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+				<div class="mb-4 rounded-lg bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">
 					{ errorMsg }
 				</div>
 			}
@@ -69,19 +57,19 @@ templ AccountLoginPage(nonce, errorMsg, next string) {
 					<input type="hidden" name="next" value={ next }/>
 				}
 				<div>
-					<label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+					<label for="email" class="block text-sm font-medium text-ink-muted mb-1">Email</label>
 					<input
 						type="email"
 						id="email"
 						name="email"
 						required
 						autocomplete="username"
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+						class="field-input"
 					/>
 				</div>
 				<button
 					type="submit"
-					class="w-full rounded-lg bg-gray-900 text-white text-sm font-medium py-2.5 hover:bg-gray-800 transition-colors"
+					class="btn btn-primary w-full"
 				>
 					Recevoir mon code
 				</button>
@@ -93,14 +81,14 @@ templ AccountLoginPage(nonce, errorMsg, next string) {
 templ AccountVerifyPage(nonce, email, errorMsg, next string) {
 	@AccountLayout("Vérification", nonce, "") {
 		<div class="max-w-sm mx-auto mt-16">
-			<h1 class="text-xl font-sora font-semibold text-gray-900 mb-2">Code envoyé</h1>
-			<p class="text-sm text-gray-500 mb-6">
+			<h1 class="text-xl font-sora font-semibold text-ink mb-2">Code envoyé</h1>
+			<p class="text-sm text-ink-faint mb-6">
 				Saisissez le code à 6 chiffres envoyé à
-				<span class="font-medium text-gray-700">{ email }</span>.
+				<span class="font-medium text-ink-muted">{ email }</span>.
 				Il est valable 10&nbsp;minutes.
 			</p>
 			if errorMsg != "" {
-				<div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+				<div class="mb-4 rounded-lg bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">
 					{ errorMsg }
 				</div>
 			}
@@ -110,7 +98,7 @@ templ AccountVerifyPage(nonce, email, errorMsg, next string) {
 					<input type="hidden" name="next" value={ next }/>
 				}
 				<div>
-					<label for="code" class="block text-sm font-medium text-gray-700 mb-1">Code (6 chiffres)</label>
+					<label for="code" class="block text-sm font-medium text-ink-muted mb-1">Code (6 chiffres)</label>
 					<input
 						type="text"
 						id="code"
@@ -120,19 +108,19 @@ templ AccountVerifyPage(nonce, email, errorMsg, next string) {
 						maxlength="6"
 						required
 						autocomplete="one-time-code"
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"
+						class="field-input tracking-widest"
 					/>
 				</div>
 				<button
 					type="submit"
-					class="w-full rounded-lg bg-gray-900 text-white text-sm font-medium py-2.5 hover:bg-gray-800 transition-colors"
+					class="btn btn-primary w-full"
 				>
 					Me connecter
 				</button>
 			</form>
-			<p class="mt-4 text-xs text-gray-400">
+			<p class="mt-4 text-xs text-ink-faint">
 				Pas reçu ? Un nouveau code peut être demandé après 1&nbsp;minute —
-				<a href="/account/login" class="underline hover:text-gray-600">renvoyer</a>.
+				<a href="/account/login" class="underline hover:text-ink">renvoyer</a>.
 			</p>
 		</div>
 	}
@@ -147,24 +135,24 @@ templ AccountDashboard(nonce string, cust *customers.Customer, myClaims []claims
 	}}
 	@AccountLayout("Mon compte", nonce, email) {
 		<div class="max-w-lg mt-8">
-			<h1 class="text-xl font-sora font-semibold text-gray-900 mb-2">Mon compte</h1>
-			<p class="text-sm text-gray-500 mb-6">Connecté en tant que { email }.</p>
+			<h1 class="text-xl font-sora font-semibold text-ink mb-2">Mon compte</h1>
+			<p class="text-sm text-ink-faint mb-6">Connecté en tant que { email }.</p>
 
 			if len(myClaims) > 0 {
-				<h2 class="text-base font-sora font-semibold text-gray-900 mt-8 mb-3">Mes réclamations</h2>
-				<div class="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
+				<h2 class="text-base font-sora font-semibold text-ink mt-8 mb-3">Mes réclamations</h2>
+				<div class="rounded-lg border border-line bg-surface-raised divide-y divide-line">
 					for _, cl := range myClaims {
 						<div class="px-4 py-3 flex items-center justify-between gap-3">
 							<div class="min-w-0">
-								<p class="text-sm font-medium text-gray-900 truncate">{ cl.CompanyName }</p>
-								<p class="text-xs text-gray-400 mt-0.5">{ cl.CreatedAt.Format("02/01/2006") }</p>
+								<p class="text-sm font-medium text-ink truncate">{ cl.CompanyName }</p>
+								<p class="text-xs text-ink-faint mt-0.5">{ cl.CreatedAt.Format("02/01/2006") }</p>
 							</div>
 							@claimStatusBadge(cl.Status)
 						</div>
 					}
 				</div>
 			} else {
-				<div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-500">
+				<div class="rounded-lg border border-line bg-surface-sunken px-4 py-5 text-sm text-ink-faint">
 					Vous n'avez pas encore réclamé d'entreprise. Ouvrez une fiche entreprise puis
 					«&nbsp;Réclamer cette entreprise&nbsp;» pour la rattacher à votre compte.
 				</div>
@@ -173,7 +161,7 @@ templ AccountDashboard(nonce string, cust *customers.Customer, myClaims []claims
 			<form method="post" action="/account/logout" class="mt-6">
 				<button
 					type="submit"
-					class="rounded-lg border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 hover:bg-gray-50 transition-colors"
+					class="rounded-lg border border-line text-ink-muted text-sm font-medium px-4 py-2 hover:bg-surface-sunken transition-colors"
 				>
 					Se déconnecter
 				</button>
@@ -185,19 +173,19 @@ templ AccountDashboard(nonce string, cust *customers.Customer, myClaims []claims
 templ AccountClaimPage(nonce, email, companySlug, companyName string, state claims.CompanyState, errorMsg string) {
 	@AccountLayout("Réclamer une entreprise", nonce, email) {
 		<div class="max-w-lg mt-8">
-			<h1 class="text-xl font-sora font-semibold text-gray-900 mb-1">Réclamer une entreprise</h1>
-			<p class="text-sm text-gray-500 mb-6">
-				{ companyName } — rattachée à <span class="font-medium text-gray-700">{ email }</span>
+			<h1 class="text-xl font-sora font-semibold text-ink mb-1">Réclamer une entreprise</h1>
+			<p class="text-sm text-ink-faint mb-6">
+				{ companyName } — rattachée à <span class="font-medium text-ink-muted">{ email }</span>
 			</p>
 
 			if errorMsg != "" {
-				<div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+				<div class="mb-4 rounded-lg bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">
 					{ errorMsg }
 				</div>
 			}
 
 			if state.Claimed {
-				<div class="rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3">
+				<div class="rounded-lg bg-positive-soft border border-positive-soft text-positive text-sm px-4 py-3">
 					if state.ClaimedByMe {
 						Cette entreprise est déjà rattachée à votre compte.
 					} else {
@@ -205,7 +193,7 @@ templ AccountClaimPage(nonce, email, companySlug, companyName string, state clai
 					}
 				</div>
 			} else if state.Pending {
-				<div class="rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm px-4 py-3">
+				<div class="rounded-lg bg-warning-soft border border-warning-soft text-warning text-sm px-4 py-3">
 					if state.PendingByMe {
 						Votre réclamation est en cours d'examen par notre équipe. Vous recevrez un email à la décision.
 					} else {
@@ -216,12 +204,12 @@ templ AccountClaimPage(nonce, email, companySlug, companyName string, state clai
 				<form method="post" action="/account/claim" class="space-y-4">
 					<input type="hidden" name="company_slug" value={ companySlug }/>
 					<div>
-						<label for="relationship" class="block text-sm font-medium text-gray-700 mb-1">Votre relation avec cette entreprise</label>
+						<label for="relationship" class="block text-sm font-medium text-ink-muted mb-1">Votre relation avec cette entreprise</label>
 						<select
 							id="relationship"
 							name="relationship"
 							required
-							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="field-input"
 						>
 							<option value="owner">Propriétaire</option>
 							<option value="manager">Gérant</option>
@@ -230,17 +218,17 @@ templ AccountClaimPage(nonce, email, companySlug, companyName string, state clai
 						</select>
 					</div>
 					<div>
-						<label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Téléphone (facultatif)</label>
+						<label for="phone" class="block text-sm font-medium text-ink-muted mb-1">Téléphone (facultatif)</label>
 						<input
 							type="tel"
 							id="phone"
 							name="phone"
 							autocomplete="tel"
-							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="field-input"
 						/>
 					</div>
 					<div>
-						<label for="evidence" class="block text-sm font-medium text-gray-700 mb-1">
+						<label for="evidence" class="block text-sm font-medium text-ink-muted mb-1">
 							Justification — pourquoi cette entreprise vous appartient-elle ?
 						</label>
 						<textarea
@@ -250,13 +238,13 @@ templ AccountClaimPage(nonce, email, companySlug, companyName string, state clai
 							required
 							minlength="20"
 							maxlength="4000"
-							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							class="field-input"
 						></textarea>
-						<p class="text-xs text-gray-400 mt-1">Au moins 20 caractères. Notre équipe vérifie chaque demande.</p>
+						<p class="text-xs text-ink-faint mt-1">Au moins 20 caractères. Notre équipe vérifie chaque demande.</p>
 					</div>
 					<button
 						type="submit"
-						class="w-full rounded-lg bg-gray-900 text-white text-sm font-medium py-2.5 hover:bg-gray-800 transition-colors"
+						class="btn btn-primary w-full"
 					>
 						Envoyer ma réclamation
 					</button>
@@ -274,11 +262,11 @@ templ claimStatusBadge(status string) {
 func claimStatusBadgeStyle(status string) (string, string) {
 	switch status {
 	case "approved":
-		return "Approuvée", "bg-green-50 text-green-700 border border-green-200"
+		return "Approuvée", "bg-positive-soft text-positive border border-positive-soft"
 	case "rejected":
-		return "Refusée", "bg-red-50 text-red-700 border border-red-200"
+		return "Refusée", "bg-danger-soft text-danger border border-danger-soft"
 	default:
-		return "En attente", "bg-yellow-50 text-yellow-700 border border-yellow-200"
+		return "En attente", "bg-warning-soft text-warning border border-warning-soft"
 	}
 }
 
@@ -299,8 +287,8 @@ func claimRelationshipLabel(r string) string {
 templ AccountPromotePage(nonce, email string, eligible []promotions.EligibleCompany, current []promotions.Promotion, priceStr string, ok, canceled bool) {
 	@AccountLayout("Mise en avant", nonce, email) {
 		<div class="max-w-lg mt-8">
-			<h1 class="text-xl font-sora font-semibold text-gray-900 mb-1">Mise en avant</h1>
-			<p class="text-sm text-gray-500 mb-6">
+			<h1 class="text-xl font-sora font-semibold text-ink mb-1">Mise en avant</h1>
+			<p class="text-sm text-ink-faint mb-6">
 				Votre entreprise apparaît avec un badge «&nbsp;Promu&nbsp;» sur sa fiche et dans les résultats.
 				if priceStr != "" {
 					{ priceStr }, sans engagement — résiliable à tout moment.
@@ -308,25 +296,25 @@ templ AccountPromotePage(nonce, email string, eligible []promotions.EligibleComp
 			</p>
 
 			if ok {
-				<div class="mb-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3">
+				<div class="mb-4 rounded-lg bg-positive-soft border border-positive-soft text-positive text-sm px-4 py-3">
 					Paiement confirmé — votre mise en avant est active (l'activation peut prendre quelques secondes).
 				</div>
 			}
 			if canceled {
-				<div class="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm px-4 py-3">
+				<div class="mb-4 rounded-lg bg-warning-soft border border-warning-soft text-warning text-sm px-4 py-3">
 					Paiement annulé — aucun montant n'a été prélevé.
 				</div>
 			}
 
 			if len(current) > 0 {
-				<h2 class="text-base font-sora font-semibold text-gray-900 mt-6 mb-3">Mes mises en avant</h2>
-				<div class="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100 mb-6">
+				<h2 class="text-base font-sora font-semibold text-ink mt-6 mb-3">Mes mises en avant</h2>
+				<div class="rounded-lg border border-line bg-surface-raised divide-y divide-line mb-6">
 					for _, pr := range current {
 						<div class="px-4 py-3 flex items-center justify-between gap-3">
 							<div class="min-w-0">
-								<p class="text-sm font-medium text-gray-900 truncate">{ pr.CompanyName }</p>
+								<p class="text-sm font-medium text-ink truncate">{ pr.CompanyName }</p>
 								if pr.CurrentPeriodEnd != nil && pr.Status != "canceled" {
-									<p class="text-xs text-gray-400 mt-0.5">Renouvellement le { pr.CurrentPeriodEnd.Format("02/01/2006") }</p>
+									<p class="text-xs text-ink-faint mt-0.5">Renouvellement le { pr.CurrentPeriodEnd.Format("02/01/2006") }</p>
 								}
 							</div>
 							@promoStatusBadge(pr.Status)
@@ -335,23 +323,23 @@ templ AccountPromotePage(nonce, email string, eligible []promotions.EligibleComp
 				</div>
 			}
 
-			<h2 class="text-base font-sora font-semibold text-gray-900 mt-6 mb-3">Promouvoir une entreprise</h2>
+			<h2 class="text-base font-sora font-semibold text-ink mt-6 mb-3">Promouvoir une entreprise</h2>
 			if len(eligible) > 0 {
-				<div class="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
+				<div class="rounded-lg border border-line bg-surface-raised divide-y divide-line">
 					for _, co := range eligible {
 						{{ citySuffix := ""; if co.City != "" { citySuffix = " · " + co.City } }}
 						<div class="px-4 py-3 flex items-center justify-between gap-3">
 							<div class="min-w-0">
-								<p class="text-sm font-medium text-gray-900 truncate">{ co.Name }</p>
+								<p class="text-sm font-medium text-ink truncate">{ co.Name }</p>
 								if co.Activity != "" || co.City != "" {
-									<p class="text-xs text-gray-400 mt-0.5 truncate">{ co.Activity + citySuffix }</p>
+									<p class="text-xs text-ink-faint mt-0.5 truncate">{ co.Activity + citySuffix }</p>
 								}
 							</div>
 							<form method="post" action="/account/promote" class="shrink-0">
 								<input type="hidden" name="company_slug" value={ co.NameSeo }/>
 								<button
 									type="submit"
-									class="rounded-lg bg-gray-900 hover:bg-gray-800 text-white text-xs font-medium px-3.5 py-2 transition-colors"
+									class="rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium px-3.5 py-2 transition-colors"
 								>
 									Promouvoir
 								</button>
@@ -359,11 +347,11 @@ templ AccountPromotePage(nonce, email string, eligible []promotions.EligibleComp
 						</div>
 					}
 				</div>
-				<p class="mt-3 text-xs text-gray-400">Le paiement est traité par Stripe. Aucune donnée bancaire ne transite par Congopro.</p>
+				<p class="mt-3 text-xs text-ink-faint">Le paiement est traité par Stripe. Aucune donnée bancaire ne transite par Congopro.</p>
 			} else {
-				<div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-500">
+				<div class="rounded-lg border border-line bg-surface-sunken px-4 py-5 text-sm text-ink-faint">
 					Aucune entreprise éligible. Pour promouvoir une entreprise, réclamez-la d'abord depuis sa fiche
-					(<span class="text-gray-700">«&nbsp;Réclamer&nbsp;»</span>) et attendez la validation de notre équipe.
+					(<span class="text-ink-muted">«&nbsp;Réclamer&nbsp;»</span>) et attendez la validation de notre équipe.
 				</div>
 			}
 		</div>
@@ -373,13 +361,13 @@ templ AccountPromotePage(nonce, email string, eligible []promotions.EligibleComp
 func promoStatusBadgeStyle(status string) (string, string) {
 	switch status {
 	case "active":
-		return "Active", "bg-green-50 text-green-700 border border-green-200"
+		return "Active", "bg-positive-soft text-positive border border-positive-soft"
 	case "past_due":
-		return "Paiement en attente", "bg-yellow-50 text-yellow-700 border border-yellow-200"
+		return "Paiement en attente", "bg-warning-soft text-warning border border-warning-soft"
 	case "pending":
-		return "En cours", "bg-blue-50 text-blue-700 border border-blue-200"
+		return "En cours", "bg-warning-soft text-warning border border-warning-soft"
 	default:
-		return "Résiliée", "bg-gray-100 text-gray-500 border border-gray-200"
+		return "Résiliée", "bg-surface-sunken text-ink-faint border border-line"
 	}
 }
 

@@ -14,7 +14,7 @@ import (
 // bottom of the viewport when content is short, and flows naturally after
 // content when there's more than a screenful, without a leftover scrollbar.
 templ SiteFooter() {
-	<footer class="w-full text-xs text-gray-400 text-center px-4 py-6 mt-auto shrink-0">
+	<footer class="w-full text-xs text-ink-faint text-center px-4 py-6 mt-auto shrink-0">
 		@templ.Raw(siteFooterHTML())
 	</footer>
 }
@@ -22,10 +22,10 @@ templ SiteFooter() {
 func siteFooterHTML() string {
 	year := strconv.Itoa(time.Now().Year())
 	link := func(href, label string) string {
-		return `<a href="` + href + `" class="hover:text-gray-600 hover:underline transition-colors">` + label + `</a>`
+		return `<a href="` + href + `" class="hover:text-ink hover:underline transition-colors">` + label + `</a>`
 	}
 	return "© " + year + " Congopro · " +
-		`<a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-gray-600 hover:underline transition-colors">Support</a> · ` +
+		`<a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-ink hover:underline transition-colors">Support</a> · ` +
 		link("/help", "Aide") + " · " +
 		link("/account", "Mon compte") + " · " +
 		link("/privacy", "Confidentialité") + " · " +

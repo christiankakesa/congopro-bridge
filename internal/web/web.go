@@ -4,9 +4,6 @@ import (
 	"embed"
 )
 
-//go:embed index.html
-var IndexHTML []byte
-
 //go:embed ads-preview.html
 var AdsPreviewHTML []byte
 
@@ -24,6 +21,9 @@ var TailwindCSS []byte
 
 //go:embed js/htmx.min.js
 var HtmxJS []byte
+
+//go:embed js/app.js
+var AppJS []byte
 
 //go:embed fonts/*.woff2
 var FontsFS embed.FS

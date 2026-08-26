@@ -27,8 +27,6 @@ templ resultRow(sr data.SearchResult, promoted bool) {
 		phone := SafePhone(c.Phone)
 		email := SafeEmail(c.Email)
 		hue := NameToHue(name)
-		bg := fmt.Sprintf("hsl(%d,55%%,92%%)", hue)
-		fg := fmt.Sprintf("hsl(%d,50%%,32%%)", hue)
 		ini := Initials(name)
 		actShort := TruncateActivity(activity)
 
@@ -69,14 +67,14 @@ templ resultRow(sr data.SearchResult, promoted bool) {
 		data-item-name={ name }
 		data-item-category={ analyticsCategory }
 	>
-		<div class="result-favicon" style={ "background:" + bg + ";color:" + fg + ";" } aria-hidden="true">{ ini }</div>
+		<div class="result-favicon" style={ fmt.Sprintf("--av-h:%d", hue) } aria-hidden="true">{ ini }</div>
 		<div class="result-body">
 			<div class="flex items-start gap-2 flex-wrap">
 				<a href={ templ.URL("/company/" + c.NameSeo) } target="_self" class="result-title hover:underline flex-1 min-w-0">
 					<span itemprop="name">{ name }</span>
 				</a>
 				if promoted {
-					<span class="shrink-0 mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Promu</span>
+					<span class="shrink-0 mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-positive-soft text-positive border border-positive-soft">Promu</span>
 				}
 				if hasScore {
 					<span class="score-badge shrink-0 mt-1">{ fmt.Sprintf("%d%%", scorePct) }</span>
@@ -92,7 +90,7 @@ templ resultRow(sr data.SearchResult, promoted bool) {
 					</span>
 				}
 				if showLocationPill {
-					<a href={ templ.URL(mapsLink) } target="_blank" rel="noopener noreferrer" class="location-pill hover:underline text-gray-600">
+					<a href={ templ.URL(mapsLink) } target="_blank" rel="noopener noreferrer" class="location-pill hover:underline text-ink-muted">
 						<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0" aria-hidden="true">
 							<path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
 						</svg>
@@ -102,7 +100,7 @@ templ resultRow(sr data.SearchResult, promoted bool) {
 					</a>
 				}
 				if phone != "" {
-					<a href={ templ.SafeURL("tel:" + phone) } itemprop="telephone" class="location-pill hover:underline text-blue-600">
+					<a href={ templ.SafeURL("tel:" + phone) } itemprop="telephone" class="location-pill hover:underline text-accent">
 						<svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0" aria-hidden="true">
 							<path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path>
 						</svg>
@@ -110,7 +108,7 @@ templ resultRow(sr data.SearchResult, promoted bool) {
 					</a>
 				}
 				if email != "" {
-					<a href={ templ.SafeURL("mailto:" + email) } itemprop="email" class="location-pill hover:underline text-blue-600">
+					<a href={ templ.SafeURL("mailto:" + email) } itemprop="email" class="location-pill hover:underline text-accent">
 						<svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0; margin-top:1px;" aria-hidden="true">
 							<path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
 							<path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>

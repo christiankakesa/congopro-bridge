@@ -43,7 +43,7 @@ func SelectAdSlots(pool []ads.AdWire, maxPerPage int) []ads.AdWire {
 
 func adAccentStyle(color string) string {
 	if color == "" {
-		return "background:#1a73e8"
+		return "background:#be0203"
 	}
 	return "background:" + color
 }
@@ -187,7 +187,7 @@ func adSlot(ad ads.AdWire) templ.Component {
 			}
 			color := SafeCSSColor(ad.Color)
 			if color == "" {
-				color = "#1a73e8"
+				color = "#be0203"
 			}
 			displayURL := ad.DisplayURL
 			if displayURL == "" {
@@ -428,7 +428,7 @@ func premiumHomepageAd(ad ads.AdWire, safeURL string) templ.Component {
 		if displayURL == "" {
 			displayURL = safeURL
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"w-full max-w-4xl relative bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden group hover:shadow-lg transition-all duration-300\" style=\"display: block;\"><div class=\"h-1 w-full\" style=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"w-full max-w-4xl relative bg-surface-raised rounded-lg shadow-md border border-line overflow-hidden group hover:shadow-lg transition-all duration-300\" style=\"display: block;\"><div class=\"h-1 w-full\" style=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -519,33 +519,33 @@ func premiumHomepageAd(ad ads.AdWire, safeURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" data-ad-placement=\"homepage\" style=\"text-decoration: none;\"><h3 class=\"text-lg font-bold text-gray-900 truncate tracking-tight mb-1 hover:opacity-80\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" data-ad-placement=\"homepage\" style=\"text-decoration: none;\"><h3 class=\"text-lg font-bold text-ink truncate tracking-tight mb-1 hover:opacity-80\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var30 string
 		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(ad.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/ads.templ`, Line: 161, Col: 105}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/ads.templ`, Line: 161, Col: 100}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</h3></a><p class=\"text-sm text-gray-600 mb-1.5 leading-snug\" style=\"display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</h3></a><p class=\"text-sm text-ink-muted mb-1.5 leading-snug\" style=\"display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(ad.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/ads.templ`, Line: 163, Col: 174}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/ads.templ`, Line: 163, Col: 175}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</p><div class=\"flex items-center text-xs font-medium text-gray-400\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"w-3.5 h-3.5 mr-1\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1\"></path></svg> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</p><div class=\"flex items-center text-xs font-medium text-ink-faint\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"w-3.5 h-3.5 mr-1\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1\"></path></svg> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
