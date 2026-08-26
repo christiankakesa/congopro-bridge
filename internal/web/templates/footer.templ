@@ -78,10 +78,30 @@ func siteFooterHTML() string {
 	link := func(href, label string) string {
 		return `<a href="` + href + `" preload="mousedown" class="hover:text-ink hover:underline transition-colors">` + label + `</a>`
 	}
-	return "© " + year + " Congopro · " +
+	// The copyright line doubles as the site-wide route home — it is the
+	// conventional place people look, and it covers deep-linked pages
+	// (static content, account) that carry no other link back.
+	return `<a href="/" preload="mousedown" class="hover:text-ink hover:underline transition-colors">© ` + year + ` Congopro</a> · ` +
 		`<a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-ink hover:underline transition-colors">Support</a> · ` +
 		link("/help", "Aide") + " · " +
 		link("/account", "Mon compte") + " · " +
 		link("/privacy", "Confidentialité") + " · " +
 		link("/terms", "Conditions")
+}
+
+// siteHeader is the compact brand bar for content pages that have no top
+// bar of their own (help/privacy/terms). Deep links land on these pages
+// from search engines and shared links, so they need a visible route back
+// into the site rather than relying on the browser's back button.
+templ siteHeader() {
+	<header class="w-full border-b border-line bg-surface-raised">
+		<div class="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center">
+			<a href="/" preload="mousedown" class="flex items-center gap-2" aria-label="Congopro Bridge — retour à l'accueil">
+				@brandMark("w-6 h-6 logo-a")
+				<span class="wordmark font-sora font-semibold text-[17px]">
+					<span class="logo-a">Congopro</span> <span class="logo-b">Bridge.</span>
+				</span>
+			</a>
+		</div>
+	</header>
 }

@@ -45,14 +45,18 @@ func StaticPage(title, canonicalURL, nonce, cssVersion, heading, bodyHTML string
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"w-full max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-28\"><h1 class=\"text-3xl font-sora font-semibold text-ink mb-6\">")
+			templ_7745c5c3_Err = siteHeader().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <div class=\"w-full max-w-3xl mx-auto px-4 sm:px-6 pt-10 pb-28\"><h1 class=\"text-3xl font-sora font-semibold text-ink mb-6\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(heading)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/static_page.templ`, Line: 10, Col: 71}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/static_page.templ`, Line: 11, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {

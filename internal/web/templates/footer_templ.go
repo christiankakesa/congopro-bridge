@@ -113,12 +113,56 @@ func siteFooterHTML() string {
 	link := func(href, label string) string {
 		return `<a href="` + href + `" preload="mousedown" class="hover:text-ink hover:underline transition-colors">` + label + `</a>`
 	}
-	return "© " + year + " Congopro · " +
+	// The copyright line doubles as the site-wide route home — it is the
+	// conventional place people look, and it covers deep-linked pages
+	// (static content, account) that carry no other link back.
+	return `<a href="/" preload="mousedown" class="hover:text-ink hover:underline transition-colors">© ` + year + ` Congopro</a> · ` +
 		`<a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-ink hover:underline transition-colors">Support</a> · ` +
 		link("/help", "Aide") + " · " +
 		link("/account", "Mon compte") + " · " +
 		link("/privacy", "Confidentialité") + " · " +
 		link("/terms", "Conditions")
+}
+
+// siteHeader is the compact brand bar for content pages that have no top
+// bar of their own (help/privacy/terms). Deep links land on these pages
+// from search engines and shared links, so they need a visible route back
+// into the site rather than relying on the browser's back button.
+func siteHeader() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var4 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var4 == nil {
+			templ_7745c5c3_Var4 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<header class=\"w-full border-b border-line bg-surface-raised\"><div class=\"max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center\"><a href=\"/\" preload=\"mousedown\" class=\"flex items-center gap-2\" aria-label=\"Congopro Bridge — retour à l'accueil\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = brandMark("w-6 h-6 logo-a").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<span class=\"wordmark font-sora font-semibold text-[17px]\"><span class=\"logo-a\">Congopro</span> <span class=\"logo-b\">Bridge.</span></span></a></div></header>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
 }
 
 var _ = templruntime.GeneratedTemplate

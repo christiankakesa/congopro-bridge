@@ -6,7 +6,8 @@ package templates
 // boundary the old client-side fetch-and-inject flow already crossed.
 templ StaticPage(title, canonicalURL, nonce, cssVersion, heading, bodyHTML string) {
 	@Layout(title, canonicalURL, nonce, cssVersion) {
-		<div class="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-28">
+		@siteHeader()
+		<div class="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-10 pb-28">
 			<h1 class="text-3xl font-sora font-semibold text-ink mb-6">{ heading }</h1>
 			<div class="content-page">
 				@templ.Raw(bodyHTML)

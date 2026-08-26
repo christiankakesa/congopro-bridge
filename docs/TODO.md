@@ -12,8 +12,42 @@ Later:
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* Surface "verified owner" on public company profiles (data exists since
-  claims landed; display is a deliberate separate step).
+* **Offsite backups to Cloudflare R2.** Local `pg_dump`s already run daily
+  (`make db-backup-install` / `db-backup-now` / `db-restore-test`), but they
+  live on the same VPS — they don't survive losing the box. Copy the pattern
+  already proven in two sibling projects:
+  `~/workspace/audio-server/DEPLOY.md` ("Offsite backups" section — the
+  `db-backup-offsite.sh` no-op-until-configured hook, `OFFSITE_MODE=s3`,
+  `OFFSITE_RCLONE_REMOTE`) and `~/workspace/kito-platform/deploy/kito.env.example`
+  (`BACKUP_STATUS_FILE` last-success marker that `/healthz` reads).
+  Congopro needs: an offsite step at the end of `scripts/db-backup.sh`, an
+  `/opt/congopro-bridge/backup-offsite.env` (never in git), and an rclone R2
+  remote written directly to `~ops/.config/rclone/rclone.conf`.
+  Gotchas already paid for in audio-server — don't rediscover them: use a
+  **separate bucket and a separate scoped token** from any other project;
+  match the **jurisdiction segment** in the endpoint
+  (`<accountid>.eu.r2.cloudflarestorage.com` for EU buckets — a missing
+  `.eu.` returns 403, which looks exactly like a bad token); set
+  `no_check_bucket = true` (object-scoped tokens can't HeadBucket); the
+  rclone `endpoint` wants the `https://` scheme. Then extend
+  `db-restore-test` to restore *from the offsite copy* — an untested backup
+  isn't a backup.
+
+* **Stripe products + webhook keys (pairing session — needs Christian's
+  Stripe account).** Promoted listings are coded against `STRIPE_SECRET_KEY`,
+  `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` (see
+  [PROMOTIONS.md](PROMOTIONS.md)) but no products exist yet. Do together, in
+  one sitting:
+  1. **DEV** — create the promoted-listing product + price in Stripe **test
+     mode**, grab the test `sk_test_…` and `price_…`, and register the
+     webhook endpoint to get its signing secret (`whsec_…`); for local work
+     use the Stripe CLI listener rather than a public URL.
+  2. **PROD** — create the same product + price in **live mode**, register
+     the production webhook against the real domain, and store the live
+     keys as deploy secrets (`make secrets-init`), never in git.
+  Verify end to end in test mode before flipping live: checkout → webhook
+  received → promotion row written → badge visible on the profile.
+
 * Telegram bot as notification/quick-action layer on top of the CMS.
 * Promoted-listing ranking (pin/badge-weight in Meilisearch) — v1 ships
   badges only.
@@ -63,6 +97,19 @@ lands in Gmail spam on reputation alone)
 
 ## Done (highlights — full history in git)
 
+* UI redesign (2026-08-27): design tokens + light/dark themes (`input.css`
+  `@theme inline`, `data-theme`, footer Auto/Clair/Sombre toggle — light is
+  the default), official charte logo (inline `brandMark` + Sora wordmark at
+  the measured -0.079em tracking), real font weights (Google Sans dropped,
+  fonts 127→63 KB), `index.html` SPA shell retired into `templates/home.templ`
+  + cacheable `js/app.js`, redesigned home hero/results/profile, snap-speed
+  layer (htmx preload, cross-document view transitions, search skeletons),
+  and the admin rebuilt: dashboard, sidebar, htmx live search, toasts,
+  sectioned + per-field-validated forms. Perf: Traefik compression, 396 KB
+  favicon → 2 KB vector, `?h=` cache-bust fix on admin/account CSS.
+* "Fiche vérifiée" badge on public company profiles (2026-08-27) —
+  `claims.IsClaimed`; the search-results fragment deliberately skips the
+  lookup to keep the hot path clean.
 * Stripe promoted listings (2026-08-25): ownership-gated (approved claim
   required) monthly subscriptions via Stripe Checkout — migration 00006
   (`promotions`), `internal/promotions`, webhook
