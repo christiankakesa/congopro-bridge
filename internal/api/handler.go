@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
 	cryptorand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -82,7 +81,7 @@ var (
 )
 
 func init() {
-	cssHash = fmt.Sprintf("%.8x", md5.Sum(web.TailwindCSS))
+	cssHash = templates.CSSVersion
 	indexTmpl = template.Must(template.New("index").Parse(string(web.IndexHTML)))
 	adsPreviewTmpl = template.Must(template.New("ads-preview").Parse(string(web.AdsPreviewHTML)))
 
@@ -679,7 +678,7 @@ func ImagesHandler(w http.ResponseWriter, r *http.Request) {
 
 func TailwindCssHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeContent(w, r, "style.min.css", startupTime, bytes.NewReader(web.TailwindCSS))
 }
 

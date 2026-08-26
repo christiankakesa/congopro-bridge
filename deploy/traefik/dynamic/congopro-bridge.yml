@@ -11,13 +11,16 @@ http:
       headers:
         customRequestHeaders:
           X-Forwarded-Proto: "https"
+    congopro-bridge-compress:
+      compress: {}
 
   routers:
     congopro-bridge-router:
       rule: "Host(`congopro.com`) || Host(`www.congopro.com`)"
       service: congopro-bridge-service
       entryPoints: [websecure]
-      # middlewares:
-      #   - congopro-bridge-header-mdw
+      middlewares:
+        - congopro-bridge-compress
+      # - congopro-bridge-header-mdw
       tls:
         certResolver: letsencrypt

@@ -98,7 +98,7 @@ templ AdminLayout(title, nonce, userName string) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title } · Congopro Admin</title>
 			<meta name="robots" content="noindex,nofollow"/>
-			<link rel="stylesheet" href="/css/style.min.css"/>
+			<link rel="stylesheet" href={ "/css/style.min.css?h=" + CSSVersion }/>
 		</head>
 		<body class="bg-gray-50 text-gray-900 antialiased min-h-full">
 			if userName != "" {
