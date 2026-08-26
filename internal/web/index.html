@@ -114,6 +114,31 @@
     <meta name="msapplication-TileImage" content="/images/mstile-150x150.png" />
     <meta name="application-name" content="Congopro" />
 
+    <!-- Theme: resolved pre-paint from localStorage; hard-defaults light until the toggle ships -->
+    <meta name="color-scheme" content="light dark" />
+    <script nonce="{{ .Nonce }}">
+      (function () {
+        try {
+          var t = localStorage.getItem("cp_theme");
+          if (t !== "dark" && t !== "light") t = "light";
+          document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
+    <link
+      rel="preload"
+      href="/fonts/inter-400.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      href="/fonts/sora-600.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
     <link
       rel="preload"
       href="/css/style.min.css?h={{.CSSVersion}}"
@@ -159,17 +184,17 @@
     >
       <div class="mb-8 select-none text-center">
         <span
-          class="font-sora font-normal text-4xl sm:text-[52px] md:text-[64px] tracking-tight leading-none flex items-center justify-center gap-2 sm:gap-3"
+          class="font-sora font-semibold text-4xl sm:text-[52px] md:text-[64px] tracking-tight leading-none flex items-center justify-center gap-2 sm:gap-3"
         >
           <span>
-            <span class="font-sora g-redx">C</span
-            ><span class="font-sora g-redx">o</span
-            ><span class="font-sora g-redx">n</span
-            ><span class="font-sora g-redx">g</span
-            ><span class="font-sora g-redx">o</span
-            ><span class="font-sora g-redx">p</span
-            ><span class="font-sora g-redx">r</span
-            ><span class="font-sora g-redx">o</span>
+            <span class="font-sora text-accent">C</span
+            ><span class="font-sora text-accent">o</span
+            ><span class="font-sora text-accent">n</span
+            ><span class="font-sora text-accent">g</span
+            ><span class="font-sora text-accent">o</span
+            ><span class="font-sora text-accent">p</span
+            ><span class="font-sora text-accent">r</span
+            ><span class="font-sora text-accent">o</span>
             <span class="font-sora text-gray-700"> Bridge.</span>
           </span>
           <svg
@@ -178,7 +203,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-[#4285f4]"
+            class="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-accent"
           >
             <path
               stroke-linecap="round"
@@ -279,14 +304,14 @@
             aria-label="Congopro Bridge - retour à l'accueil"
           >
             <span>
-              <span class="font-sora g-blue">C</span
-              ><span class="font-sora g-red">o</span
-              ><span class="font-sora g-yellow">n</span
-              ><span class="font-sora g-green">g</span
-              ><span class="font-sora g-blue">o</span
-              ><span class="font-sora g-red">p</span
-              ><span class="font-sora g-yellow">r</span
-              ><span class="font-sora g-green">o</span>
+              <span class="font-sora text-accent">C</span
+              ><span class="font-sora text-accent">o</span
+              ><span class="font-sora text-accent">n</span
+              ><span class="font-sora text-accent">g</span
+              ><span class="font-sora text-accent">o</span
+              ><span class="font-sora text-accent">p</span
+              ><span class="font-sora text-accent">r</span
+              ><span class="font-sora text-accent">o</span>
               <span class="font-sora text-gray-600 text-[20px] sm:text-[22px]">
                 Bridge.</span
               >
@@ -297,7 +322,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="w-5 h-5 sm:w-6 sm:h-6 text-[#4285f4]"
+              class="w-5 h-5 sm:w-6 sm:h-6 text-accent"
             >
               <path
                 stroke-linecap="round"

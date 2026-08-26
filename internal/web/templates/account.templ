@@ -18,6 +18,18 @@ templ AccountLayout(title, nonce, email string) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title } · Congopro</title>
 			<meta name="robots" content="noindex,nofollow"/>
+			<meta name="color-scheme" content="light dark"/>
+			<script nonce={ nonce }>
+				(function () {
+					try {
+						var t = localStorage.getItem("cp_theme");
+						if (t !== "dark" && t !== "light") t = "light";
+						document.documentElement.dataset.theme = t;
+					} catch (e) {}
+				})();
+			</script>
+			<link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
+			<link rel="preload" href="/fonts/sora-600.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
 			<link rel="stylesheet" href={ "/css/style.min.css?h=" + CSSVersion }/>
 		</head>
 		<body class="bg-white text-gray-900 antialiased min-h-full flex flex-col">

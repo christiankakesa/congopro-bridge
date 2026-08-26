@@ -80,6 +80,19 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 			<meta name="msapplication-TileImage" content="/images/mstile-150x150.png"/>
 			<meta name="application-name" content="Congopro"/>
 
+			<!-- Theme: resolved pre-paint from localStorage; hard-defaults light until the toggle ships -->
+			<meta name="color-scheme" content="light dark"/>
+			<script nonce={ nonce }>
+				(function () {
+					try {
+						var t = localStorage.getItem("cp_theme");
+						if (t !== "dark" && t !== "light") t = "light";
+						document.documentElement.dataset.theme = t;
+					} catch (e) {}
+				})();
+			</script>
+			<link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
+			<link rel="preload" href="/fonts/sora-600.woff2" as="font" type="font/woff2" crossorigin="anonymous"/>
 			<link rel="preload" href={ "/css/style.min.css?h=" + cssVersion } as="style"/>
 			<link rel="stylesheet" href={ "/css/style.min.css?h=" + cssVersion }/>
 			<script async nonce={ nonce } src="https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG"></script>
