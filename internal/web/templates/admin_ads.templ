@@ -1,0 +1,291 @@
+package templates
+
+import (
+	"strconv"
+
+	"congopro-bridge/internal/ads"
+)
+
+templ AdminAdsList(nonce string, nav AdminNav, statusFilter string, list []AdminAdRow, settings ads.Settings) {
+	@AdminLayout("Publicités", nonce, nav) {
+		<div class="flex items-center justify-between mb-6">
+			<h1 class="text-xl font-sora font-semibold text-ink">Publicités</h1>
+			<a
+				href="/admin/ads/new"
+				class="btn btn-primary"
+			>
+				+ Nouvelle campagne
+			</a>
+		</div>
+
+		<form method="post" action="/admin/ads/settings" class="bg-surface-raised rounded-2xl border border-line shadow-card p-4 mb-6 flex flex-wrap items-end gap-4">
+			<div>
+				<p class="text-xs text-ink-faint uppercase font-medium mb-2">Réglages globaux</p>
+				<label class="flex items-center gap-2 text-sm text-ink-muted">
+					<input type="checkbox" name="active" checked?={ settings.Active } class="rounded border-line"/>
+					Système actif
+				</label>
+			</div>
+			<div>
+				<label for="rotation_sec" class="block text-xs text-ink-faint mb-1">Rotation (s)</label>
+				<input
+					type="number" id="rotation_sec" name="rotation_sec" min="1" max="120"
+					value={ strconv.Itoa(settings.RotationSec) }
+					class="field-input max-w-24"
+				/>
+			</div>
+			<div>
+				<label for="max_per_page" class="block text-xs text-ink-faint mb-1">Max / page</label>
+				<input
+					type="number" id="max_per_page" name="max_per_page" min="1" max="3"
+					value={ strconv.Itoa(settings.MaxPerPage) }
+					class="field-input max-w-24"
+				/>
+			</div>
+			<button type="submit" class="btn btn-secondary">
+				Enregistrer
+			</button>
+		</form>
+
+		<nav class="flex items-center gap-1 text-sm mb-4">
+			@adsFilterTab(statusFilter, "", "Toutes")
+			@adsFilterTab(statusFilter, "active", "Actives")
+			@adsFilterTab(statusFilter, "draft", "Brouillons")
+			@adsFilterTab(statusFilter, "paused", "En pause")
+			@adsFilterTab(statusFilter, "expired", "Expirées")
+		</nav>
+
+		<div class="bg-surface-raised rounded-2xl border border-line shadow-card overflow-x-auto">
+			if len(list) == 0 {
+				<div class="px-4 py-8 text-sm text-ink-faint text-center">Aucune campagne.</div>
+			} else {
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs text-ink-faint uppercase border-b border-line bg-surface-sunken">
+							<th class="px-4 py-2.5 font-medium">Campagne</th>
+							<th class="px-4 py-2.5 font-medium">Emplacement</th>
+							<th class="px-4 py-2.5 font-medium">Période</th>
+							<th class="px-4 py-2.5 font-medium">Statut</th>
+							<th class="px-4 py-2.5 font-medium">Vendu par</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-line">
+						for _, row := range list {
+							<tr class="hover:bg-surface-sunken">
+								<td class="px-4 py-3">
+									<a href={ templ.URL("/admin/ads/" + row.ID + "/edit") } class="font-medium text-ink hover:underline">{ row.Title }</a>
+									<p class="text-xs text-ink-faint mt-0.5">{ row.ID }</p>
+								</td>
+								<td class="px-4 py-3 text-ink-muted">{ adPlacementLabel(row.Placement) }</td>
+								<td class="px-4 py-3 text-ink-muted">{ row.Period }</td>
+								<td class="px-4 py-3">@adStatusBadge(row.Status)</td>
+								<td class="px-4 py-3 text-ink-muted">{ row.SoldByEmail }</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+		</div>
+	}
+}
+
+templ adsFilterTab(current, value, label string) {
+	{{ active := current == value }}
+	<a
+		href={ templ.URL(adsFilterHref(value)) }
+		class={ "px-3 py-1.5 rounded-full transition-colors " + claimTabClass(active) }
+	>
+		{ label }
+	</a>
+}
+
+func adsFilterHref(value string) string {
+	if value == "" {
+		return "/admin/ads"
+	}
+	return "/admin/ads?status=" + value
+}
+
+func adPlacementLabel(p string) string {
+	switch p {
+	case "homepage":
+		return "Accueil"
+	case "search_results":
+		return "Résultats"
+	default:
+		return "Résultats"
+	}
+}
+
+func adStatusBadgeStyle(status string) (string, string) {
+	switch status {
+	case "active":
+		return "Active", "bg-positive-soft text-positive border border-positive-soft"
+	case "paused":
+		return "En pause", "bg-warning-soft text-warning border border-warning-soft"
+	case "expired":
+		return "Expirée", "bg-surface-sunken text-ink-faint border border-line"
+	default:
+		return "Brouillon", "bg-surface-sunken text-ink-muted border border-line"
+	}
+}
+
+templ adStatusBadge(status string) {
+	{{ label, cls := adStatusBadgeStyle(status) }}
+	<span class={ "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium " + cls }>{ label }</span>
+}
+
+templ AdminAdForm(nonce string, nav AdminNav, form AdminAdFormData, isNew bool, errorMsg string, staff []StaffOption, labelValues []string) {
+	@AdminLayout(adFormTitle(isNew), nonce, nav) {
+		<div class="max-w-2xl">
+			<div class="flex items-center justify-between mb-6">
+				<h1 class="text-xl font-sora font-semibold text-ink">
+					if isNew {
+						<span>Nouvelle campagne</span>
+					} else {
+						<span>Modifier : { form.Title }</span>
+					}
+				</h1>
+				<a href="/admin/ads" class="text-sm text-ink-faint hover:text-ink">← Retour</a>
+			</div>
+			if errorMsg != "" {
+				<div class="mb-4 rounded-lg bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">{ errorMsg }</div>
+			}
+			<form method="post" class="space-y-4 bg-surface-raised rounded-2xl border border-line shadow-card p-5">
+				if isNew {
+					@adField("Identifiant (slug unique)", "id", "text", form.ID, true, "ex : rawbank-homepage-2026")
+				}
+				@adField("Titre", "title", "text", form.Title, true, "")
+				@adField("Description", "description", "text", form.Description, false, "")
+				@adField("URL de destination (https)", "url", "url", form.URL, true, "")
+				@adField("URL affichée", "display_url", "text", form.DisplayURL, false, "ex : rawbank.cd")
+
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div>
+						<label for="label" class="block text-sm font-medium text-ink-muted mb-1">Label</label>
+						<input list="ad-label-presets" type="text" id="label" name="label" value={ form.Label }
+							class="field-input"/>
+						<datalist id="ad-label-presets">
+							for _, lv := range labelValues {
+								<option value={ lv }></option>
+							}
+						</datalist>
+					</div>
+					<div>
+						<label for="color" class="block text-sm font-medium text-ink-muted mb-1">Couleur d'accent</label>
+						<input type="text" id="color" name="color" value={ form.Color } placeholder="#be0203"
+							class="field-input"/>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+					<div>
+						<label for="period_start" class="block text-sm font-medium text-ink-muted mb-1">Début</label>
+						<input type="date" id="period_start" name="period_start" value={ form.PeriodStart }
+							class="field-input"/>
+					</div>
+					<div>
+						<label for="period_end" class="block text-sm font-medium text-ink-muted mb-1">Fin (incluse)</label>
+						<input type="date" id="period_end" name="period_end" value={ form.PeriodEnd }
+							class="field-input"/>
+					</div>
+					<div>
+						<label for="weight" class="block text-sm font-medium text-ink-muted mb-1">Poids</label>
+						<input type="number" id="weight" name="weight" min="0" max="100" value={ form.Weight }
+							class="field-input"/>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div>
+						<label for="placement" class="block text-sm font-medium text-ink-muted mb-1">Emplacement</label>
+						<select id="placement" name="placement"
+							class="field-input">
+							<option value="search_results" selected?={ form.Placement == "search_results" }>Résultats de recherche</option>
+							<option value="homepage" selected?={ form.Placement == "homepage" }>Accueil</option>
+						</select>
+					</div>
+					<div>
+						<label for="status" class="block text-sm font-medium text-ink-muted mb-1">Statut</label>
+						<select id="status" name="status"
+							class="field-input">
+							<option value="draft" selected?={ form.Status == "draft" }>Brouillon</option>
+							<option value="active" selected?={ form.Status == "active" }>Active</option>
+							<option value="paused" selected?={ form.Status == "paused" }>En pause</option>
+							<option value="expired" selected?={ form.Status == "expired" }>Expirée</option>
+						</select>
+					</div>
+				</div>
+
+				<div>
+					<label for="keywords" class="block text-sm font-medium text-ink-muted mb-1">Mots-clés (un par ligne — vide = toutes les requêtes)</label>
+					<textarea id="keywords" name="keywords" rows="4" class="field-input font-mono">{ form.Keywords }</textarea>
+				</div>
+
+				<div class="border-t border-line pt-4">
+					<p class="text-xs text-ink-faint uppercase font-medium mb-3">Attribution commerciale</p>
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label for="sold_by" class="block text-sm font-medium text-ink-muted mb-1">Vendu par</label>
+							<select id="sold_by" name="sold_by"
+								class="field-input">
+								<option value="">—</option>
+								for _, st := range staff {
+									<option value={ st.ID } selected?={ st.ID == form.SoldByUserID }>{ st.Label }</option>
+								}
+							</select>
+						</div>
+						<div>
+							<label for="customer_email" class="block text-sm font-medium text-ink-muted mb-1">Client (email du compte)</label>
+							<input type="email" id="customer_email" name="customer_email" value={ form.CustomerEmail }
+								class="field-input"/>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+						<div>
+							<label for="price" class="block text-sm font-medium text-ink-muted mb-1">Prix (facultatif)</label>
+							<input type="text" id="price" name="price" value={ form.Price } placeholder="150.00"
+								class="field-input"/>
+						</div>
+						<div>
+							<label for="currency" class="block text-sm font-medium text-ink-muted mb-1">Devise</label>
+							<input type="text" id="currency" name="currency" value={ form.Currency } maxlength="3" placeholder="USD"
+								class="field-input"/>
+						</div>
+					</div>
+				</div>
+
+				<button type="submit"
+					class="btn btn-primary">
+					if isNew {
+						<span>Créer la campagne</span>
+					} else {
+						<span>Enregistrer</span>
+					}
+				</button>
+			</form>
+		</div>
+	}
+}
+
+templ adField(label, name, inputType, value string, required bool, placeholder string) {
+	<div>
+		<label for={ name } class="block text-sm font-medium text-ink-muted mb-1">{ label }</label>
+		<input
+			type={ inputType }
+			id={ name }
+			name={ name }
+			value={ value }
+			required?={ required }
+			placeholder={ placeholder }
+			class="field-input"
+		/>
+	</div>
+}
+
+func adFormTitle(isNew bool) string {
+	if isNew {
+		return "Nouvelle campagne"
+	}
+	return "Modifier la campagne"
+}

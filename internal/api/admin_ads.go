@@ -97,9 +97,8 @@ func (a *AppEngine) AdminAdsListHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	settings := a.Ads.Settings()
-	name := staffDisplayName(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templates.AdminAdsList(nonceFrom(r), name, status, list, settings).Render(r.Context(), w)
+	templates.AdminAdsList(nonceFrom(r), a.adminNav(r), status, list, settings).Render(r.Context(), w)
 }
 
 func adPeriodLabel(start, end string) string {
@@ -143,7 +142,7 @@ func (a *AppEngine) AdminAdsSettingsHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	a.reloadAdsAsync()
-	http.Redirect(w, r, "/admin/ads", http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/ads?flash=settings", http.StatusSeeOther)
 }
 
 // GET /admin/ads/new
@@ -339,7 +338,11 @@ func (a *AppEngine) adUpsert(w http.ResponseWriter, r *http.Request, isNew bool)
 	}
 
 	a.reloadAdsAsync()
-	http.Redirect(w, r, "/admin/ads", http.StatusSeeOther)
+	flash := "saved"
+	if isNew {
+		flash = "created"
+	}
+	http.Redirect(w, r, "/admin/ads?flash="+flash, http.StatusSeeOther)
 }
 
 func (a *AppEngine) renderAdForm(w http.ResponseWriter, r *http.Request, form templates.AdminAdFormData, isNew bool, errorMsg string) {
@@ -352,7 +355,7 @@ func (a *AppEngine) renderAdForm(w http.ResponseWriter, r *http.Request, form te
 		labelValues = append(labelValues, p.Label)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templates.AdminAdForm(nonceFrom(r), staffDisplayName(r), form, isNew, errorMsg, staff, labelValues).Render(r.Context(), w)
+	templates.AdminAdForm(nonceFrom(r), a.adminNav(r), form, isNew, errorMsg, staff, labelValues).Render(r.Context(), w)
 }
 
 func (a *AppEngine) staffOptions(r *http.Request) ([]templates.StaffOption, error) {

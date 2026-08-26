@@ -1,0 +1,98 @@
+package templates
+
+import (
+	"strconv"
+
+	"congopro-bridge/internal/claims"
+)
+
+// AdminDashboardStats backs the /admin landing page tiles.
+type AdminDashboardStats struct {
+	CompaniesTotal     int
+	CompaniesPublished int
+	CompaniesDraft     int
+	CompaniesDisputed  int
+	AdsActive          int
+	AdsTotal           int
+	AdsSystemOn        bool
+	RecentPending      []claims.Claim // newest pending claims, capped by the handler
+}
+
+templ AdminDashboard(nonce string, nav AdminNav, stats AdminDashboardStats) {
+	@AdminLayout("Tableau de bord", nonce, nav) {
+		<div class="mb-6">
+			<h1 class="text-xl font-sora font-semibold text-ink">Tableau de bord</h1>
+		</div>
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+			@statTile("Entreprises", formatTotal(stats.CompaniesTotal), publishedShare(stats), "/admin/companies", false)
+			@statTile("Brouillons", formatTotal(stats.CompaniesDraft), litigesNote(stats.CompaniesDisputed), "/admin/companies", false)
+			@statTile("Réclamations en attente", formatTotal(nav.PendingClaims), "à traiter", "/admin/claims", nav.PendingClaims > 0)
+			@statTile("Campagnes actives", formatTotal(stats.AdsActive), "sur "+formatTotal(stats.AdsTotal)+" campagnes", "/admin/ads", false)
+		</div>
+		if !stats.AdsSystemOn {
+			<div class="mb-6 flex items-center gap-2.5 rounded-xl bg-warning-soft border border-warning-soft text-warning text-sm px-4 py-3">
+				<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+				La diffusion des publicités est désactivée — <a href="/admin/ads" class="underline font-medium">réglages</a>.
+			</div>
+		}
+		<section class="bg-surface-raised rounded-2xl border border-line shadow-card">
+			<div class="flex items-center justify-between px-5 pt-5 pb-3">
+				<h2 class="text-[15px] font-sora font-semibold text-ink">Réclamations en attente</h2>
+				<a href="/admin/claims?status=pending" class="text-sm text-accent hover:underline">Tout voir</a>
+			</div>
+			if len(stats.RecentPending) == 0 {
+				<p class="px-5 pb-5 text-sm text-ink-faint">Aucune réclamation en attente — la file est vide.</p>
+			} else {
+				<ul class="divide-y divide-line">
+					for _, cl := range stats.RecentPending {
+						<li class="px-5 py-3 flex items-center justify-between gap-3">
+							<div class="min-w-0">
+								<p class="text-sm font-medium text-ink truncate">{ cl.CompanyName }</p>
+								<p class="text-xs text-ink-faint mt-0.5">{ cl.ClaimantEmail } · { cl.CreatedAt.Format("02/01/2006") }</p>
+							</div>
+							<a href="/admin/claims?status=pending" class="btn btn-secondary h-9 px-3.5 text-xs shrink-0">Traiter</a>
+						</li>
+					}
+				</ul>
+			}
+		</section>
+	}
+}
+
+templ statTile(label, value, sub, href string, alert bool) {
+	<a href={ templ.URL(href) } class={ "block rounded-2xl border shadow-card p-4 transition-colors hover:bg-surface-sunken " + tileClass(alert) }>
+		<p class={ "text-xs font-medium " + tileLabelClass(alert) }>{ label }</p>
+		<p class="font-sora font-semibold text-[26px] text-ink mt-1">{ value }</p>
+		if sub != "" {
+			<p class="text-xs text-ink-muted mt-0.5">{ sub }</p>
+		}
+	</a>
+}
+
+func tileClass(alert bool) string {
+	if alert {
+		return "bg-surface-raised border-warning"
+	}
+	return "bg-surface-raised border-line"
+}
+
+func tileLabelClass(alert bool) string {
+	if alert {
+		return "text-warning"
+	}
+	return "text-ink-faint"
+}
+
+func publishedShare(s AdminDashboardStats) string {
+	if s.CompaniesTotal == 0 {
+		return ""
+	}
+	return formatTotal(s.CompaniesPublished) + " publiées (" + strconv.Itoa(s.CompaniesPublished*100/s.CompaniesTotal) + " %)"
+}
+
+func litigesNote(disputed int) string {
+	if disputed == 0 {
+		return "aucun litige"
+	}
+	return formatTotal(disputed) + " en litige"
+}

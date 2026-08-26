@@ -1,0 +1,220 @@
+package templates
+
+import (
+	"net/url"
+	"strconv"
+)
+
+templ AdminCompaniesList(nonce string, nav AdminNav, query string, companies []AdminCompanyRow, page int, hasNext bool) {
+	@AdminLayout("Entreprises", nonce, nav) {
+		<div class="flex items-center justify-between gap-3 mb-6">
+			<h1 class="text-xl font-sora font-semibold text-ink">Entreprises</h1>
+			<a href="/admin/companies/new" class="btn btn-primary">+ Nouvelle entreprise</a>
+		</div>
+		<form method="get" action="/admin/companies" class="mb-4">
+			<input
+				type="search"
+				name="q"
+				value={ query }
+				placeholder="Recherche instantanée — nom…"
+				aria-label="Rechercher une entreprise"
+				class="field-input max-w-sm"
+				hx-get="/admin/companies"
+				hx-trigger="input changed delay:300ms, search"
+				hx-target="#companiesTable"
+				hx-swap="outerHTML"
+				hx-push-url="true"
+				hx-indicator="#companiesTable"
+			/>
+		</form>
+		@AdminCompaniesTable(query, companies, page, hasNext)
+	}
+}
+
+// AdminCompaniesTable is the live-search swap target: table plus pagination,
+// re-rendered alone on htmx requests.
+templ AdminCompaniesTable(query string, companies []AdminCompanyRow, page int, hasNext bool) {
+	<div id="companiesTable">
+		<div class="bg-surface-raised rounded-2xl border border-line shadow-card overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead class="bg-surface-sunken text-ink-faint text-xs uppercase tracking-wide">
+					<tr>
+						<th class="text-left px-4 py-2.5 font-medium">Nom</th>
+						<th class="text-left px-4 py-2.5 font-medium">Ville</th>
+						<th class="text-left px-4 py-2.5 font-medium">Pays</th>
+						<th class="text-left px-4 py-2.5 font-medium">Statut</th>
+						<th class="text-left px-4 py-2.5 font-medium">Mis à jour</th>
+						<th class="px-4 py-2.5"></th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-line">
+					for _, c := range companies {
+						<tr class="hover:bg-surface-sunken transition-colors">
+							<td class="px-4 py-2.5 font-medium text-ink">{ c.Name }</td>
+							<td class="px-4 py-2.5 text-ink-muted">{ c.City }</td>
+							<td class="px-4 py-2.5 text-ink-muted">{ c.Country }</td>
+							<td class="px-4 py-2.5">
+								@statusBadge(c.Status)
+							</td>
+							<td class="px-4 py-2.5 text-ink-faint">{ c.UpdatedAt }</td>
+							<td class="px-4 py-2.5 text-right">
+								<a href={ templ.URL("/admin/companies/" + c.ID + "/edit") } class="text-accent hover:underline">
+									Modifier
+								</a>
+							</td>
+						</tr>
+					}
+					if len(companies) == 0 {
+						<tr>
+							<td colspan="6" class="px-4 py-8 text-center text-ink-faint">Aucune entreprise trouvée.</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+		<div class="flex items-center justify-between mt-4 text-sm">
+			<span class="text-ink-faint">Page { strconv.Itoa(page) }</span>
+			<div class="flex gap-2">
+				if page > 1 {
+					<a href={ templ.URL(pageURL(query, page-1)) } class="px-3 py-1.5 rounded-xl border border-line text-ink-muted hover:bg-surface-sunken">← Précédent</a>
+				}
+				if hasNext {
+					<a href={ templ.URL(pageURL(query, page+1)) } class="px-3 py-1.5 rounded-xl border border-line text-ink-muted hover:bg-surface-sunken">Suivant →</a>
+				}
+			</div>
+		</div>
+	</div>
+}
+
+func pageURL(query string, page int) string {
+	u := "/admin/companies?page=" + strconv.Itoa(page)
+	if query != "" {
+		u += "&q=" + url.QueryEscape(query)
+	}
+	return u
+}
+
+templ statusBadge(status string) {
+	switch status {
+		case "published":
+			<span class="badge bg-positive-soft text-positive"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>Publié</span>
+		case "draft":
+			<span class="badge bg-surface-sunken text-ink-muted"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>Brouillon</span>
+		case "disputed":
+			<span class="badge bg-warning-soft text-warning"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>Litige</span>
+		default:
+			<span class="badge bg-surface-sunken text-ink-muted">{ status }</span>
+	}
+}
+
+templ AdminCompanyForm(nonce string, nav AdminNav, form AdminCompanyFormData, isEdit bool, errorMsg string) {
+	@AdminLayout(formTitle(isEdit), nonce, nav) {
+		<div class="max-w-2xl">
+			<div class="flex items-center justify-between mb-6">
+				<h1 class="text-xl font-sora font-semibold text-ink">{ formTitle(isEdit) }</h1>
+				<a href="/admin/companies" class="text-sm text-ink-faint hover:text-ink">← Retour à la liste</a>
+			</div>
+			if errorMsg != "" {
+				<div class="mb-4 rounded-xl bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">
+					{ errorMsg }
+				</div>
+			}
+			<form method="post" action={ templ.URL(formAction(isEdit, form.ID)) } class="space-y-4">
+				@formSection("Identité") {
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						@field("Nom *", "name", "text", form.Name, true)
+						@field("Slug (name_seo)", "name_seo", "text", form.NameSeo, false)
+						@field("Activité", "activity", "text", form.Activity, false)
+						<div>
+							<label for="status" class="block text-sm font-medium text-ink-muted mb-1">Statut</label>
+							<select id="status" name="status" class="field-input">
+								<option value="draft" selected?={ form.Status == "draft" }>Brouillon</option>
+								<option value="published" selected?={ form.Status == "published" }>Publié</option>
+								<option value="disputed" selected?={ form.Status == "disputed" }>Litige</option>
+							</select>
+						</div>
+						<div class="sm:col-span-2">
+							@field("Slogan", "slogan", "text", form.Slogan, false)
+						</div>
+						<div class="sm:col-span-2">
+							<label for="description" class="block text-sm font-medium text-ink-muted mb-1">Description</label>
+							<textarea id="description" name="description" rows="4" class="field-input">{ form.Description }</textarea>
+						</div>
+					</div>
+				}
+				@formSection("Contact") {
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						@field("Site web", "website", "url", form.Website, false)
+						@field("Email", "email", "email", form.Email, false)
+						@field("Téléphone", "phone", "text", form.Phone, false)
+						@field("WhatsApp", "whatsapp", "text", form.Whatsapp, false)
+					</div>
+				}
+				@formSection("Adresse & géolocalisation") {
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						@field("Adresse", "address_line_1", "text", form.AddressLine1, false)
+						@field("Complément d'adresse", "address_line_2", "text", form.AddressLine2, false)
+						@field("Ville", "city", "text", form.City, false)
+						@field("Pays", "country", "text", form.Country, false)
+						@field("Latitude", "lat", "text", form.Lat, false)
+						@field("Longitude", "lon", "text", form.Lon, false)
+					</div>
+				}
+				@formSection("Réseaux sociaux") {
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						@field("Twitter/X", "twitter", "text", form.Twitter, false)
+						@field("Facebook", "facebook", "text", form.Facebook, false)
+						@field("LinkedIn", "linkedin", "text", form.LinkedIn, false)
+						@field("Instagram", "instagram", "text", form.Instagram, false)
+						@field("TikTok", "tiktok", "text", form.TikTok, false)
+						@field("YouTube", "youtube", "text", form.Youtube, false)
+					</div>
+					<label class="flex items-center gap-2 mt-4 text-sm text-ink-muted">
+						<input type="checkbox" id="stats_show" name="stats_show" checked?={ form.StatsShow } class="rounded border-line"/>
+						Afficher les statistiques publiquement
+					</label>
+				}
+				<div class="flex items-center justify-end gap-3 pt-1">
+					<a href="/admin/companies" class="btn btn-secondary">Annuler</a>
+					<button type="submit" class="btn btn-primary">Enregistrer</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ formSection(title string) {
+	<fieldset class="bg-surface-raised rounded-2xl border border-line shadow-card p-5">
+		<legend class="sr-only">{ title }</legend>
+		<p class="text-sm font-sora font-semibold text-ink mb-4" aria-hidden="true">{ title }</p>
+		{ children... }
+	</fieldset>
+}
+
+templ field(label, name, inputType, value string, required bool) {
+	<div>
+		<label for={ name } class="block text-sm font-medium text-ink-muted mb-1">{ label }</label>
+		<input
+			type={ inputType }
+			id={ name }
+			name={ name }
+			value={ value }
+			required?={ required }
+			class="field-input"
+		/>
+	</div>
+}
+
+func formTitle(isEdit bool) string {
+	if isEdit {
+		return "Modifier l'entreprise"
+	}
+	return "Nouvelle entreprise"
+}
+
+func formAction(isEdit bool, id string) string {
+	if isEdit {
+		return "/admin/companies/" + id + "/edit"
+	}
+	return "/admin/companies/new"
+}

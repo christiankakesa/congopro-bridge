@@ -27,16 +27,8 @@ func (a *AppEngine) AdminClaimsListHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	user := staffUser(r)
-	name := ""
-	if user != nil {
-		name = user.Name
-		if name == "" {
-			name = user.Email
-		}
-	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templates.AdminClaimsList(nonceFrom(r), name, status, list).Render(r.Context(), w)
+	templates.AdminClaimsList(nonceFrom(r), a.adminNav(r), status, list).Render(r.Context(), w)
 }
 
 // POST /admin/claims/{id}/approve
@@ -68,6 +60,11 @@ func (a *AppEngine) resolveClaim(w http.ResponseWriter, r *http.Request, approve
 	if err != nil {
 		if err == claims.ErrAlreadyResolved {
 			// Stale tab / double click — nothing to do, back to the queue.
+			if isHTMXRequest(r) {
+				w.Header().Set("HX-Redirect", "/admin/claims")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 			http.Redirect(w, r, "/admin/claims", http.StatusSeeOther)
 			return
 		}
@@ -77,7 +74,25 @@ func (a *AppEngine) resolveClaim(w http.ResponseWriter, r *http.Request, approve
 	}
 
 	a.sendClaimDecisionEmail(approve, claimantEmail, companyName, note)
-	http.Redirect(w, r, "/admin/claims", http.StatusSeeOther)
+
+	flash := "rejected"
+	if approve {
+		flash = "approved"
+	}
+	if isHTMXRequest(r) {
+		// Swap the pending row for a confirmation strip, refresh the nav
+		// badge and push a toast — all in one fragment response.
+		pending, cerr := claims.CountPending(r.Context(), a.DB)
+		if cerr != nil {
+			log.Error().Msgf("[admin] count pending claims: %v", cerr)
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		templates.AdminClaimResolvedRow(companyName, approve).Render(r.Context(), w)
+		templates.AdminToastOOB(templates.AdminFlashText(flash)).Render(r.Context(), w)
+		templates.AdminClaimsBadgeOOB(pending).Render(r.Context(), w)
+		return
+	}
+	http.Redirect(w, r, "/admin/claims?flash="+flash, http.StatusSeeOther)
 }
 
 func (a *AppEngine) staffUserID(r *http.Request) string {

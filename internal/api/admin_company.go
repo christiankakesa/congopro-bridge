@@ -73,14 +73,21 @@ func (a *AppEngine) AdminCompaniesListHandler(w http.ResponseWriter, r *http.Req
 		list = list[:adminPageSize]
 	}
 
-	if err := templates.AdminCompaniesList(nonceFrom(r), staffUser(r).Name, q, list, page, hasNext).Render(r.Context(), w); err != nil {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if isHTMXRequest(r) {
+		if err := templates.AdminCompaniesTable(q, list, page, hasNext).Render(r.Context(), w); err != nil {
+			log.Error().Msgf("[admin] render companies table: %v", err)
+		}
+		return
+	}
+	if err := templates.AdminCompaniesList(nonceFrom(r), a.adminNav(r), q, list, page, hasNext).Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[admin] render companies list: %v", err)
 	}
 }
 
 func (a *AppEngine) AdminCompanyNewFormHandler(w http.ResponseWriter, r *http.Request) {
 	form := templates.AdminCompanyFormData{Status: "draft"}
-	if err := templates.AdminCompanyForm(nonceFrom(r), staffUser(r).Name, form, false, "").Render(r.Context(), w); err != nil {
+	if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), form, false, "").Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[admin] render new company form: %v", err)
 	}
 }
@@ -157,7 +164,7 @@ func (a *AppEngine) AdminCompanyCreateHandler(w http.ResponseWriter, r *http.Req
 	input, errMsg := parseCompanyForm(r)
 	if errMsg != "" {
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		if err := templates.AdminCompanyForm(nonceFrom(r), staffUser(r).Name, input.form, false, errMsg).Render(r.Context(), w); err != nil {
+		if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, false, errMsg).Render(r.Context(), w); err != nil {
 			log.Error().Msgf("[admin] render new company form: %v", err)
 		}
 		return
@@ -192,14 +199,14 @@ func (a *AppEngine) AdminCompanyCreateHandler(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		log.Error().Msgf("[admin] insert company: %v", err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		if rerr := templates.AdminCompanyForm(nonceFrom(r), staffUser(r).Name, input.form, false, "Erreur lors de l'enregistrement — vérifiez le slug (doit être unique).").Render(r.Context(), w); rerr != nil {
+		if rerr := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, false, "Erreur lors de l'enregistrement — vérifiez le slug (doit être unique).").Render(r.Context(), w); rerr != nil {
 			log.Error().Msgf("[admin] render new company form: %v", rerr)
 		}
 		return
 	}
 
 	a.reloadEngineAsync()
-	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/companies?flash=created", http.StatusSeeOther)
 }
 
 func (a *AppEngine) AdminCompanyEditFormHandler(w http.ResponseWriter, r *http.Request) {
@@ -214,7 +221,7 @@ func (a *AppEngine) AdminCompanyEditFormHandler(w http.ResponseWriter, r *http.R
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	if err := templates.AdminCompanyForm(nonceFrom(r), staffUser(r).Name, *form, true, "").Render(r.Context(), w); err != nil {
+	if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), *form, true, "").Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[admin] render edit company form: %v", err)
 	}
 }
@@ -259,7 +266,7 @@ func (a *AppEngine) AdminCompanyUpdateHandler(w http.ResponseWriter, r *http.Req
 	input.form.ID = id
 	if errMsg != "" {
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		if err := templates.AdminCompanyForm(nonceFrom(r), staffUser(r).Name, input.form, true, errMsg).Render(r.Context(), w); err != nil {
+		if err := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, true, errMsg).Render(r.Context(), w); err != nil {
 			log.Error().Msgf("[admin] render edit company form: %v", err)
 		}
 		return
@@ -286,7 +293,7 @@ func (a *AppEngine) AdminCompanyUpdateHandler(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		log.Error().Msgf("[admin] update company %s: %v", id, err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		if rerr := templates.AdminCompanyForm(nonceFrom(r), staffUser(r).Name, input.form, true, "Erreur lors de l'enregistrement — vérifiez le slug (doit être unique).").Render(r.Context(), w); rerr != nil {
+		if rerr := templates.AdminCompanyForm(nonceFrom(r), a.adminNav(r), input.form, true, "Erreur lors de l'enregistrement — vérifiez le slug (doit être unique).").Render(r.Context(), w); rerr != nil {
 			log.Error().Msgf("[admin] render edit company form: %v", rerr)
 		}
 		return
@@ -297,7 +304,7 @@ func (a *AppEngine) AdminCompanyUpdateHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	a.reloadEngineAsync()
-	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/companies?flash=saved", http.StatusSeeOther)
 }
 
 // reloadEngineAsync re-syncs the public search index after an admin write

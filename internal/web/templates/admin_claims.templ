@@ -1,0 +1,161 @@
+package templates
+
+import "congopro-bridge/internal/claims"
+
+templ AdminClaimsList(nonce string, nav AdminNav, statusFilter string, list []claims.Claim) {
+	@AdminLayout("Réclamations", nonce, nav) {
+		<div class="flex items-center justify-between mb-6">
+			<h1 class="text-xl font-sora font-semibold text-ink">Réclamations</h1>
+			<nav class="flex items-center gap-1 text-sm">
+				@claimFilterTab(statusFilter, "", "Toutes")
+				@claimFilterTab(statusFilter, "pending", "En attente")
+				@claimFilterTab(statusFilter, "approved", "Approuvées")
+				@claimFilterTab(statusFilter, "rejected", "Refusées")
+			</nav>
+		</div>
+		<div class="bg-surface-raised rounded-2xl border border-line shadow-card overflow-x-auto">
+			if len(list) == 0 {
+				<div class="px-4 py-8 text-sm text-ink-faint text-center">
+					Aucune réclamation { claimFilterLabel(statusFilter) }.
+				</div>
+			} else {
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs text-ink-faint uppercase border-b border-line bg-surface-sunken">
+							<th class="px-4 py-2.5 font-medium">Entreprise</th>
+							<th class="px-4 py-2.5 font-medium">Demandeur</th>
+							<th class="px-4 py-2.5 font-medium">Justification</th>
+							<th class="px-4 py-2.5 font-medium">Statut</th>
+							<th class="px-4 py-2.5 font-medium"></th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-line">
+						for _, cl := range list {
+							<tr class="align-top">
+								<td class="px-4 py-3">
+									<a href={ templ.URL("/company/" + cl.CompanyNameSeo) } class="font-medium text-ink hover:underline">
+										{ cl.CompanyName }
+									</a>
+									<p class="text-xs text-ink-faint mt-0.5">{ cl.CreatedAt.Format("02/01/2006 15:04") }</p>
+								</td>
+								<td class="px-4 py-3">
+									<p class="text-ink">{ cl.ClaimantEmail }</p>
+									if cl.ContactPhone != "" {
+										<p class="text-xs text-ink-faint mt-0.5">{ cl.ContactPhone }</p>
+									}
+									<p class="text-xs text-ink-faint mt-0.5">{ claimRelationshipLabel(cl.Relationship) }</p>
+								</td>
+								<td class="px-4 py-3 text-ink-muted max-w-md">
+									<p class="whitespace-pre-line">{ cl.Evidence }</p>
+									if cl.AdminNote != "" {
+										<p class="text-xs text-ink-faint mt-1.5">Note : { cl.AdminNote }</p>
+									}
+								</td>
+								<td class="px-4 py-3">@claimStatusBadge(cl.Status)</td>
+								<td class="px-4 py-3">
+									if cl.Status == "pending" {
+										<form method="post" class="space-y-1.5 w-44">
+											<input
+												type="text"
+												name="note"
+												placeholder="Note (facultatif)"
+												class="field-input text-xs"
+											/>
+											<div class="flex gap-1.5">
+												<button
+													type="submit"
+													formaction={ templ.SafeURL("/admin/claims/" + cl.ID + "/approve") }
+													hx-post={ "/admin/claims/" + cl.ID + "/approve" }
+													hx-include="closest form"
+													hx-target="closest tr"
+													hx-swap="outerHTML"
+													hx-confirm="Approuver cette réclamation ?"
+													class="flex-1 rounded-md bg-positive hover:opacity-90 text-white text-xs font-medium py-1.5 transition-colors"
+												>
+													Approuver
+												</button>
+												<button
+													type="submit"
+													formaction={ templ.SafeURL("/admin/claims/" + cl.ID + "/reject") }
+													hx-post={ "/admin/claims/" + cl.ID + "/reject" }
+													hx-include="closest form"
+													hx-target="closest tr"
+													hx-swap="outerHTML"
+													hx-confirm="Refuser cette réclamation ?"
+													class="flex-1 rounded-md bg-surface-raised border border-danger-soft hover:bg-danger-soft text-danger text-xs font-medium py-1.5 transition-colors"
+												>
+													Refuser
+												</button>
+											</div>
+										</form>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+		</div>
+	}
+}
+
+templ claimFilterTab(current, value, label string) {
+	{{ active := current == value }}
+	<a
+		href={ templ.URL(claimFilterHref(value)) }
+		class={ "px-3 py-1.5 rounded-full transition-colors " + claimTabClass(active) }
+	>
+		{ label }
+	</a>
+}
+
+func claimFilterHref(value string) string {
+	if value == "" {
+		return "/admin/claims"
+	}
+	return "/admin/claims?status=" + value
+}
+
+func claimTabClass(active bool) string {
+	if active {
+		return "bg-accent text-white"
+	}
+	return "text-ink-muted hover:bg-surface-sunken"
+}
+
+func claimFilterLabel(statusFilter string) string {
+	switch statusFilter {
+	case "pending":
+		return "en attente"
+	case "approved":
+		return "approuvée"
+	case "rejected":
+		return "refusée"
+	default:
+		return ""
+	}
+}
+
+// AdminClaimResolvedRow replaces a pending claim's row after an htmx
+// approve/reject: a slim confirmation strip in place of the row.
+templ AdminClaimResolvedRow(companyName string, approved bool) {
+	<tr>
+		<td colspan="5" class="px-4 py-3">
+			<span class={ "badge " + resolvedRowClass(approved) }>
+				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+				if approved {
+					Réclamation « { companyName } » approuvée
+				} else {
+					Réclamation « { companyName } » refusée
+				}
+			</span>
+		</td>
+	</tr>
+}
+
+func resolvedRowClass(approved bool) string {
+	if approved {
+		return "bg-positive-soft text-positive"
+	}
+	return "bg-danger-soft text-danger"
+}

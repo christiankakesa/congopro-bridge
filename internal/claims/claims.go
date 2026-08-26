@@ -278,3 +278,11 @@ func StateForCompany(ctx context.Context, db *pgxpool.Pool, companyID, customerI
 	}
 	return st, err
 }
+
+// CountPending returns the number of claims awaiting a decision — feeds the
+// admin nav badge and the dashboard tile.
+func CountPending(ctx context.Context, db *pgxpool.Pool) (int, error) {
+	var n int
+	err := db.QueryRow(ctx, `SELECT count(*) FROM company_claims WHERE status = 'pending'`).Scan(&n)
+	return n, err
+}

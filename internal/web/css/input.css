@@ -554,3 +554,32 @@ mark {
   color: var(--accent);
   font-weight: 600;
 }
+
+/* ── Admin toasts & live-search loading ── */
+.admin-toast {
+  animation:
+    toast-in 0.18s ease,
+    toast-out 0.25s ease 5s forwards;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+    visibility: hidden;
+  }
+}
+#companiesTable.htmx-request {
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-toast {
+    animation: toast-out 0.01s linear 8s forwards;
+  }
+}
