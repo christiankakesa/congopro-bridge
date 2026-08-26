@@ -567,17 +567,6 @@
         },
       };
 
-      // Paths that are real server-rendered pages (internal/web/templates),
-      // not part of this SPA — navigation to them must not be intercepted.
-      function isServerRenderedPath(pathname) {
-        return (
-          pathname === "/help" ||
-          pathname === "/privacy" ||
-          pathname === "/terms" ||
-          pathname.startsWith("/company/")
-        );
-      }
-
       // ── View switching ────────────────────────────────────
       function showHome() {
         if (window.location.pathname !== "/" || window.location.search !== "") {
@@ -754,11 +743,11 @@
       });
 
       // ── The Router ─────────────────────────────────────────
-      // /help, /privacy, /terms and /company/* are real server-rendered
-      // pages now (see internal/web/templates) — this SPA only owns "/" and
-      // search results, so handleRoute() no longer needs branches for them.
-      // The click handler below lets navigation to those paths fall through
-      // to a normal browser page load instead of intercepting it.
+      // This SPA only owns "/" and search results (/?q=…); every other path
+      // (/help, /account, /company/*, …) is a real server-rendered page (see
+      // internal/web/templates). The click handler further down only
+      // intercepts links whose pathname is exactly "/" — everything else
+      // falls through to a normal browser page load.
       function handleRoute() {
         homepage.style.display = "none";
         resultsPage.classList.add("hidden");
@@ -993,20 +982,22 @@
           return;
         }
 
+        // This SPA only owns "/" (home and /?q= shared searches). Every
+        // other same-host path — /help, /account, /company/*, … — is a real
+        // server-rendered page and must fall through to a normal browser
+        // navigation. Intercepting used to be deny-list based, which broke
+        // each time a new server-rendered page shipped (e.g. /account).
         const link = e.target.closest("a");
         if (
           link &&
           link.host === window.location.host &&
           !link.hasAttribute("target") &&
-          !isServerRenderedPath(link.pathname)
+          link.pathname === "/"
         ) {
           e.preventDefault();
           history.pushState(null, "", link.href);
           handleRoute();
         }
-        // Links to /help, /privacy, /terms and /company/* fall through to a
-        // normal browser navigation — those routes are real server-rendered
-        // pages now (see internal/web/templates), not part of this SPA.
       });
 
       window.addEventListener("popstate", handleRoute);
