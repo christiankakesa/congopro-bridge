@@ -41,7 +41,7 @@
   --sunken: #efece7;           /* wells, table heads, chips */
   --ink: #1c2128;              /* primary text */
   --muted: #5a6270;            /* secondary text */
-  --faint: #8d94a0;            /* tertiary text, placeholders */
+  --faint: #646c79;            /* tertiary text, placeholders */
   --line: #e7e3dd;             /* borders, dividers */
   --accent: #be0203;           /* brand red (charte 2026) */
   --accent-hover: #9d0102;
@@ -66,12 +66,12 @@
   --sunken: #0b0d11;
   --ink: #e8eaef;
   --muted: #a7aeba;
-  --faint: #6f7683;
+  --faint: #7e8694;
   --line: #272c35;
   --accent: #f05252;           /* lifted — #be0203 fails contrast on dark */
   --accent-hover: #f87171;
   --accent-soft: #3a1517;
-  --on-accent: #ffffff;
+  --on-accent: #1c0808; /* dark ink on the lifted red — white fails AA here */
   --link: #f28b8b;
   --positive: #34c98e;
   --positive-soft: #12312a;
@@ -111,6 +111,13 @@
   --shadow-card: var(--shadow-card);
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-display: 'Sora', 'Inter', system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 body {
@@ -533,4 +540,17 @@ mark {
   .animate-pulse {
     animation: none;
   }
+}
+
+/* Theme toggle (footer) */
+.theme-toggle-btn {
+  color: var(--faint);
+  cursor: pointer;
+}
+.theme-toggle-btn:hover {
+  color: var(--ink);
+}
+.theme-toggle-btn[aria-pressed='true'] {
+  color: var(--accent);
+  font-weight: 600;
 }

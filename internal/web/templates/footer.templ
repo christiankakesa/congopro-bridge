@@ -13,9 +13,54 @@ import (
 // index.html's <body>) — that's the "sticky footer" pattern: it sits at the
 // bottom of the viewport when content is short, and flows naturally after
 // content when there's more than a screenful, without a leftover scrollbar.
-templ SiteFooter() {
+templ SiteFooter(nonce string) {
 	<footer class="w-full text-xs text-ink-faint text-center px-4 py-6 mt-auto shrink-0">
 		@templ.Raw(siteFooterHTML())
+		<div class="mt-3 flex items-center justify-center gap-1" role="group" aria-label="Choix du thème">
+			<span class="mr-1">Thème&nbsp;:</span>
+			<button type="button" data-set-theme="auto" class="theme-toggle-btn px-2 py-1" aria-pressed="false">Auto</button>
+			<span aria-hidden="true">·</span>
+			<button type="button" data-set-theme="light" class="theme-toggle-btn px-2 py-1" aria-pressed="false">Clair</button>
+			<span aria-hidden="true">·</span>
+			<button type="button" data-set-theme="dark" class="theme-toggle-btn px-2 py-1" aria-pressed="false">Sombre</button>
+		</div>
+		<script nonce={ nonce }>
+			(function () {
+				var KEY = "cp_theme";
+				function stored() {
+					try { return localStorage.getItem(KEY); } catch (e) { return null; }
+				}
+				function paint() {
+					var pref = stored();
+					var mode = pref === "light" || pref === "dark" ? pref : "auto";
+					var resolved = mode === "auto"
+						? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+						: mode;
+					document.documentElement.dataset.theme = resolved;
+					document.querySelectorAll("[data-set-theme]").forEach(function (b) {
+						b.setAttribute("aria-pressed", String(b.getAttribute("data-set-theme") === mode));
+					});
+					var m = document.querySelector('meta[name="theme-color"]');
+					if (m) m.setAttribute("content", resolved === "dark" ? "#171a21" : "#be0203");
+				}
+				document.querySelectorAll("[data-set-theme]").forEach(function (b) {
+					b.addEventListener("click", function () {
+						var v = b.getAttribute("data-set-theme");
+						try {
+							if (v === "auto") localStorage.removeItem(KEY);
+							else localStorage.setItem(KEY, v);
+						} catch (e) {}
+						paint();
+					});
+				});
+				try {
+					matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+						if (!stored()) paint();
+					});
+				} catch (e) {}
+				paint();
+			})();
+		</script>
 	</footer>
 }
 

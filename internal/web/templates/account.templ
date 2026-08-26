@@ -37,7 +37,7 @@ templ AccountLayout(title, nonce, email string) {
 			<main class="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-8">
 				{ children... }
 			</main>
-			@SiteFooter()
+			@SiteFooter(nonce)
 		</body>
 	</html>
 }
