@@ -64,7 +64,8 @@ func SiteFooter(nonce string) templ.Component {
 
 // themeToggle is the 3-state theme control (Auto/Clair/Sombre) shared by
 // the public footer and the admin sidebar. Self-contained: markup plus a
-// nonce'd script, so it works on pages that do not load app.js.
+// nonce'd script, so it works on pages that do not load app.js. Light is
+// the default; « Auto » (follow the system) and « Sombre » are opt-in.
 func themeToggle(nonce string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -93,13 +94,13 @@ func themeToggle(nonce string) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/footer.templ`, Line: 35, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/footer.templ`, Line: 36, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\">\n\t\t(function () {\n\t\t\tvar KEY = \"cp_theme\";\n\t\t\tfunction stored() {\n\t\t\t\ttry { return localStorage.getItem(KEY); } catch (e) { return null; }\n\t\t\t}\n\t\t\tfunction paint() {\n\t\t\t\tvar pref = stored();\n\t\t\t\tvar mode = pref === \"light\" || pref === \"dark\" ? pref : \"auto\";\n\t\t\t\tvar resolved = mode === \"auto\"\n\t\t\t\t\t? (matchMedia(\"(prefers-color-scheme: dark)\").matches ? \"dark\" : \"light\")\n\t\t\t\t\t: mode;\n\t\t\t\tdocument.documentElement.dataset.theme = resolved;\n\t\t\t\tdocument.querySelectorAll(\"[data-set-theme]\").forEach(function (b) {\n\t\t\t\t\tb.setAttribute(\"aria-pressed\", String(b.getAttribute(\"data-set-theme\") === mode));\n\t\t\t\t});\n\t\t\t\tvar m = document.querySelector('meta[name=\"theme-color\"]');\n\t\t\t\tif (m) m.setAttribute(\"content\", resolved === \"dark\" ? \"#171a21\" : \"#be0203\");\n\t\t\t}\n\t\t\tdocument.querySelectorAll(\"[data-set-theme]\").forEach(function (b) {\n\t\t\t\tb.addEventListener(\"click\", function () {\n\t\t\t\t\tvar v = b.getAttribute(\"data-set-theme\");\n\t\t\t\t\ttry {\n\t\t\t\t\t\tif (v === \"auto\") localStorage.removeItem(KEY);\n\t\t\t\t\t\telse localStorage.setItem(KEY, v);\n\t\t\t\t\t} catch (e) {}\n\t\t\t\t\tpaint();\n\t\t\t\t});\n\t\t\t});\n\t\t\ttry {\n\t\t\t\tmatchMedia(\"(prefers-color-scheme: dark)\").addEventListener(\"change\", function () {\n\t\t\t\t\tif (!stored()) paint();\n\t\t\t\t});\n\t\t\t} catch (e) {}\n\t\t\tpaint();\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\">\n\t\t(function () {\n\t\t\tvar KEY = \"cp_theme\";\n\t\t\tfunction stored() {\n\t\t\t\ttry { return localStorage.getItem(KEY); } catch (e) { return null; }\n\t\t\t}\n\t\t\tfunction paint() {\n\t\t\t\tvar pref = stored();\n\t\t\t\tvar mode = pref === \"auto\" || pref === \"dark\" ? pref : \"light\";\n\t\t\t\tvar resolved = mode === \"auto\"\n\t\t\t\t\t? (matchMedia(\"(prefers-color-scheme: dark)\").matches ? \"dark\" : \"light\")\n\t\t\t\t\t: mode;\n\t\t\t\tdocument.documentElement.dataset.theme = resolved;\n\t\t\t\tdocument.querySelectorAll(\"[data-set-theme]\").forEach(function (b) {\n\t\t\t\t\tb.setAttribute(\"aria-pressed\", String(b.getAttribute(\"data-set-theme\") === mode));\n\t\t\t\t});\n\t\t\t\tvar m = document.querySelector('meta[name=\"theme-color\"]');\n\t\t\t\tif (m) m.setAttribute(\"content\", resolved === \"dark\" ? \"#171a21\" : \"#be0203\");\n\t\t\t}\n\t\t\tdocument.querySelectorAll(\"[data-set-theme]\").forEach(function (b) {\n\t\t\t\tb.addEventListener(\"click\", function () {\n\t\t\t\t\tvar v = b.getAttribute(\"data-set-theme\");\n\t\t\t\t\ttry {\n\t\t\t\t\t\tif (v === \"light\") localStorage.removeItem(KEY);\n\t\t\t\t\t\telse localStorage.setItem(KEY, v);\n\t\t\t\t\t} catch (e) {}\n\t\t\t\t\tpaint();\n\t\t\t\t});\n\t\t\t});\n\t\t\ttry {\n\t\t\t\tmatchMedia(\"(prefers-color-scheme: dark)\").addEventListener(\"change\", function () {\n\t\t\t\t\tif (stored() === \"auto\") paint();\n\t\t\t\t});\n\t\t\t} catch (e) {}\n\t\t\tpaint();\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

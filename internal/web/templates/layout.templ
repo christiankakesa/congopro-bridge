@@ -120,8 +120,8 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 
 // commonHead is the asset/theme boilerplate shared by every layout head
 // (Layout, AdminLayout, AccountLayout): color-scheme meta + the pre-paint
-// theme script (localStorage cp_theme overrides; defaults to the system
-// preference), font preloads, and the cache-busted stylesheet.
+// theme script (localStorage cp_theme; light by default — "auto" follows
+// the system, "dark" forces dark), font preloads, and the cache-busted stylesheet.
 // Page-type-specific meta (SEO, robots, favicons, analytics) stays in each
 // layout.
 templ commonHead(nonce, cssVersion string) {
@@ -130,8 +130,9 @@ templ commonHead(nonce, cssVersion string) {
 		(function () {
 			try {
 				var t = localStorage.getItem("cp_theme");
-				if (t !== "dark" && t !== "light")
+				if (t === "auto")
 					t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+				else if (t !== "dark") t = "light";
 				document.documentElement.dataset.theme = t;
 			} catch (e) {}
 		})();

@@ -22,7 +22,8 @@ templ SiteFooter(nonce string) {
 
 // themeToggle is the 3-state theme control (Auto/Clair/Sombre) shared by
 // the public footer and the admin sidebar. Self-contained: markup plus a
-// nonce'd script, so it works on pages that do not load app.js.
+// nonce'd script, so it works on pages that do not load app.js. Light is
+// the default; « Auto » (follow the system) and « Sombre » are opt-in.
 templ themeToggle(nonce string) {
 	<div class="mt-3 flex items-center justify-center gap-1" role="group" aria-label="Choix du thème">
 		<span class="mr-1">Thème&nbsp;:</span>
@@ -40,7 +41,7 @@ templ themeToggle(nonce string) {
 			}
 			function paint() {
 				var pref = stored();
-				var mode = pref === "light" || pref === "dark" ? pref : "auto";
+				var mode = pref === "auto" || pref === "dark" ? pref : "light";
 				var resolved = mode === "auto"
 					? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
 					: mode;
@@ -55,7 +56,7 @@ templ themeToggle(nonce string) {
 				b.addEventListener("click", function () {
 					var v = b.getAttribute("data-set-theme");
 					try {
-						if (v === "auto") localStorage.removeItem(KEY);
+						if (v === "light") localStorage.removeItem(KEY);
 						else localStorage.setItem(KEY, v);
 					} catch (e) {}
 					paint();
@@ -63,7 +64,7 @@ templ themeToggle(nonce string) {
 			});
 			try {
 				matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
-					if (!stored()) paint();
+					if (stored() === "auto") paint();
 				});
 			} catch (e) {}
 			paint();
