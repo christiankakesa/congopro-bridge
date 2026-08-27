@@ -105,7 +105,30 @@ func (c *Config) ValidateStripe() error {
 	if n != 3 {
 		return fmt.Errorf("config: Stripe requires STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_PRICE_ID together (%d of 3 set)", n)
 	}
+	// Prefix checks: every one of these ids is copy-pasted from the Stripe
+	// dashboard, where neighbouring panels show similar-looking values. A
+	// product id (prod_…) pasted into STRIPE_PRICE_ID boots happily and only
+	// fails when a paying customer clicks Checkout — refuse it here instead.
+	for _, chk := range []struct{ name, value, prefix, hint string }{
+		{"STRIPE_SECRET_KEY", c.StripeSecretKey, "sk_", "the secret key from Developers → API keys"},
+		{"STRIPE_WEBHOOK_SECRET", c.StripeWebhookSecret, "whsec_", "the endpoint's signing secret (Developers → Webhooks), or `stripe listen --print-secret` locally"},
+		{"STRIPE_PRICE_ID", c.StripePriceID, "price_", "the PRICE id from the product's Pricing table — not the product id (prod_…)"},
+	} {
+		if !strings.HasPrefix(chk.value, chk.prefix) {
+			return fmt.Errorf("config: %s must start with %q — got %q; use %s",
+				chk.name, chk.prefix, redactID(chk.value), chk.hint)
+		}
+	}
 	return nil
+}
+
+// redactID keeps just enough of a value to recognise the mistake without
+// printing a live credential into logs.
+func redactID(v string) string {
+	if len(v) <= 8 {
+		return v
+	}
+	return v[:8] + "…"
 }
 
 // ValidateSMTP enforces the all-or-nothing SMTP contract at boot: a

@@ -80,7 +80,7 @@ RSYNC        := rsync -az --progress --delete \
          prod-ollama-pull prod-ollama-reset prod-ollama-setup prod-ollama-status prod-ping \
          prod-search-config-push prod-search-install prod-search-logs prod-search-reset \
          prod-search-restart prod-search-service-install prod-search-setup prod-search-start \
-         prod-search-status prod-search-stop prod-search-traefik-push prod-secrets-init \
+         prod-search-status prod-search-stop prod-search-traefik-push prod-secrets-init prod-secrets-list prod-secrets-set \
          prod-service-install prod-ssh prod-traefik-logs prod-traefik-reload
 
 all: build
@@ -380,6 +380,35 @@ prod-secrets-init:
 	  fi; \
 	  sudo chown root:root $(REMOTE_DIR)/$(APP_ENV_FILE) $(MEILI_DIR)/etc/secrets.env; \
 	  sudo chmod 600 $(REMOTE_DIR)/$(APP_ENV_FILE) $(MEILI_DIR)/etc/secrets.env"
+
+# Writes ONE key into the server's EnvironmentFile. The value is typed with
+# echo off and travels over stdin — it never appears on screen, in your shell
+# history, or in the process list on either machine. Idempotent: an existing
+# definition of the key is replaced, never duplicated (systemd silently takes
+# the last one, which makes duplicates a nasty way to lose an afternoon).
+#
+#   make prod-secrets-set KEY=STRIPE_SECRET_KEY
+#   make prod-secrets-set KEY=STRIPE_WEBHOOK_SECRET
+#   make prod-secrets-set KEY=STRIPE_PRICE_ID
+#
+# Live keys belong here and ONLY here — never in .env, which is dev and holds
+# test keys. Run prod-app-restart afterwards to load them.
+prod-secrets-set:
+	@if [ -z "$(KEY)" ]; then echo "Usage: make prod-secrets-set KEY=STRIPE_SECRET_KEY" >&2; exit 2; fi
+	@$(RSYNC) scripts/secret-set.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/secret-set.sh
+	@printf "Value for %s (hidden): " "$(KEY)"; \
+	  stty -echo 2>/dev/null || true; \
+	  IFS= read -r VAL; \
+	  stty echo 2>/dev/null || true; \
+	  echo; \
+	  printf '%s\n' "$$VAL" | $(SSH) "chmod +x /tmp/secret-set.sh && sudo /tmp/secret-set.sh '$(KEY)' '$(REMOTE_DIR)/$(APP_ENV_FILE)'; rm -f /tmp/secret-set.sh"
+	@echo "  → apply with: make prod-app-restart"
+
+# Lists which keys the server's EnvironmentFile defines. Names only — values
+# are never printed, so this is safe to run while someone is watching.
+prod-secrets-list:
+	@echo "▶ Keys defined in $(REMOTE_DIR)/$(APP_ENV_FILE):"
+	@$(SSH) "sudo grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' $(REMOTE_DIR)/$(APP_ENV_FILE) 2>/dev/null | tr -d '=' | sort | sed 's/^/    /' || echo '    (file not found)'"
 
 # Full server bootstrap: Ollama + Meilisearch + app. Run once on a fresh server.
 prod-bootstrap-all: prod-ollama-setup prod-search-setup prod-bootstrap-app
@@ -704,6 +733,8 @@ help:
 	@echo "    prod-config-push         Upload Traefik dynamic config + reload"
 	@echo "    prod-app-start/-stop/-restart/-status/-logs"
 	@echo "    prod-secrets-init        Generate missing secrets on the server (idempotent)"
+	@echo "    prod-secrets-set KEY=…   Set one secret (hidden input, never echoed/logged)"
+	@echo "    prod-secrets-list        List which keys the server defines (names only)"
 	@echo "    prod-bootstrap-app       First-time app install (unit + secrets + deploy)"
 	@echo "    prod-bootstrap-all       Fresh server: Ollama + Meilisearch + app"
 	@echo "    prod-db-install          Install PostgreSQL + PostGIS (idempotent)"

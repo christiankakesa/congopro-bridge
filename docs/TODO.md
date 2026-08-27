@@ -30,22 +30,18 @@ Later:
   `db-restore-test` to restore *from the offsite copy* — an untested backup
   isn't a backup.
 
-* **Stripe PRODUCTION setup (pairing session — needs Christian's Stripe
-  account).** DEV is done and verified (2026-08-27, details below); only the
-  live-mode half remains:
-  - Create the "Mise en avant" product + monthly price in **live mode**
-    (test-mode price is $10.00 USD/month — confirm the real number before
-    going live; the app reads the amount from Stripe at runtime, so changing
-    it is a new price, not a code change).
-  - Register the webhook endpoint `https://congopro.com/webhooks/stripe`
-    with events checkout.session.completed, customer.subscription.updated,
-    customer.subscription.deleted, and copy its signing secret. NOTE: unlike
-    dev, production's `whsec_…` comes from the **Dashboard** endpoint, not
-    from `stripe listen`.
-  - Store `sk_live_…`, that `whsec_…` and the live `price_…` as deploy
-    secrets via `make prod-secrets-init` — never in git, never in .env.
-  - Re-run the end-to-end check against production with a real card, then
-    refund/cancel it.
+* **Stripe production — final verification.** Keys, product, price and
+  webhook are all configured and live (2026-08-27, see Done). What is left is
+  proving it with money rather than inference:
+  - Sign in as a customer with an approved claim and open `/account/promote`
+    — it must display the real amount. That is the only thing that exercises
+    `price.Get()` with the live key; everything else is already verified.
+  - Send a signed test `checkout.session.completed` from the Dashboard
+    endpoint (Tentatives → Send test event) and confirm a 200 delivery.
+  - Then one real card end to end, and refund it.
+  - Decide the currency question: the live product's MRR panel reads in EUR
+    while the recorded pricing decision was $15/month. Harmless if
+    deliberate — the app displays whatever currency Stripe returns.
 
 * Telegram bot as notification/quick-action layer on top of the CMS.
 * Promoted-listing ranking (pin/badge-weight in Meilisearch) — v1 ships
@@ -95,6 +91,21 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Stripe PRODUCTION configured (2026-08-27): live product "Mise en avant"
+  with a monthly price on `acct_1U5NcNLbym0EdjAY`, webhook endpoint
+  `https://congopro.com/webhooks/stripe`, and all three keys pushed to the
+  server's EnvironmentFile via the new `make prod-secrets-set` (hidden input,
+  value over stdin — never in argv, history or `ps`). Verified: service
+  active, `Stripe enabled (price price_…)` at boot, unsigned webhook POST
+  rejected with 400.
+  Two traps worth remembering. The Stripe CLI here is logged into a
+  **sandbox** (`acct_1U5NcX…`), which can never do livemode — production work
+  happens in the Dashboard, not the CLI. And the dashboard's product page
+  shows "ID du produit" (`prod_…`) far more prominently than the price id;
+  pasting it into `STRIPE_PRICE_ID` boots fine and only fails when a customer
+  clicks Checkout. `ValidateStripe` now rejects it at boot (prefix checks on
+  all three keys, values redacted in the error).
 
 * Stripe DEV configured and verified end to end (2026-08-27): test-mode
   product "Mise en avant" + $10.00 USD/month price, keys in `.env`. Full
