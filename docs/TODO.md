@@ -1,8 +1,5 @@
 # TODO
 
-Later:
-  * From Homepage, ← Back to home link must not appears as we already are at homepage
-
 ## Now
 
 * (nothing — pull from Next when ready)
