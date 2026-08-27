@@ -103,7 +103,7 @@ services:
   # resends. Read them at http://localhost:8025.
   #
   # Behind the "dev" profile so production-style `docker compose up` never
-  # starts it; start it with `make mail-up`.
+  # starts it; start it with `make dev-mail-up`.
   #
   # Point the app at it with SMTP_HOST=localhost (or "mail" from another
   # container), SMTP_PORT=1025, SMTP_TLS=none, and no credentials — the

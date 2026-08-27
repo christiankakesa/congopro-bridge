@@ -1,10 +1,17 @@
+# Target naming: <where>-<what>-<verb>.
+#   dev-*    act on your local machine (native app, dockerised Postgres)
+#   prod-*   act on the live server over SSH
+#   image-*  build the production container image locally
+#   bare     environment-neutral (go build/test/vet, codegen, help)
+# Anything that can destroy data says so in its help text.
+#
 # NOTE: do NOT `-include .env` + `export` here. Make parses .env as Makefile
 # syntax and expands `$` sequences inside values — an SMTP password like
 # "ab$9kC$d2..." silently arrives as "ab" (observed: 12 chars in the file,
 # 4 by the time a make-spawned process read it) and the mail server answers
 # a baffling 535. The Go app loads .env itself (internal/config loadDotEnv,
 # with real environment variables winning), docker compose reads .env
-# natively, and the deploy targets below read the handful of keys they need
+# natively, and the prod-deploy targets below read the handful of keys they need
 # via the sed helper — none of which expand anything.
 #
 # .env carries no trailing comments after values (see .env.template), so the
@@ -16,12 +23,12 @@ _env_var  = $(shell sed -nE "s/^$1=([^#]*)#.*/\1/p; s/^$1=(.*)$$/\1/p" .env 2>/d
 DEPLOY_USER  ?= $(or $(call _env_var,DEPLOY_USER),ops)
 DEPLOY_HOST  ?= $(or $(call _env_var,DEPLOY_HOST),xxx.xxx.xxx.xxx)
 DEPLOY_PORT  ?= $(or $(call _env_var,DEPLOY_PORT),4242)
-SSH_KEY      ?= $(patsubst ~/%,$(HOME)/%,$(or $(call _env_var,SSH_KEY),$(HOME)/.ssh/id_ed25519))
+SSH_KEY      ?= $(patsubst ~/%,$(HOME)/%,$(or $(call _env_var,SSH_KEY),$(HOME)/.prod-ssh/id_ed25519))
 REMOTE_DIR   ?= $(or $(call _env_var,REMOTE_DIR),/opt/congopro-bridge)
 # The app's systemd EnvironmentFile on the server (deploy/systemd/*.service
 # references the same path). Named after the service rather than
 # "secrets.env" so ownership is obvious in directory listings — the
-# secrets-init and db-* targets below are the single source of this name.
+# prod-secrets-init and db-* targets below are the single source of this name.
 APP_ENV_FILE := congopro-bridge.env
 MEILI_DIR    ?= /opt/meilisearch
 MEILI_VERSION ?= v1.43.1
@@ -57,19 +64,22 @@ SSH          := ssh $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST)
 RSYNC        := rsync -az --progress --delete \
                 -e "ssh $(_ssh_opts)"
 
-.PHONY: all build build-local clean test templ \
-        docker-build docker-push docker-save docker-run docker-up docker-down docker-down-v meili-reset \
-        mail-up mail-down mail-test \
-        deploy deploy-binary deploy-config deploy-service deploy-full deploy-all secrets-init \
-        service-start service-stop service-restart service-status service-logs \
-        traefik-reload traefik-logs \
-        ollama-install ollama-configure-limit ollama-pull-models ollama-clean-models ollama-reset ollama-status ollama-setup ollama-logs \
-        meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik meili-setup meili-start meili-stop meili-restart meili-status meili-logs meili-index-reset \
-        db-up db-down db-migrate db-import db-import-ads create-admin test-integration dev dev-down \
-        db-install db-provision db-remote-status db-remote-check db-migrate-remote db-import-remote db-import-ads-remote \
-        db-backup-install db-backup-now db-backup-status db-backup-logs db-backup-list db-backup-pull \
-        db-restore-test db-restore \
-        ssh ping help
+.PHONY: all build build-quick clean css help templ test vet image-build image-run image-save \
+         dev dev-admin-create dev-db-down dev-db-import dev-db-import-ads dev-db-migrate \
+         dev-db-psql dev-db-reset dev-db-restore-test dev-db-up dev-deps-down dev-deps-reset \
+         dev-deps-up dev-mail-down dev-mail-test dev-mail-up dev-search-reset dev-stack-down \
+         dev-stack-logs dev-stack-logs-app dev-stack-reset dev-stack-up dev-test-integration \
+         prod-app-logs prod-app-push prod-app-restart prod-app-start prod-app-status \
+         prod-app-stop prod-backup-install prod-backup-list prod-backup-logs prod-backup-now \
+         prod-backup-pull prod-backup-status prod-bootstrap-all prod-bootstrap-app \
+         prod-config-push prod-db-check prod-db-import prod-db-import-ads prod-db-install \
+         prod-db-migrate prod-db-provision prod-db-restore prod-db-status prod-deploy \
+         prod-ollama-clean prod-ollama-install prod-ollama-limit prod-ollama-logs \
+         prod-ollama-pull prod-ollama-reset prod-ollama-setup prod-ollama-status prod-ping \
+         prod-search-config-push prod-search-install prod-search-logs prod-search-reset \
+         prod-search-restart prod-search-service-install prod-search-setup prod-search-start \
+         prod-search-status prod-search-stop prod-search-traefik-push prod-secrets-init \
+         prod-service-install prod-ssh prod-traefik-logs prod-traefik-reload
 
 all: build
 
@@ -106,7 +116,7 @@ build: css templ
 	    $(CMD_PATH)
 	@echo "✓ $(BUILD_DIR)/$(BINARY)"
 
-build-local:
+build-quick:
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY) $(CMD_PATH)
 
@@ -117,7 +127,10 @@ clean:
 test:
 	go test ./... -v -race -timeout 60s
 
-docker-build:
+vet:
+	go vet ./...
+
+image-build:
 	@echo "▶ docker build $(IMAGE):$(TAG)…"
 	docker build \
 	  --build-arg VERSION=$(shell git describe --tags --always 2>/dev/null || echo dev) \
@@ -125,39 +138,39 @@ docker-build:
 	  .
 	@echo "✓ $(IMAGE):$(TAG)"
 
-docker-save: docker-build
+image-save: image-build
 	@mkdir -p $(BUILD_DIR)
 	docker save $(IMAGE):$(TAG) | gzip > $(BUILD_DIR)/$(IMAGE)-$(TAG).tar.gz
 	@echo "✓ $(BUILD_DIR)/$(IMAGE)-$(TAG).tar.gz"
 
-docker-run: docker-build
+image-run: image-build
 	docker run -p 8080:8080 $(IMAGE):$(TAG)
 
-docker-up: css
+dev-stack-up: css
 	@echo "▶ Starting services…"
 	docker compose up -d --build
 	@echo "✓ Services running"
 
-docker-down:
+dev-stack-down:
 	@echo "▶ Stopping services…"
 	docker compose down
 	@echo "✓ Services stopped"
 
-docker-down-v:
+dev-stack-reset:
 	@echo "▶ Stopping services (keeping ollama_data volume)…"
 	docker compose down
 	docker volume rm congopro-bridge_meili_data 2>/dev/null || true
 	@echo "✓ Services stopped, meili_data removed, ollama_data preserved"
 
-docker-logs:
+dev-stack-logs:
 	@echo "▶ Starting docker logs…"
 	docker compose logs -f
 
-docker-logs-app:
+dev-stack-logs-app:
 	@echo "▶ Starting docker logs…"
 	docker compose logs -f app
 
-meili-reset:
+dev-search-reset:
 	@echo "▶ Resetting Meilisearch index (keeping Ollama models)…"
 	docker compose rm -sf meilisearch
 	docker volume rm congopro-bridge_meili_data
@@ -171,59 +184,73 @@ meili-reset:
 # Local capture: every email the app sends lands in Mailpit's web UI instead
 # of a real mailbox. The app reaches it with SMTP_HOST=localhost SMTP_PORT=1025
 # SMTP_TLS=none (no credentials — the sender refuses passwords in the clear).
-mail-up:
+dev-mail-up:
 	@echo "▶ Starting Mailpit (local email capture)…"
 	docker compose --profile dev up -d mail
 	@echo "✓ SMTP on 127.0.0.1:1025, web UI at http://localhost:8025"
 
-mail-down:
+dev-mail-down:
 	@echo "▶ Stopping Mailpit…"
 	docker compose stop mail
 	@echo "✓ Mailpit stopped"
 
 # Proves the SMTP account from .env works end-to-end — run this against the
 # real OVH account (and a real inbox) once, before anything depends on email.
-mail-test:
-	@if [ -z "$(TO)" ]; then echo "Usage: make mail-test TO=you@example.com" >&2; exit 2; fi
-	go run ./cmd/mail-test $(TO)
+dev-mail-test:
+	@if [ -z "$(TO)" ]; then echo "Usage: make dev-mail-test TO=you@example.com" >&2; exit 2; fi
+	go run ./cmd/dev-mail-test $(TO)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Database (local dev — docker compose)
 # ──────────────────────────────────────────────────────────────────────────────
 
-db-up:
+dev-db-up:
 	@echo "▶ Starting local Postgres…"
 	docker compose up -d --wait postgres
 	@echo "✓ Postgres ready on 127.0.0.1:$(POSTGRES_PORT)"
 
-db-down:
+dev-db-down:
 	@echo "▶ Stopping local Postgres…"
 	docker compose stop postgres
 	@echo "✓ Postgres stopped (data volume kept — use docker-down-v-style removal to wipe it)"
 
-db-migrate: db-up
+dev-db-migrate: dev-db-up
 	@echo "▶ Applying migrations to local Postgres…"
 	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -migrate
 
+# DESTRUCTIVE (local only): drops the local Postgres volume and re-applies
+# migrations, leaving an empty schema. `docker compose rm -sf` first because a
+# merely-stopped container still pins its volume (the same trap dev-search-reset hit).
+dev-db-reset:
+	@echo "▶ DESTRUCTIVE: wiping local Postgres data…"
+	@docker compose rm -sf postgres
+	@docker volume rm congopro-bridge_postgres_data 2>/dev/null || true
+	@$(MAKE) dev-db-migrate
+	@echo "✓ local database reset (empty schema) — run 'make dev-db-import' to reload companies"
+
+# Opens a psql shell on the local dev database.
+dev-db-psql: dev-db-up
+	@docker exec -it -e PGPASSWORD=$(DB_USER) congopro-bridge-postgres-1 psql -U $(DB_USER) -d $(DB_NAME)
+
 # One-time (idempotent) import of the legacy embedded JSON export into local Postgres.
-db-import: db-migrate
+dev-db-import: dev-db-migrate
 	@echo "▶ Importing companies into local Postgres…"
 	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -import
 
 # One-time (idempotent) import of the legacy embedded ads.yml into local Postgres.
-db-import-ads: db-migrate
+dev-db-import-ads: dev-db-migrate
 	@echo "▶ Importing ad campaigns into local Postgres…"
 	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -import-ads
 
 # Interactive: creates a staff account (super_admin) against local Postgres.
 # Prints a TOTP enrollment secret/URI you'll need to log in — see -create-admin.
-create-admin: db-up
+dev-admin-create: dev-db-up
 	DATABASE_URL="$(LOCAL_DATABASE_URL)" go run $(CMD_PATH) -create-admin
 
 # Integration tests are gated behind the "integration" build tag so `make test`
 # stays fast and DB-free. Add tests with `//go:build integration` as the
 # schema grows; this target is a no-op (passes trivially) until then.
-test-integration: db-migrate
+dev-test-integration: dev-db-migrate
 	@echo "▶ Running integration tests against local Postgres…"
 	DATABASE_URL="$(LOCAL_DATABASE_URL)" go test ./... -tags=integration -race -timeout 120s
 
@@ -239,60 +266,77 @@ test-integration: db-migrate
 dev:
 	DATABASE_URL="$(LOCAL_DATABASE_URL)" bash scripts/dev.sh
 
+# Starts the dockerised dev dependencies without running the app.
+dev-deps-up:
+	@echo "▶ Starting dev deps (postgres, meilisearch, ollama)…"
+	@docker compose up -d --wait postgres meilisearch ollama
+	@echo "✓ dev deps running"
+
+# DESTRUCTIVE (local only): wipes the Postgres AND Meilisearch volumes, then
+# re-applies migrations. Ollama models are kept — re-pulling them costs ~1 GB.
+dev-deps-reset:
+	@echo "▶ DESTRUCTIVE: wiping local postgres + meilisearch data (ollama models kept)…"
+	@docker compose rm -sf postgres meilisearch
+	@docker volume rm congopro-bridge_postgres_data 2>/dev/null || true
+	@docker volume rm congopro-bridge_meili_data 2>/dev/null || true
+	@$(MAKE) dev-db-migrate
+	@docker compose up -d --wait meilisearch
+	@echo "✓ local deps reset — run 'make dev-db-import' to reload companies"
+
 # Stops only the dev deps started by `make dev` (data volumes are kept).
-dev-down:
+dev-deps-down:
 	@echo "▶ Stopping dev deps…"
 	@docker compose stop postgres meilisearch ollama ollama-init
 	@echo "✓ dev deps stopped"
 
-ping:
+prod-ping:
 	@echo "▶ pinging $(DEPLOY_USER)@$(DEPLOY_HOST):$(DEPLOY_PORT)…"
 	@$(SSH) "echo '✓ connected as $(DEPLOY_USER) on $(DEPLOY_HOST)'"
 
-ssh:
+prod-ssh:
 	ssh $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # App deployment
 # ──────────────────────────────────────────────────────────────────────────────
 
-deploy: deploy-binary deploy-config service-restart
+prod-deploy: prod-app-push prod-config-push prod-app-restart
 	@echo ""
 	@echo "╔══════════════════════════════════════╗"
 	@echo "║  ✓ Deployment complete               ║"
 	@echo "║  https://$(DOMAIN)                ║"
 	@echo "╚══════════════════════════════════════╝"
 
-deploy-binary: build
+prod-app-push: build
 	@echo "▶ Uploading binary → $(DEPLOY_HOST):$(REMOTE_DIR)/"
 	@$(SSH) "sudo mkdir -p $(REMOTE_DIR) && sudo chown $(DEPLOY_USER): $(REMOTE_DIR)"
 	@$(RSYNC) $(BUILD_DIR)/$(BINARY) $(DEPLOY_USER)@$(DEPLOY_HOST):$(REMOTE_DIR)/$(BINARY)
 	@$(SSH) "chmod +x $(REMOTE_DIR)/$(BINARY)"
 	@echo "✓ binary uploaded"
 
-deploy-config:
+prod-config-push:
 	@echo "▶ Uploading Traefik dynamic config…"
 	@$(SSH) "sudo mkdir -p /srv/traefik/dynamic"
 	@$(RSYNC) deploy/traefik/dynamic/ $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/traefik-dynamic/
 	@$(SSH) "sudo cp -r /tmp/traefik-dynamic/. /srv/traefik/dynamic/ && rm -rf /tmp/traefik-dynamic"
 	@echo "✓ config uploaded"
-	@$(MAKE) traefik-reload
+	@$(MAKE) prod-traefik-reload
 
-deploy-service:
+prod-service-install:
 	@echo "▶ Installing $(SERVICE) systemd unit…"
 	@$(RSYNC) deploy/systemd/$(SERVICE).service $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/$(SERVICE).service
 	@$(SSH) "sudo mv /tmp/$(SERVICE).service /etc/systemd/system/$(SERVICE).service && sudo systemctl daemon-reload"
-	@echo "✓ unit installed — run 'make service-start' to enable"
+	@echo "✓ unit installed — run 'make prod-app-start' to enable"
 
 # First-time app setup: installs systemd unit, deploys binary, enables on boot.
-deploy-full: deploy-service secrets-init deploy
+prod-bootstrap-app: prod-service-install prod-secrets-init prod-deploy
 	@$(SSH) "sudo systemctl enable $(SERVICE)"
 	@echo "✓ $(SERVICE) enabled on boot"
 
 # Generates secrets on the server (never downloaded, never printed) and writes them to
 # EnvironmentFile(s). Idempotent per-key: only fills in whatever is missing, so re-running
 # after adding a new secret doesn't touch keys already in place.
-secrets-init:
+prod-secrets-init:
 	@echo "▶ Ensuring secrets exist on $(DEPLOY_HOST)…"
 	@$(SSH) "sudo mkdir -p $(REMOTE_DIR) $(MEILI_DIR)/etc; \
 	  sudo touch $(REMOTE_DIR)/$(APP_ENV_FILE) $(MEILI_DIR)/etc/secrets.env; \
@@ -315,7 +359,7 @@ secrets-init:
 	  sudo chmod 600 $(REMOTE_DIR)/$(APP_ENV_FILE) $(MEILI_DIR)/etc/secrets.env"
 
 # Full server bootstrap: Ollama + Meilisearch + app. Run once on a fresh server.
-deploy-all: ollama-setup meili-setup deploy-full
+prod-bootstrap-all: prod-ollama-setup prod-search-setup prod-bootstrap-app
 	@echo ""
 	@echo "╔══════════════════════════════════════╗"
 	@echo "║  ✓ Full stack ready                  ║"
@@ -326,36 +370,36 @@ deploy-all: ollama-setup meili-setup deploy-full
 # App service
 # ──────────────────────────────────────────────────────────────────────────────
 
-service-start:
+prod-app-start:
 	@$(SSH) "sudo systemctl enable --now $(SERVICE)"
 	@echo "✓ $(SERVICE) started"
 
-service-stop:
+prod-app-stop:
 	@$(SSH) "sudo systemctl stop $(SERVICE)"
 	@echo "✓ $(SERVICE) stopped"
 
-service-restart:
+prod-app-restart:
 	@echo "▶ Restarting $(SERVICE)…"
 	@$(SSH) "sudo systemctl restart $(SERVICE)"
 	@sleep 2
-	@$(MAKE) service-status
+	@$(MAKE) prod-app-status
 
-service-status:
+prod-app-status:
 	@$(SSH) "sudo systemctl status $(SERVICE) --no-pager -l || true"
 
-service-logs:
+prod-app-logs:
 	$(SSH) "sudo journalctl -u $(SERVICE) -f --no-pager"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Traefik
 # ──────────────────────────────────────────────────────────────────────────────
 
-traefik-reload:
+prod-traefik-reload:
 	@echo "▶ Triggering Traefik dynamic config reload…"
 	@$(SSH) "sudo touch /srv/traefik/dynamic/congopro-bridge.yml"
 	@echo "✓ Traefik will pick up changes within a few seconds"
 
-traefik-logs:
+prod-traefik-logs:
 	$(SSH) "sudo journalctl -u traefik -f --no-pager 2>/dev/null || sudo docker logs -f $$(sudo docker ps -qf name=traefik)"
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -365,13 +409,13 @@ traefik-logs:
 OLLAMA_MODELS ?= $(GENERATIVE_MODEL) $(EMBEDDING_MODEL)
 OLLAMA_NUM_THREADS ?= 2
 
-ollama-install:
+prod-ollama-install:
 	@echo "▶ Installing Ollama on $(DEPLOY_HOST)…"
 	@$(SSH) "curl -fsSL https://ollama.com/install.sh | sh"
 	@$(SSH) "sudo systemctl enable --now ollama"
 	@echo "✓ Ollama installed and started"
 
-ollama-configure-limit:
+prod-ollama-limit:
 	@echo "▶ Limiting Ollama to $(OLLAMA_NUM_THREADS) CPU threads…"
 	@$(SSH) "sudo mkdir -p /etc/systemd/system/ollama.service.d && \
 	         echo '[Service]' | sudo tee /etc/systemd/system/ollama.service.d/override.conf >/dev/null && \
@@ -380,36 +424,36 @@ ollama-configure-limit:
 	         sudo systemctl restart ollama"
 	@echo "✓ Ollama CPU limit applied"
 
-ollama-pull-models:
+prod-ollama-pull:
 	@echo "▶ Pulling models: $(OLLAMA_MODELS)…"
 	@$(SSH) "for model in $(OLLAMA_MODELS); do echo \"Pulling \$$model...\"; ollama pull \$$model; done"
 	@echo "✓ All models pulled"
 
-ollama-clean-models:
+prod-ollama-clean:
 	@echo "▶ Removing all Ollama models on $(DEPLOY_HOST)…"
 	@$(SSH) "ollama list | tail -n +2 | awk '{print \$$1}' | xargs -I {} ollama rm {}"
 	@echo "✓ All models removed"
 
-ollama-reset: ollama-clean-models ollama-pull-models
+prod-ollama-reset: prod-ollama-clean prod-ollama-pull
 	@echo "✓ Models reset to: $(OLLAMA_MODELS)"
 
-ollama-status:
+prod-ollama-status:
 	@$(SSH) "sudo systemctl status ollama --no-pager -l || true"
 	@$(SSH) "ollama list"
 
-ollama-setup: ollama-install ollama-configure-limit ollama-pull-models
+prod-ollama-setup: prod-ollama-install prod-ollama-limit prod-ollama-pull
 	@echo "╔═════════════════════════════════════════════════════════════════════════════╗"
 	@echo "║  Ollama is ready with $(OLLAMA_MODELS)                            ║"
 	@echo "╚═════════════════════════════════════════════════════════════════════════════╝"
 
-ollama-logs:
+prod-ollama-logs:
 	$(SSH) "sudo journalctl -u ollama -f --no-pager"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Meilisearch (production — systemd)
 # ──────────────────────────────────────────────────────────────────────────────
 
-meili-install:
+prod-search-install:
 	@echo "▶ Installing Meilisearch $(MEILI_VERSION) on $(DEPLOY_HOST)…"
 	@$(SSH) "sudo useradd -r -s /bin/false meilisearch 2>/dev/null || true"
 	@$(SSH) "sudo mkdir -p $(MEILI_DIR)/bin $(MEILI_DIR)/data/db $(MEILI_DIR)/data/dumps $(MEILI_DIR)/etc"
@@ -418,27 +462,27 @@ meili-install:
 	@$(SSH) "sudo chmod +x $(MEILI_DIR)/bin/meilisearch"
 	@echo "✓ Meilisearch $(MEILI_VERSION) installed at $(MEILI_DIR)/bin/meilisearch"
 
-meili-deploy-config:
+prod-search-config-push:
 	@echo "▶ Uploading meilisearch.toml…"
 	@$(RSYNC) deploy/meilisearch/meilisearch.toml $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/meilisearch.toml
 	@$(SSH) "sudo mv /tmp/meilisearch.toml $(MEILI_DIR)/etc/meilisearch.toml && sudo chown meilisearch:meilisearch $(MEILI_DIR)/etc/meilisearch.toml"
 	@echo "✓ meilisearch.toml deployed"
 
-meili-deploy-service:
+prod-search-service-install:
 	@echo "▶ Installing meilisearch systemd unit…"
 	@$(RSYNC) deploy/meilisearch/meilisearch.service $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/meilisearch.service
 	@$(SSH) "sudo mv /tmp/meilisearch.service /etc/systemd/system/meilisearch.service && sudo systemctl daemon-reload"
 	@echo "✓ systemd unit installed"
 
-meili-deploy-traefik:
+prod-search-traefik-push:
 	@echo "▶ Uploading Meilisearch Traefik config…"
 	@$(RSYNC) deploy/meilisearch/meilisearch.yml $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/meilisearch.yml
 	@$(SSH) "sudo mkdir -p /srv/traefik/dynamic && sudo mv /tmp/meilisearch.yml /srv/traefik/dynamic/meilisearch.yml"
-	@$(MAKE) traefik-reload
+	@$(MAKE) prod-traefik-reload
 	@echo "✓ Traefik config deployed"
 
 # First-time Meilisearch setup: installs binary, config, systemd unit, Traefik, enables service.
-meili-setup: meili-install meili-deploy-config meili-deploy-service meili-deploy-traefik secrets-init
+prod-search-setup: prod-search-install prod-search-config-push prod-search-service-install prod-search-traefik-push prod-secrets-init
 	@$(SSH) "sudo systemctl enable --now meilisearch"
 	@echo ""
 	@echo "╔══════════════════════════════════════╗"
@@ -446,39 +490,39 @@ meili-setup: meili-install meili-deploy-config meili-deploy-service meili-deploy
 	@echo "║  https://meili.$(DOMAIN)          ║"
 	@echo "╚══════════════════════════════════════╝"
 
-meili-start:
+prod-search-start:
 	@$(SSH) "sudo systemctl enable --now meilisearch"
 	@echo "✓ meilisearch started"
 
-meili-stop:
+prod-search-stop:
 	@$(SSH) "sudo systemctl stop meilisearch"
 	@echo "✓ meilisearch stopped"
 
-meili-restart:
+prod-search-restart:
 	@echo "▶ Restarting meilisearch…"
 	@$(SSH) "sudo systemctl restart meilisearch"
 	@sleep 2
-	@$(MAKE) meili-status
+	@$(MAKE) prod-search-status
 
-meili-status:
+prod-search-status:
 	@$(SSH) "sudo systemctl status meilisearch --no-pager -l || true"
 
-meili-logs:
+prod-search-logs:
 	$(SSH) "sudo journalctl -u meilisearch -f --no-pager"
 
 # Wipes the index on the remote server; app re-indexes automatically on next start.
-meili-index-reset:
+prod-search-reset:
 	@echo "▶ Wiping Meilisearch data on $(DEPLOY_HOST) (index will rebuild on next app start)…"
-	@$(MAKE) meili-stop
+	@$(MAKE) prod-search-stop
 	@$(SSH) "sudo rm -rf $(MEILI_DIR)/data/db && sudo mkdir -p $(MEILI_DIR)/data/db && sudo chown meilisearch:meilisearch $(MEILI_DIR)/data/db"
-	@$(MAKE) meili-start
+	@$(MAKE) prod-search-start
 	@echo "✓ Meilisearch index wiped"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Database (production — self-hosted PostgreSQL via systemd, not docker)
 # ──────────────────────────────────────────────────────────────────────────────
 
-db-install:
+prod-db-install:
 	@echo "▶ Installing PostgreSQL $(PG_VERSION) + PostGIS on $(DEPLOY_HOST)…"
 	@$(SSH) "MISSING=''; \
 	  dpkg -s postgresql-$(PG_VERSION) >/dev/null 2>&1 || MISSING=\"\$$MISSING postgresql-$(PG_VERSION)\"; \
@@ -487,39 +531,39 @@ db-install:
 	@$(SSH) "sudo systemctl enable --now postgresql"
 	@echo "✓ PostgreSQL installed and running"
 
-# Creates the app's role and database using the password secrets-init already generated
+# Creates the app's role and database using the password prod-secrets-init already generated
 # into $(APP_ENV_FILE). Requires sudo on the host (CREATE ROLE/DATABASE need postgres superuser) —
 # gate scripts/db-provision.sh behind a dedicated sudoers entry rather than full root sudo.
-db-provision: secrets-init
+prod-db-provision: prod-secrets-init
 	@echo "▶ Provisioning database role and schema on $(DEPLOY_HOST)…"
 	@$(RSYNC) scripts/db-provision.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-provision.sh
 	@$(SSH) "chmod +x /tmp/db-provision.sh && sudo /tmp/db-provision.sh '$(DB_NAME)' '$(DB_USER)' '$(REMOTE_DIR)/$(APP_ENV_FILE)' && rm -f /tmp/db-provision.sh"
-	@echo "✓ database provisioned — run 'make db-migrate-remote' to apply schema"
+	@echo "✓ database provisioned — run 'make prod-db-migrate' to apply schema"
 
-db-remote-status:
+prod-db-status:
 	@$(SSH) "sudo systemctl status postgresql --no-pager -l || true"
 
-db-remote-check:
+prod-db-check:
 	@echo "▶ Checking remote database and PostGIS…"
 	@$(SSH) "sudo -u postgres psql -d $(DB_NAME) -c 'SELECT postgis_version();' -c '\dt'"
 
 # Applies pending migrations using the already-deployed binary and the server's own
 # $(APP_ENV_FILE) — no credentials ever leave the host.
-db-migrate-remote:
+prod-db-migrate:
 	@echo "▶ Applying migrations on $(DEPLOY_HOST)…"
 	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -migrate'"
 	@echo "✓ remote database is up to date"
 
 # One-time (idempotent) import of the legacy embedded JSON export into production. Only
 # needed once, when first cutting the app over from the embedded JSON to Postgres.
-db-import-remote:
+prod-db-import:
 	@echo "▶ Importing companies on $(DEPLOY_HOST)…"
 	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -import'"
 	@echo "✓ import complete"
 
 # One-time (idempotent) import of the legacy ads.yml campaigns into production —
 # the ads CMS cutover step. Settings row is seeded only (never clobbered).
-db-import-ads-remote:
+prod-db-import-ads:
 	@echo "▶ Importing ad campaigns on $(DEPLOY_HOST)…"
 	@$(SSH) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -import-ads'"
 	@echo "✓ import complete"
@@ -529,7 +573,7 @@ db-import-ads-remote:
 # ──────────────────────────────────────────────────────────────────────────────
 
 # First-time (and idempotent re-run) install: script + systemd unit + timer, enabled.
-db-backup-install:
+prod-backup-install:
 	@echo "▶ Installing database backup script + timer on $(DEPLOY_HOST)…"
 	@$(SSH) "sudo mkdir -p $(REMOTE_DIR)/scripts $(BACKUP_DIR) && sudo chown postgres:postgres $(BACKUP_DIR)"
 	@$(RSYNC) scripts/db-backup.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-backup.sh
@@ -541,24 +585,24 @@ db-backup-install:
 	@echo "✓ backup timer installed — next run: $$($(SSH) 'systemctl show congopro-bridge-db-backup.timer -p NextElapseUSecRealtime --value')"
 
 # Triggers an out-of-schedule backup run (the timer keeps its normal schedule).
-db-backup-now:
+prod-backup-now:
 	@echo "▶ Running an ad-hoc backup on $(DEPLOY_HOST)…"
 	@$(SSH) "sudo systemctl start congopro-bridge-db-backup.service"
-	@$(MAKE) db-backup-status
+	@$(MAKE) prod-backup-status
 
-db-backup-status:
+prod-backup-status:
 	@$(SSH) "sudo systemctl status congopro-bridge-db-backup.timer --no-pager -l || true"
-	@$(MAKE) db-backup-list
+	@$(MAKE) prod-backup-list
 
-db-backup-logs:
+prod-backup-logs:
 	$(SSH) "sudo journalctl -u congopro-bridge-db-backup.service -f --no-pager"
 
-db-backup-list:
+prod-backup-list:
 	@$(SSH) "ls -lht $(BACKUP_DIR) 2>/dev/null || echo '(no backups yet)'"
 
 # Downloads every backup currently on the server into LOCAL_BACKUP_DIR (no --delete,
 # so older backups you've already pulled and the server has since rotated away stay put).
-db-backup-pull:
+prod-backup-pull:
 	@mkdir -p $(LOCAL_BACKUP_DIR)
 	@echo "▶ Pulling backups from $(DEPLOY_HOST):$(BACKUP_DIR) → $(LOCAL_BACKUP_DIR)/…"
 	@rsync -az --progress -e "ssh $(_ssh_opts)" $(DEPLOY_USER)@$(DEPLOY_HOST):$(BACKUP_DIR)/ $(LOCAL_BACKUP_DIR)/
@@ -567,22 +611,22 @@ db-backup-pull:
 # Restores a dump into a throwaway database on the LOCAL dev Postgres and verifies it —
 # proves a backup is actually restorable without going near production. Defaults to the
 # newest file in LOCAL_BACKUP_DIR; pass BACKUP_FILE=path/to/x.dump to test a specific one.
-db-restore-test: db-up
+dev-db-restore-test: dev-db-up
 	@FILE="$(BACKUP_FILE)"; \
 	if [ -z "$$FILE" ]; then \
 	  FILE=$$(ls -t $(LOCAL_BACKUP_DIR)/*.dump 2>/dev/null | head -1); \
 	fi; \
 	if [ -z "$$FILE" ]; then \
-	  echo "❌ no dump file found — run 'make db-backup-pull' first or pass BACKUP_FILE=..."; \
+	  echo "❌ no dump file found — run 'make prod-backup-pull' first or pass BACKUP_FILE=..."; \
 	  exit 1; \
 	fi; \
 	echo "▶ testing restore of $$FILE against local dev Postgres…"; \
 	bash scripts/db-restore-test.sh "$$FILE"
 
-# DESTRUCTIVE: overwrites the live production database. Requires db-restore-test to have
-# been run first, and a typed confirmation on the server (ssh -t for the interactive prompt).
+# DESTRUCTIVE: overwrites the live production database. Requires dev-db-restore-test to have
+# been run first, and a typed confirmation on the server (prod-ssh -t for the interactive prompt).
 # Defaults to the newest file in LOCAL_BACKUP_DIR; pass BACKUP_FILE=path/to/x.dump to pick one.
-db-restore:
+prod-db-restore:
 	@FILE="$(BACKUP_FILE)"; \
 	if [ -z "$$FILE" ]; then \
 	  FILE=$$(ls -t $(LOCAL_BACKUP_DIR)/*.dump 2>/dev/null | head -1); \
@@ -594,52 +638,72 @@ db-restore:
 	echo "▶ uploading $$FILE → $(DEPLOY_HOST):/tmp/restore.dump…"; \
 	rsync -az --progress -e "ssh $(_ssh_opts)" "$$FILE" $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/restore.dump; \
 	$(RSYNC) scripts/db-restore-prod.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-restore-prod.sh; \
-	ssh -t $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST) "chmod +x /tmp/db-restore-prod.sh && sudo /tmp/db-restore-prod.sh '$(DB_NAME)' /tmp/restore.dump '$(SERVICE)'; rm -f /tmp/db-restore-prod.sh /tmp/restore.dump"
+	prod-ssh -t $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST) "chmod +x /tmp/db-restore-prod.sh && sudo /tmp/db-restore-prod.sh '$(DB_NAME)' /tmp/restore.dump '$(SERVICE)'; rm -f /tmp/db-restore-prod.sh /tmp/restore.dump"
 
 # ──────────────────────────────────────────────────────────────────────────────
 
 help:
 	@echo ""
-	@echo "  Congopro Bridge — available make targets"
-	@echo "  ────────────────────────────────────────────────────────"
-	@echo "  Bootstrap:  deploy-all          Fresh server: Ollama + Meilisearch + app"
-	@echo "  App:        deploy              Rebuild and deploy binary"
-	@echo "              deploy-full         First-time: installs systemd unit + deploy"
-	@echo "  Dev:        dev                 One command: deps + migrations + templ/CSS watch + hot-reload app"
-	@echo "              dev-down            Stop the dev deps (postgres, meili, ollama; volumes kept)"
-	@echo "              docker-up/down      Start/stop the whole stack in docker (incl. app container)"
-	@echo "              templ               Regenerate *_templ.go from .templ sources"
-	@echo "              meili-reset         Wipe local Meilisearch index"
-	@echo "  Mail:      mail-up/down        Start/stop Mailpit (local email capture, UI :8025)"
-	@echo "              mail-test          Send one test email: make mail-test TO=you@example.com"
-	@echo "  Meili:      meili-setup         First-time remote Meilisearch install"
-	@echo "              meili-index-reset   Wipe remote index (rebuilds on next start)"
-	@echo "  Ollama:     ollama-setup        Install + configure + pull models"
-	@echo "  DB (dev):   db-up/db-down       Start/stop local Postgres (docker compose)"
-	@echo "              db-migrate          Apply migrations to local Postgres"
-	@echo "              db-import           One-time: load the embedded JSON export into local Postgres"
-	@echo "              db-import-ads       One-time: load the legacy ads.yml campaigns into local Postgres"
-	@echo "              create-admin        Interactively create a staff account (super_admin)"
-	@echo "              test-integration    Run integration-tagged tests against local Postgres"
-	@echo "  DB (prod):  db-install          Install PostgreSQL + PostGIS via apt (idempotent)"
-	@echo "              db-provision        Create app role/database from $(APP_ENV_FILE)"
-	@echo "              db-migrate-remote   Apply migrations on the VPS"
-	@echo "              db-import-remote    One-time: load the embedded JSON export into production"
-	@echo "              db-import-ads-remote  One-time: ads CMS cutover (load legacy campaigns)"
-	@echo "              db-remote-status    systemctl status postgresql"
-	@echo "              db-remote-check     Verify PostGIS + tables on the VPS"
-	@echo "  Backups:    db-backup-install   Install backup script + daily systemd timer"
-	@echo "              db-backup-now       Trigger an ad-hoc backup"
-	@echo "              db-backup-status    Timer status + list of backups on the VPS"
-	@echo "              db-backup-logs      Follow backup service logs"
-	@echo "              db-backup-list      List backups on the VPS"
-	@echo "              db-backup-pull      Download backups to ./backups/"
-	@echo "              db-restore-test     Restore a backup into a local throwaway DB and verify it"
-	@echo "              db-restore          DESTRUCTIVE: restore a backup onto production (confirmation required)"
-	@echo "  ────────────────────────────────────────────────────────"
-	@echo "  Key variables (set in .env or as env overrides):"
-	@echo "    DEPLOY_HOST, DEPLOY_USER, DEPLOY_PORT, SSH_KEY"
-	@echo "    REMOTE_DIR, MEILI_DIR, MEILI_VERSION, DOMAIN"
-	@echo "    POSTGRES_PORT, DB_NAME, DB_USER, PG_VERSION"
-	@echo "    BACKUP_DIR, BACKUP_KEEP, LOCAL_BACKUP_DIR, BACKUP_FILE"
+	@echo "  Congopro Bridge — make targets"
+	@echo "  Naming: <where>-<what>-<verb>.  dev-* = this machine · prod-* = live server (SSH)"
+	@echo "  ─────────────────────────────────────────────────────────────────────────────"
+	@echo "  EVERYDAY"
+	@echo "    dev                      Deps + migrations + templ/CSS watch + hot-reload app"
+	@echo "    test                     Unit tests (race)          vet   go vet ./..."
+	@echo "    build                    Release binary (static, linux/amd64)"
+	@echo "    build-quick              Fast native build, no codegen"
+	@echo "    css / templ              Regenerate stylesheet / *_templ.go"
+	@echo ""
+	@echo "  DEV — local machine"
+	@echo "    dev-deps-up/-down        Start/stop postgres+meilisearch+ollama (volumes kept)"
+	@echo "    dev-deps-reset           ⚠ DESTROYS local postgres+meili data (ollama models kept)"
+	@echo "    dev-db-up/-down          Start/stop local Postgres only"
+	@echo "    dev-db-migrate           Apply migrations locally"
+	@echo "    dev-db-reset             ⚠ DESTROYS the local database, then re-migrates (empty schema)"
+	@echo "    dev-db-psql              psql shell on the local database"
+	@echo "    dev-db-import            Load the embedded JSON export into local Postgres"
+	@echo "    dev-db-import-ads        Load the legacy ads.yml campaigns locally"
+	@echo "    dev-db-restore-test      Restore a backup into a throwaway local DB and verify it"
+	@echo "    dev-search-reset         ⚠ DESTROYS the local Meilisearch index (rebuilds on next boot)"
+	@echo "    dev-admin-create         Interactively create a staff account (super_admin)"
+	@echo "    dev-test-integration     Integration-tagged tests against local Postgres"
+	@echo "    dev-mail-up/-down        Mailpit local email capture (UI http://localhost:8025)"
+	@echo "    dev-mail-test TO=…       Send one real test email through the .env SMTP account"
+	@echo "    dev-stack-up/-down       Whole stack in docker, app container included"
+	@echo "    dev-stack-reset          ⚠ DESTROYS the local Meilisearch volume"
+	@echo "    dev-stack-logs[-app]     Follow compose logs"
+	@echo ""
+	@echo "  PROD — live server over SSH"
+	@echo "    prod-ping / prod-ssh     Check connectivity / open a shell"
+	@echo "    prod-deploy              Build, upload binary, push config, restart"
+	@echo "    prod-app-push            Upload the binary only"
+	@echo "    prod-config-push         Upload Traefik dynamic config + reload"
+	@echo "    prod-app-start/-stop/-restart/-status/-logs"
+	@echo "    prod-secrets-init        Generate missing secrets on the server (idempotent)"
+	@echo "    prod-bootstrap-app       First-time app install (unit + secrets + deploy)"
+	@echo "    prod-bootstrap-all       Fresh server: Ollama + Meilisearch + app"
+	@echo "    prod-db-install          Install PostgreSQL + PostGIS (idempotent)"
+	@echo "    prod-db-provision        Create app role/database from $(APP_ENV_FILE)"
+	@echo "    prod-db-migrate          Apply migrations on the server"
+	@echo "    prod-db-import[-ads]     One-time cutover imports"
+	@echo "    prod-db-status/-check    systemctl status / PostGIS + tables"
+	@echo "    prod-db-restore          ⚠ DESTROYS production data (typed confirmation required)"
+	@echo "    prod-search-setup        First-time remote Meilisearch install"
+	@echo "    prod-search-start/-stop/-restart/-status/-logs"
+	@echo "    prod-search-reset        ⚠ DESTROYS the remote index (rebuilds on next start)"
+	@echo "    prod-ollama-setup        Install + CPU limit + pull models"
+	@echo "    prod-ollama-reset        ⚠ Removes all remote models, then re-pulls"
+	@echo "    prod-ollama-status/-logs"
+	@echo "    prod-traefik-reload/-logs"
+	@echo "    prod-backup-install      Install backup script + daily systemd timer"
+	@echo "    prod-backup-now/-status/-logs/-list"
+	@echo "    prod-backup-pull         Download backups to ./backups/"
+	@echo ""
+	@echo "  IMAGE — container build (local)"
+	@echo "    image-build / image-save / image-run"
+	@echo "  ─────────────────────────────────────────────────────────────────────────────"
+	@echo "  Variables (.env or env overrides):"
+	@echo "    DEPLOY_HOST DEPLOY_USER DEPLOY_PORT SSH_KEY REMOTE_DIR DOMAIN"
+	@echo "    MEILI_DIR MEILI_VERSION POSTGRES_PORT DB_NAME DB_USER PG_VERSION"
+	@echo "    BACKUP_DIR BACKUP_KEEP LOCAL_BACKUP_DIR BACKUP_FILE"
 	@echo ""

@@ -14,7 +14,7 @@ set -euo pipefail
 #
 # Usage: db-restore-prod.sh DB_NAME DUMP_FILE SERVICE
 # Must run as root, with a tty attached (for the confirmation prompt) —
-# invoked by `make db-restore` over `ssh -t`.
+# invoked by `make prod-db-restore` over `ssh -t`.
 # ─────────────────────────────────────────────────────────────────────────────
 
 DB_NAME="${1:?usage: db-restore-prod.sh DB_NAME DUMP_FILE SERVICE}"

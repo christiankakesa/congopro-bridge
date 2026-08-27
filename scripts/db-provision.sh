@@ -4,8 +4,8 @@ set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Creates the congopro-bridge Postgres role and database on this host, using
-# the password `make secrets-init` already generated into congopro-bridge.env. Meant
-# to run as root on the VPS (invoked by `make db-provision`, which uploads
+# the password `make prod-secrets-init` already generated into congopro-bridge.env. Meant
+# to run as root on the VPS (invoked by `make prod-db-provision`, which uploads
 # this file and runs it via sudo) — CREATE ROLE/DATABASE need postgres
 # superuser privileges, which is why this is a separate, sudoers-gated script
 # rather than something the app itself does at startup.
@@ -28,13 +28,13 @@ if [[ "$(id -u)" -ne 0 ]]; then
 fi
 
 if [[ ! -s "${SECRETS_FILE}" ]]; then
-  echo "❌ ${SECRETS_FILE} not found or empty — run 'make secrets-init' first" >&2
+  echo "❌ ${SECRETS_FILE} not found or empty — run 'make prod-secrets-init' first" >&2
   exit 1
 fi
 
 DATABASE_URL="$(grep '^DATABASE_URL=' "${SECRETS_FILE}" | cut -d= -f2-)"
 if [[ -z "${DATABASE_URL}" ]]; then
-  echo "❌ DATABASE_URL not set in ${SECRETS_FILE} — run 'make secrets-init' first" >&2
+  echo "❌ DATABASE_URL not set in ${SECRETS_FILE} — run 'make prod-secrets-init' first" >&2
   exit 1
 fi
 
@@ -68,4 +68,4 @@ fi
 sudo -u postgres psql -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS postgis;" >/dev/null
 echo "✓ postgis extension ready on ${DB_NAME}"
 
-echo "✓ provisioning complete — run 'make db-migrate-remote' to apply schema"
+echo "✓ provisioning complete — run 'make prod-db-migrate' to apply schema"

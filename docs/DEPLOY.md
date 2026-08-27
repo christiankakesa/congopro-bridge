@@ -55,20 +55,20 @@ full list, or run `make help`).
 Run once, in order, on a fresh server:
 
 ```bash
-make ollama-setup       # installs Ollama, pulls the generative + embedding models
-make meili-setup        # installs Meilisearch, config, systemd unit, Traefik route
-make db-install          # installs PostgreSQL + PostGIS via apt, enables the service
-make db-provision        # generates a DB password into congopro-bridge.env, creates role + database
-make deploy-full         # uploads the binary, installs the app's systemd unit, starts it
-make db-migrate-remote   # applies schema migrations against the new database
-make db-import-remote    # one-time: loads the legacy embedded JSON export into Postgres
-make db-import-ads-remote # one-time: ads CMS cutover, loads the legacy ads.yml campaigns
-make service-restart      # REQUIRED after db-import-ads-remote: the serving snapshot
+make prod-ollama-setup       # installs Ollama, pulls the generative + embedding models
+make prod-search-setup        # installs Meilisearch, config, systemd unit, Traefik route
+make prod-db-install          # installs PostgreSQL + PostGIS via apt, enables the service
+make prod-db-provision        # generates a DB password into congopro-bridge.env, creates role + database
+make prod-bootstrap-app         # uploads the binary, installs the app's systemd unit, starts it
+make prod-db-migrate   # applies schema migrations against the new database
+make prod-db-import    # one-time: loads the legacy embedded JSON export into Postgres
+make prod-db-import-ads # one-time: ads CMS cutover, loads the legacy ads.yml campaigns
+make prod-app-restart      # REQUIRED after db-import-ads-remote: the serving snapshot
                           # loads at boot; the import CLI cannot reload a running process
-make db-backup-install   # installs the daily backup timer
+make prod-backup-install   # installs the daily backup timer
 ```
 
-(`make deploy-all` already chains `ollama-setup` + `meili-setup` + `deploy-full`
+(`make prod-bootstrap-all` already chains `ollama-setup` + `meili-setup` + `deploy-full`
 for the non-database parts; the `db-*` steps above are additive.)
 
 Each step is idempotent — safe to re-run if one fails partway and you fix the
@@ -77,24 +77,24 @@ underlying issue (missing sudoers rule, DNS not propagated yet, etc.).
 ## Day-to-day deploy (code changes)
 
 ```bash
-make deploy
+make prod-deploy
 ```
 
 Rebuilds the binary, uploads it, uploads Traefik config, restarts the
 `congopro-bridge` service. If the change includes a new migration, run
-`make db-migrate-remote` as well (before or after `make deploy` — migrations
+`make prod-db-migrate` as well (before or after `make prod-deploy` — migrations
 here are additive/backward-compatible by convention, so order isn't critical
 yet; that may stop being true once destructive migrations show up).
 
 ## Database
 
 - **Local dev**: `make dev` (one-command loop: deps + migrations + templ/CSS
-  regeneration + hot-reload app — see `scripts/dev.sh`), `make db-up` (starts
-  Postgres in docker), `make db-migrate` (applies migrations),
-  `make test-integration` (runs `-tags=integration` tests against it —
+  regeneration + hot-reload app — see `scripts/dev.sh`), `make dev-db-up` (starts
+  Postgres in docker), `make dev-db-migrate` (applies migrations),
+  `make dev-test-integration` (runs `-tags=integration` tests against it —
   currently a no-op until integration tests exist).
-- **Production**: `make db-remote-check` verifies PostGIS and lists tables;
-  `make db-remote-status` shows the systemd unit status.
+- **Production**: `make prod-db-check` verifies PostGIS and lists tables;
+  `make prod-db-status` shows the systemd unit status.
 - Migrations live in `internal/db/migrations/*.sql` (goose format, embedded
   into the binary via `go:embed`). `<binary> -migrate` applies pending ones
   and exits — that's what both `db-migrate` (local) and `db-migrate-remote`
@@ -102,8 +102,8 @@ yet; that may stop being true once destructive migrations show up).
 - The app loads companies from Postgres (`status = 'published'` only — drafts
   stay hidden) and no longer touches the embedded JSON at runtime.
   `<binary> -import` is the one-time migration that upserts the legacy
-  embedded JSON export into the `companies` table (`make db-import` locally,
-  `make db-import-remote` in production); safe to re-run, existing rows are
+  embedded JSON export into the `companies` table (`make dev-db-import` locally,
+  `make prod-db-import` in production); safe to re-run, existing rows are
   updated in place. Once it has run against production, new companies are
   meant to be created through the admin CMS, not this — until that CMS
   exists, insert/update `companies` rows directly.
@@ -114,22 +114,22 @@ An untested backup isn't a real backup — the tooling below is built around
 that: every restore path other than the real production one runs against a
 throwaway database, so testing a backup is cheap and safe to do often.
 
-- `make db-backup-install` — installs `scripts/db-backup.sh` plus a systemd
+- `make prod-backup-install` — installs `scripts/db-backup.sh` plus a systemd
   service + timer (`deploy/systemd/congopro-bridge-db-backup.{service,timer}`)
   that runs `pg_dump -Fc` daily at 03:15 as the `postgres` OS user (peer auth,
   no password needed), keeping the 14 most recent dumps in
   `/opt/congopro-bridge/backups` (override with `BACKUP_KEEP=`).
-- `make db-backup-now` — triggers an out-of-schedule run.
-- `make db-backup-status` / `db-backup-logs` / `db-backup-list` — inspect the
+- `make prod-backup-now` — triggers an out-of-schedule run.
+- `make prod-backup-status` / `db-backup-logs` / `db-backup-list` — inspect the
   timer, follow logs, list what's on the server.
-- `make db-backup-pull` — downloads everything in the remote backup directory
+- `make prod-backup-pull` — downloads everything in the remote backup directory
   into `./backups/` locally (gitignored).
-- `make db-restore-test [BACKUP_FILE=./backups/x.dump]` — restores a dump into
+- `make dev-db-restore-test [BACKUP_FILE=./backups/x.dump]` — restores a dump into
   a throwaway database on **local dev Postgres**, runs a sanity query, drops
   the throwaway database. Defaults to the newest file in `./backups/`. Never
   touches production. Run this periodically (e.g. after every `db-backup-pull`)
   — a backup you haven't restored is a guess, not a guarantee.
-- `make db-restore [BACKUP_FILE=./backups/x.dump]` — **destructive.** Uploads
+- `make prod-db-restore [BACKUP_FILE=./backups/x.dump]` — **destructive.** Uploads
   the dump, stops the `congopro-bridge` service, terminates other connections,
   and runs `pg_restore --clean` against the live database. Requires typing
   `RESTORE <db_name>` at an interactive prompt (the script refuses to run
@@ -139,7 +139,7 @@ throwaway database, so testing a backup is cheap and safe to do often.
 
 ## Secrets
 
-`make secrets-init` (also run automatically by `db-provision` and
+`make prod-secrets-init` (also run automatically by `db-provision` and
 `meili-setup`) generates `MEILI_MASTER_KEY` and `DATABASE_URL` directly on the
 server — they're never downloaded to your machine or printed to your
 terminal — and writes them to `/opt/congopro-bridge/congopro-bridge.env`
@@ -150,10 +150,10 @@ fills in what's missing; it won't rotate existing keys.
 ## Verification checklist after a fresh bootstrap
 
 ```bash
-make service-status        # congopro-bridge is active (running)
-make db-remote-status       # postgresql is active (running)
-make db-remote-check        # postgis_version() returns a version, \dt lists companies
-make meili-status           # meilisearch is active (running)
-make ollama-status           # ollama is active, models are pulled
+make prod-app-status        # congopro-bridge is active (running)
+make prod-db-status       # postgresql is active (running)
+make prod-db-check        # postgis_version() returns a version, \dt lists companies
+make prod-search-status           # meilisearch is active (running)
+make prod-ollama-status           # ollama is active, models are pulled
 curl -sf https://$(DOMAIN)/api/v1/healthz  # app responds
 ```

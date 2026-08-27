@@ -75,7 +75,7 @@ all three; none set disables the promote endpoints cleanly (503).
 
    and copy the printed `whsec_…`. Keep it running while testing.
 3. **Test the full flow**:
-   - log in at `/account/login` (OTP — read the code in Mailpit, `make mail-up`)
+   - log in at `/account/login` (OTP — read the code in Mailpit, `make dev-mail-up`)
    - claim a company from its profile ("Réclamer"), approve in `/admin/claims`
    - `/account/promote` → *Promouvoir* → Stripe Checkout page
    - pay with `4242 4242 4242 4242`, any future expiry, any CVC
@@ -90,7 +90,7 @@ all three; none set disables the promote endpoints cleanly (503).
    `https://congopro.com/webhooks/stripe`, events: the three above. Copy its
    signing secret (`whsec_…` — **different from the local one**) into
    `congopro-bridge.env`.
-3. `make service-restart`, then verify: `curl -sf
+3. `make prod-app-restart`, then verify: `curl -sf
    https://congopro.com/webhooks/stripe -X POST` → 400 (invalid signature)
    is the healthy answer — the route exists and verifies.
 

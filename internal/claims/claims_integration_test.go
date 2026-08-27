@@ -1,6 +1,6 @@
 //go:build integration
 
-// Claims workflow integration tests — run via `make test-integration`.
+// Claims workflow integration tests — run via `make dev-test-integration`.
 package claims
 
 import (
@@ -27,8 +27,8 @@ func TestMain(m *testing.M) {
 	}
 	if dsn == "" {
 		// Loud, not silent: a silent exit-0 once made six "passing" runs out
-		// of a suite that never executed. Run via make test-integration.
-		fmt.Fprintln(os.Stderr, "claims integration tests: DATABASE_URL not set — run via make test-integration")
+		// of a suite that never executed. Run via make dev-test-integration.
+		fmt.Fprintln(os.Stderr, "claims integration tests: DATABASE_URL not set — run via make dev-test-integration")
 		os.Exit(1)
 	}
 	pool, err := pgxpool.New(context.Background(), dsn)

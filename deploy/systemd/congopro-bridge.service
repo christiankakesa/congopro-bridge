@@ -19,7 +19,7 @@ Environment=MEILI_URL=http://127.0.0.1:7700
 Environment=MEILI_INDEX_NAME=companies
 
 # MEILI_MASTER_KEY is a secret and must NOT be committed to git.
-# Run `make secrets-init` to generate it on the target host (chmod 600, owned by root:root),
+# Run `make prod-secrets-init` to generate it on the target host (chmod 600, owned by root:root),
 # or create /opt/congopro-bridge/congopro-bridge.env manually with: MEILI_MASTER_KEY=<value>
 EnvironmentFile=/opt/congopro-bridge/congopro-bridge.env
 

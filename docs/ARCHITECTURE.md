@@ -68,9 +68,9 @@ Deliberately boring: the build order and the reasoning behind every choice
 ## Environments
 
 - **Local dev** — docker-compose for Postgres (host port 5433), Meilisearch,
-  Ollama; the binary runs natively. `make db-up / db-migrate / db-import`.
+  Ollama; the binary runs natively. `make dev-db-up / db-migrate / db-import`.
 - **Production** — single VPS, systemd services + Traefik, no docker. Secrets
-  generated on-server (`make secrets-init`), daily `pg_dump` backups with a
+  generated on-server (`make prod-secrets-init`), daily `pg_dump` backups with a
   tested-restore path. Full runbook: [DEPLOY.md](DEPLOY.md).
 
 ## Where this goes next

@@ -1,7 +1,7 @@
 //go:build integration
 
 // Integration tests for the customer account flow — the repo's first
-// integration-tagged tests. Run with `make test-integration` (starts local
+// integration-tagged tests. Run with `make dev-test-integration` (starts local
 // Postgres, applies migrations, sets DATABASE_URL).
 package customers
 

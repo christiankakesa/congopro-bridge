@@ -9,7 +9,7 @@ set -euo pipefail
 # throwaway database is dropped afterwards either way (success or failure).
 #
 # Must be run from the repository root with the local `postgres` service
-# already up (`make db-up`).
+# already up (`make dev-db-up`).
 #
 # Usage: db-restore-test.sh DUMP_FILE [DB_USER]
 # ─────────────────────────────────────────────────────────────────────────────

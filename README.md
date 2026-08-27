@@ -55,8 +55,8 @@ The one-command dev loop (first run pulls ~1 GB of Ollama models, once):
 
 ```bash
 make dev    # deps up (docker) → migrations → app on :8080 with hot reload
-make db-import    # once: load the legacy embedded JSON into local Postgres
-make create-admin # once: create the first staff account (TOTP enrollment)
+make dev-db-import    # once: load the legacy embedded JSON into local Postgres
+make dev-admin-create # once: create the first staff account (TOTP enrollment)
 ```
 
 `make dev` watches `.templ`, `.go`, and Tailwind `input.css` files — every
@@ -64,14 +64,14 @@ save regenerates templ code, recompiles the CSS, and rebuilds/restarts the
 binary via [air](https://github.com/air-verse/air) (install it with
 `go install github.com/air-verse/air@latest`; without it the app runs via
 `go run` with manual restarts). Ctrl+C stops the app but leaves the dockerised
-deps running for fast restarts; `make dev-down` stops the deps.
+deps running for fast restarts; `make dev-deps-down` stops the deps.
 
 `DATABASE_URL` is required — `make dev` and the other `db-*` targets set it
 for you. There is deliberately no default credential baked into the binary.
 
-The manual equivalent, if you prefer separate steps: `make db-up` (local
-Postgres on 127.0.0.1:5433), `make db-migrate`, `make build`. To run the
-whole stack including the app in Docker: `make docker-up`.
+The manual equivalent, if you prefer separate steps: `make dev-db-up` (local
+Postgres on 127.0.0.1:5433), `make dev-db-migrate`, `make build`. To run the
+whole stack including the app in Docker: `make dev-stack-up`.
 
 ## Configuration
 
@@ -92,7 +92,7 @@ whole stack including the app in Docker: `make docker-up`.
 | `SMTP_PORT` | `587` | SMTP port (587 with `starttls`, 465 with `implicit`) |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | *(empty)* | Full mailbox address + password (required for `starttls`/`implicit`; must be **empty** for `none`) |
 | `SMTP_FROM` / `SMTP_FROM_NAME` | *(empty)* | Envelope sender — a mailbox actually owned on the domain |
-| `SMTP_TLS` | `starttls` | `starttls` \| `implicit` \| `none` (local capture via Mailpit, no credentials — see `make mail-up`) |
+| `SMTP_TLS` | `starttls` | `starttls` \| `implicit` \| `none` (local capture via Mailpit, no credentials — see `make dev-mail-up`) |
 | `STRIPE_SECRET_KEY` | *(empty = disabled)* | Stripe key for promoted listings — all three Stripe keys required together |
 | `STRIPE_WEBHOOK_SECRET` | *(empty)* | Signing secret for `POST /webhooks/stripe` (locally: `stripe listen --forward-to localhost:8090/webhooks/stripe`) |
 | `STRIPE_PRICE_ID` | *(empty)* | Monthly recurring Price of the "Mise en avant" product |
@@ -161,5 +161,5 @@ deploy/                systemd units, Traefik config, Meilisearch config
 ## Deployment
 
 Production runs on a VPS via systemd + Traefik (no docker). See
-[docs/DEPLOY.md](docs/DEPLOY.md) — bootstrap, day-to-day `make deploy`,
+[docs/DEPLOY.md](docs/DEPLOY.md) — bootstrap, day-to-day `make prod-deploy`,
 backups with tested restores.

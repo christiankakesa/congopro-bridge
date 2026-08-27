@@ -9,7 +9,7 @@
 # proved unreliable when run detached from a TTY. See .air.toml.
 #
 # Ctrl+C stops the app; deps keep running so restarts are fast.
-# `make dev-down` stops the deps.
+# `make dev-deps-down` stops the deps.
 set -Eeuo pipefail
 
 cd "$(dirname "$0")/.."
@@ -44,10 +44,10 @@ docker compose version >/dev/null 2>&1 || die "docker compose plugin not availab
 command -v templ >/dev/null 2>&1 || die "templ CLI not found: go install github.com/a-h/templ/cmd/templ@latest"
 command -v tailwindcss >/dev/null 2>&1 || die "tailwindcss CLI not found (download line is in the Makefile 'css' target)"
 
-# A stale compose `app` container (make docker-up) or an orphaned dev binary
+# A stale compose `app` container (make dev-stack-up) or an orphaned dev binary
 # holding the port makes the new app die on listen — catch it up front.
 if command -v ss >/dev/null 2>&1 && ss -ltn "sport = :$PORT" 2>/dev/null | grep -q LISTEN; then
-	die "port $PORT is already in use — stop the other instance first (make docker-down), or run with PORT=8081"
+	die "port $PORT is already in use — stop the other instance first (make dev-stack-down), or run with PORT=8081"
 fi
 
 # --- 1. Deps -------------------------------------------------------------------
@@ -67,7 +67,7 @@ ok "database is up to date"
 rows="$(docker compose exec -T postgres psql -U congopro_bridge -d congopro_bridge -tAc \
 	'SELECT count(*) FROM companies' 2>/dev/null || echo '?')"
 if [ "$rows" = "0" ]; then
-	echo "  note: companies table is empty — run 'make db-import' once to load the legacy JSON export."
+	echo "  note: companies table is empty — run 'make dev-db-import' once to load the legacy JSON export."
 fi
 
 # --- 3. App with hot reload ------------------------------------------------------

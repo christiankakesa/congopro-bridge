@@ -1,6 +1,6 @@
 //go:build integration
 
-// Promotions lifecycle integration tests — run via `make test-integration`.
+// Promotions lifecycle integration tests — run via `make dev-test-integration`.
 // Webhook events are hand-built JSON applied through the same appliers the
 // Stripe webhook handler uses, so no Stripe account is needed.
 package promotions
@@ -25,7 +25,7 @@ func TestMain(m *testing.M) {
 	}
 	if dsn == "" {
 		// Loud, not silent (see claims tests for why).
-		println("promotions integration tests: DATABASE_URL not set — run via make test-integration")
+		println("promotions integration tests: DATABASE_URL not set — run via make dev-test-integration")
 		os.Exit(1)
 	}
 	pool, err := pgxpool.New(context.Background(), dsn)

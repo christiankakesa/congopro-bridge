@@ -4,9 +4,9 @@
 // records can be proven working BEFORE anything depends on them (nothing in
 // the app sends email yet). Run it with:
 //
-//	make mail-test TO=you@example.com
+//	make dev-mail-test TO=you@example.com
 //
-// For local capture instead of a real mailbox, start Mailpit (make mail-up)
+// For local capture instead of a real mailbox, start Mailpit (make dev-mail-up)
 // and override the account: SMTP_HOST=localhost SMTP_PORT=1025 SMTP_TLS=none
 // SMTP_USERNAME= SMTP_PASSWORD= — then read the message at
 // http://localhost:8025.

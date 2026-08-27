@@ -10,7 +10,7 @@ Later:
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
 * **Offsite backups to Cloudflare R2.** Local `pg_dump`s already run daily
-  (`make db-backup-install` / `db-backup-now` / `db-restore-test`), but they
+  (`make prod-backup-install` / `db-backup-now` / `db-restore-test`), but they
   live on the same VPS — they don't survive losing the box. Copy the pattern
   already proven in two sibling projects:
   `~/workspace/audio-server/DEPLOY.md` ("Offsite backups" section — the
@@ -43,7 +43,7 @@ Later:
     dev, production's `whsec_…` comes from the **Dashboard** endpoint, not
     from `stripe listen`.
   - Store `sk_live_…`, that `whsec_…` and the live `price_…` as deploy
-    secrets via `make secrets-init` — never in git, never in .env.
+    secrets via `make prod-secrets-init` — never in git, never in .env.
   - Re-run the end-to-end check against production with a real card, then
     refund/cancel it.
 
@@ -147,8 +147,8 @@ lands in Gmail spam on reputation alone)
   switch, campaign CRUD with sales attribution (sold_by / customer / price),
   label presets, keyword textarea. Serving semantics preserved byte-for-byte
   from ads.yml (keyword priority, weighting, 75/25, rotation), locked by
-  unit tests. Cutover: `make db-import-ads` locally,
-  `make db-import-ads-remote` in production.
+  unit tests. Cutover: `make dev-db-import-ads` locally,
+  `make prod-db-import-ads` in production.
 * Company claims / dispute workflow (2026-08-24): customers claim companies
   from the profile page (`Réclamer`), staff arbitrate in `/admin/claims`
   (approve/reject with note, one form two `formaction` buttons), approval
@@ -162,7 +162,7 @@ lands in Gmail spam on reputation alone)
   (SHA-256 at rest, 5 attempts, 60s cooldown, atomic single-use), 30-day
   sessions, SameSite=Strict cookie, OVH EmailPro + Mailpit capture, rate
   limits on both POSTs. Includes the repo's first integration tests
-  (`make test-integration`).
+  (`make dev-test-integration`).
 * AI answer fallback: when the model answers "je l'ignore", the user now gets
   a grounded insight computed from the search results (count, top cities,
   top activities) instead of a dead end — `internal/data/engine.go`.

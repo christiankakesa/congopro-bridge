@@ -1,6 +1,6 @@
 //go:build integration
 
-// Ads CMS DB roundtrip — run via `make test-integration`.
+// Ads CMS DB roundtrip — run via `make dev-test-integration`.
 package ads
 
 import (
@@ -19,7 +19,7 @@ func adsPool(t *testing.T) *pgxpool.Pool {
 		dsn = os.Getenv("DATABASE_URL")
 	}
 	if dsn == "" {
-		t.Fatal("DATABASE_URL not set — run via make test-integration")
+		t.Fatal("DATABASE_URL not set — run via make dev-test-integration")
 	}
 	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {

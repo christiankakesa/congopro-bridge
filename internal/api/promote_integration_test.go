@@ -89,7 +89,7 @@ func newPromoteFixture(t *testing.T, checkout *fakeCheckout, webhookSecret strin
 		dsn = os.Getenv("DATABASE_URL")
 	}
 	if dsn == "" {
-		t.Skip("DATABASE_URL not set — run via make test-integration")
+		t.Skip("DATABASE_URL not set — run via make dev-test-integration")
 	}
 	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
