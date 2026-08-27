@@ -788,6 +788,7 @@ func (e *Engine) generateSitemapEntries() []SitemapEntry {
 	}{
 		{"/", "daily", 1.0},
 		{"/help", "weekly", 0.5},
+		{"/contact", "monthly", 0.4},
 		{"/privacy", "monthly", 0.3},
 		{"/terms", "monthly", 0.3},
 	}

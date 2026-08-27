@@ -1,0 +1,125 @@
+package templates
+
+// TelegramSupportURL is the single source of truth for the public support
+// channel. It used to be pasted into the footer and all three static pages;
+// those now route through /contact, which is the only page that links it.
+const TelegramSupportURL = "https://t.me/+yzJqliLeudNkZjY0"
+
+// ContactForm carries submitted values back into the form on a validation
+// error so nothing the visitor typed is lost.
+type ContactForm struct {
+	Name    string
+	Email   string
+	Subject string
+	Message string
+}
+
+// ContactPage is the public /contact page: a form that emails the team,
+// plus Telegram for anyone who would rather not use a form. When mail is
+// disabled the form is hidden rather than shown as a control that silently
+// does nothing.
+//
+// The support mailbox is deliberately NOT printed here. This page is
+// indexed and listed in sitemap.xml, so a mailto: would hand the address
+// straight to harvesters — and the form's spam defences (honeypot, rate
+// limit, fixed recipient) protect the form, not a published address.
+// Replying from the mailbox is what gives a correspondent the address.
+templ ContactPage(canonicalURL, nonce, cssVersion string, form ContactForm, fieldErrors map[string]string, sent, mailEnabled bool) {
+	@Layout("Contact | Congopro Bridge", canonicalURL, nonce, cssVersion) {
+		@siteHeader()
+		<main class="w-full max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-24">
+			<h1 class="font-sora font-semibold text-3xl text-ink tracking-tight">Nous contacter</h1>
+			<p class="mt-3 text-[15px] text-ink-muted leading-relaxed">
+				Une question, une correction sur une fiche, une demande publicitaire ?
+				Écrivez-nous — nous répondons sous 48&nbsp;heures ouvrées.
+			</p>
+			if sent {
+				<div class="mt-8 rounded-2xl border border-positive-soft bg-positive-soft p-5 flex items-start gap-3">
+					<span class="flex items-center justify-center w-7 h-7 rounded-full bg-positive text-white shrink-0">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+					</span>
+					<div>
+						<p class="font-sora font-semibold text-[15px] text-positive">Message envoyé</p>
+						<p class="mt-1 text-sm text-ink-muted leading-relaxed">
+							Merci — nous avons bien reçu votre message et vous répondrons par e-mail.
+						</p>
+						<a href="/" preload="mousedown" class="btn btn-secondary mt-4">Retour à l'accueil</a>
+					</div>
+				</div>
+			} else if mailEnabled {
+				if len(fieldErrors) > 0 {
+					<div class="mt-6 rounded-xl bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">
+						Corrigez les champs signalés ci-dessous.
+					</div>
+				}
+				<form method="post" action="/contact" class="mt-8 space-y-4">
+					<div class="bg-surface-raised rounded-2xl border border-line shadow-card p-5 space-y-4">
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							@contactField("Nom *", "name", "text", form.Name, true, fieldErrors["name"])
+							@contactField("Votre e-mail *", "email", "email", form.Email, true, fieldErrors["email"])
+						</div>
+						@contactField("Sujet", "subject", "text", form.Subject, false, fieldErrors["subject"])
+						<div>
+							<label for="message" class={ "block text-sm font-medium mb-1 " + fieldLabelClass(fieldErrors["message"]) }>Message *</label>
+							<textarea
+								id="message"
+								name="message"
+								rows="7"
+								required
+								aria-invalid={ ariaInvalid(fieldErrors["message"]) }
+								class={ "field-input " + fieldErrorClass(fieldErrors["message"]) }
+							>{ form.Message }</textarea>
+							@fieldError(fieldErrors["message"])
+						</div>
+						<!-- Honeypot: invisible to people, irresistible to bots. A filled
+						     value means the submission is silently discarded. -->
+						<div class="hidden" aria-hidden="true">
+							<label for="website_url">Ne remplissez pas ce champ</label>
+							<input type="text" id="website_url" name="website_url" tabindex="-1" autocomplete="off"/>
+						</div>
+					</div>
+					<div class="flex justify-end">
+						<button type="submit" class="btn btn-primary">Envoyer le message</button>
+					</div>
+				</form>
+			}
+			<section class="mt-10">
+				<h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-ink-faint mb-3">Besoin d'une réponse immédiate ?</h2>
+				<div>
+					<a
+						href={ templ.URL(TelegramSupportURL) }
+						target="_blank"
+						rel="noopener noreferrer"
+						class="flex items-center gap-3 rounded-2xl border border-line bg-surface-raised shadow-card p-4 hover:bg-surface-sunken transition-colors"
+					>
+						<span class="flex items-center justify-center w-10 h-10 rounded-full shrink-0" style="background-color:#24a1de;color:#ffffff">
+							<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+								<path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"></path>
+							</svg>
+						</span>
+						<span class="min-w-0">
+							<span class="block text-sm font-medium text-ink">Canal Telegram</span>
+							<span class="block text-xs text-ink-faint">Assistance rapide, en direct</span>
+						</span>
+					</a>
+				</div>
+			</section>
+		</main>
+	}
+}
+
+templ contactField(label, name, inputType, value string, required bool, errMsg string) {
+	<div>
+		<label for={ name } class={ "block text-sm font-medium mb-1 " + fieldLabelClass(errMsg) }>{ label }</label>
+		<input
+			type={ inputType }
+			id={ name }
+			name={ name }
+			value={ value }
+			required?={ required }
+			aria-invalid={ ariaInvalid(errMsg) }
+			class={ "field-input " + fieldErrorClass(errMsg) }
+		/>
+		@fieldError(errMsg)
+	</div>
+}

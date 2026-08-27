@@ -43,6 +43,10 @@ type AppEngine struct {
 	Mailer      mail.Mailer
 	MailEnabled bool
 
+	// ContactTo is where the public /contact form delivers. Never taken
+	// from request input — see internal/api/contact.go.
+	ContactTo string
+
 	// Stripe promoted listings. StripeCheckout nil or StripeEnabled false
 	// disables the promote endpoints (clean 503).
 	StripeCheckout      CheckoutCreator

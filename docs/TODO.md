@@ -1,9 +1,6 @@
 # TODO
 
-Later: 
-  * add a contact form: must add support lnk (Telegram) in contact page
-  * remove Support link from the footer add a contact link
-  * From /help, /privacy, /terms change the telegram link to contact page link
+Later:
   * From Homepage, ← Back to home link must not appears as we already are at homepage
 
 ## Now
@@ -96,6 +93,17 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Contact page (2026-08-27): `/contact` with a rate-limited form that mails
+  `CONTACT_TO` (default ask@congopro.com) — honeypot, per-field validation,
+  input preserved on error, form hidden (not silently broken) when SMTP is
+  off. The footer's Telegram "Support" link and the Telegram CTAs on
+  help/privacy/terms now route here; `TelegramSupportURL` lives in exactly
+  one place. Added to sitemap.xml. **The support mailbox is deliberately not
+  printed on the page** — it is indexed and in the sitemap, so a mailto:
+  would feed harvesters, and the form's defences protect the form, not a
+  published address. Don't "helpfully" add it back; publish a rotatable
+  alias instead if a visible address is ever needed.
 
 * UI redesign (2026-08-27): design tokens + light/dark themes (`input.css`
   `@theme inline`, `data-theme`, footer Auto/Clair/Sombre toggle — light is

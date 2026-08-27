@@ -117,7 +117,7 @@ func siteFooterHTML() string {
 	// conventional place people look, and it covers deep-linked pages
 	// (static content, account) that carry no other link back.
 	return `<a href="/" preload="mousedown" class="hover:text-ink hover:underline transition-colors">© ` + year + ` Congopro</a> · ` +
-		`<a href="https://t.me/+yzJqliLeudNkZjY0" target="_blank" rel="noopener noreferrer" class="hover:text-ink hover:underline transition-colors">Support</a> · ` +
+		link("/contact", "Contact") + " · " +
 		link("/help", "Aide") + " · " +
 		link("/account", "Mon compte") + " · " +
 		link("/privacy", "Confidentialité") + " · " +

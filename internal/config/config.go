@@ -46,6 +46,11 @@ type Config struct {
 	SMTPFromName string
 	SMTPTLSMode  string // starttls | implicit | none (see internal/mail)
 
+	// ContactTo is the mailbox the /contact form delivers to. It is never
+	// taken from user input — the form always sends here, so the endpoint
+	// can't be used as an open relay.
+	ContactTo string
+
 	// Stripe — all-or-nothing like SMTP: any key set means all three are
 	// required (secret, webhook signing secret, price id for the promote
 	// plan); none set disables promoted listings cleanly.
@@ -190,6 +195,9 @@ func Load() *Config {
 	if ah := os.Getenv("OLLAMA_ALLOWED_HOSTS"); ah != "" {
 		cfg.OllamaAllowedHosts = splitTrimmed(ah, ",")
 	}
+	if ct := os.Getenv("CONTACT_TO"); ct != "" {
+		cfg.ContactTo = ct
+	}
 	if mu := os.Getenv("MEILI_URL"); mu != "" {
 		cfg.MeiliURL = mu
 	}
@@ -252,6 +260,7 @@ func defaults() *Config {
 		MeiliURL:            "http://127.0.0.1:7700",
 		MeiliMasterKey:      "",
 		MeiliIndexName:      "companies",
+		ContactTo:           "ask@congopro.com",
 		// Only these peers are trusted to set X-Forwarded-For/X-Real-IP (e.g. a local
 		// reverse proxy like Traefik). Requests from anyone else have their client-supplied
 		// forwarding headers ignored, so the rate limiter can't be bypassed by spoofing them.

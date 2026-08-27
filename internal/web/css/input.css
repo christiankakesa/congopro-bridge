@@ -466,54 +466,65 @@ mark {
   padding: 0 0 8px;
 }
 
-/* ── Static content pages (help/privacy/terms) ──
-   Base rhythm for the trusted admin-authored HTML in content/*.html;
-   utility classes inside that HTML refine on top of this. */
-.content-page {
-  color: var(--muted);
-  line-height: 1.65;
-  font-size: 15px;
-}
-.content-page h2 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  color: var(--ink);
-  font-size: 1.25rem;
-  margin: 2rem 0 0.75rem;
-}
-.content-page h3 {
-  font-weight: 600;
-  color: var(--ink);
-  font-size: 1.05rem;
-  margin: 1.5rem 0 0.5rem;
-}
-.content-page p {
-  margin: 0 0 1rem;
-}
-.content-page ul,
-.content-page ol {
-  margin: 0 0 1.25rem;
-  padding-left: 1.25rem;
-}
-.content-page li {
-  margin: 0.35rem 0;
-}
-.content-page a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.content-page a:hover {
-  color: var(--accent-hover);
-}
-.content-page strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-.content-page hr {
-  border: 0;
-  border-top: 1px solid var(--line);
-  margin: 2rem 0;
+/* Wrapped in @layer components so Tailwind's utilities (which live in
+   @layer utilities, a later layer) always win. This is NOT a specificity
+   question: UNLAYERED css beats every layered rule no matter how weak,
+   which is why these defaults previously painted the contact button's
+   label accent-red on an accent-red background even at :where() zero
+   specificity. Layer first, specificity second. */
+@layer components {
+  /* ── Static content pages (help/privacy/terms) ──
+     Base rhythm for the trusted admin-authored HTML in content/*.html.
+     Every descendant rule is wrapped in :where() so it carries ZERO
+     specificity: these are defaults, and any utility class in the content
+     markup must win. Without it, `.content-page a` (0,1,1) beat
+     `.text-on-accent` (0,1,0) and painted the contact button's label red on
+     a red background — invisible. Same trick Tailwind Typography uses. */
+  .content-page {
+    color: var(--muted);
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  :where(.content-page) :where(h2) {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 1.25rem;
+    margin: 2rem 0 0.75rem;
+  }
+  :where(.content-page) :where(h3) {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 1.05rem;
+    margin: 1.5rem 0 0.5rem;
+  }
+  :where(.content-page) :where(p) {
+    margin: 0 0 1rem;
+  }
+  :where(.content-page) :where(ul, ol) {
+    margin: 0 0 1.25rem;
+    padding-left: 1.25rem;
+  }
+  :where(.content-page) :where(li) {
+    margin: 0.35rem 0;
+  }
+  :where(.content-page) :where(a) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  :where(.content-page) :where(a):hover {
+    color: var(--accent-hover);
+  }
+  :where(.content-page) :where(strong) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  :where(.content-page) :where(hr) {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 2rem 0;
+  }
 }
 
 /* ── Snap-speed layer ──────────────────────────────────────────────

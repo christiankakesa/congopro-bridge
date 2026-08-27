@@ -149,6 +149,8 @@ func main() {
 
 	// Transactional email (customer OTP). Empty SMTP_HOST disables email —
 	// account login then answers 503 instead of half-working.
+	apiAppEngine.ContactTo = cfg.ContactTo
+
 	if mailCfg, enabled := cfg.MailConfig(); enabled {
 		apiAppEngine.Mailer = mail.SMTPSender{Config: mailCfg}
 		apiAppEngine.MailEnabled = true
@@ -185,6 +187,9 @@ func main() {
 	mux.HandleFunc("GET /help", apiAppEngine.WithSecurityHeaders(apiAppEngine.HelpHandler))
 	mux.HandleFunc("GET /privacy", apiAppEngine.WithSecurityHeaders(apiAppEngine.PrivacyHandler))
 	mux.HandleFunc("GET /terms", apiAppEngine.WithSecurityHeaders(apiAppEngine.TermsHandler))
+	contactRL := ratelimiter.NewRateLimiter(5) // sending mail costs money
+	mux.HandleFunc("GET /contact", apiAppEngine.WithSecurityHeaders(apiAppEngine.ContactPageHandler))
+	mux.HandleFunc("POST /contact", apiAppEngine.WithSecurityHeaders(contactRL.WithRateLimit(apiAppEngine.ContactSubmitHandler)))
 	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
 
 	// Ads preview
