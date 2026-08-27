@@ -23,7 +23,7 @@ _env_var  = $(shell sed -nE "s/^$1=([^#]*)#.*/\1/p; s/^$1=(.*)$$/\1/p" .env 2>/d
 DEPLOY_USER  ?= $(or $(call _env_var,DEPLOY_USER),ops)
 DEPLOY_HOST  ?= $(or $(call _env_var,DEPLOY_HOST),xxx.xxx.xxx.xxx)
 DEPLOY_PORT  ?= $(or $(call _env_var,DEPLOY_PORT),4242)
-SSH_KEY      ?= $(patsubst ~/%,$(HOME)/%,$(or $(call _env_var,SSH_KEY),$(HOME)/.prod-ssh/id_ed25519))
+SSH_KEY      ?= $(patsubst ~/%,$(HOME)/%,$(or $(call _env_var,SSH_KEY),$(HOME)/.ssh/id_ed25519))
 REMOTE_DIR   ?= $(or $(call _env_var,REMOTE_DIR),/opt/congopro-bridge)
 # The app's systemd EnvironmentFile on the server (deploy/systemd/*.service
 # references the same path). Named after the service rather than
@@ -748,7 +748,7 @@ dev-db-restore-test: dev-db-up
 	bash scripts/db-restore-test.sh "$$FILE"
 
 # DESTRUCTIVE: overwrites the live production database. Requires dev-db-restore-test to have
-# been run first, and a typed confirmation on the server (prod-ssh -t for the interactive prompt).
+# been run first, and a typed confirmation on the server (ssh -t for the interactive prompt).
 # Defaults to the newest file in LOCAL_BACKUP_DIR; pass BACKUP_FILE=path/to/x.dump to pick one.
 prod-db-restore:
 	@FILE="$(BACKUP_FILE)"; \
@@ -762,7 +762,7 @@ prod-db-restore:
 	echo "▶ uploading $$FILE → $(DEPLOY_HOST):/tmp/restore.dump…"; \
 	rsync -az --progress -e "ssh $(_ssh_opts)" "$$FILE" $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/restore.dump; \
 	$(RSYNC) scripts/db-restore-prod.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-restore-prod.sh; \
-	prod-ssh -t $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST) "chmod +x /tmp/db-restore-prod.sh && sudo /tmp/db-restore-prod.sh '$(DB_NAME)' /tmp/restore.dump '$(SERVICE)'; rm -f /tmp/db-restore-prod.sh /tmp/restore.dump"
+	ssh -t $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST) "chmod +x /tmp/db-restore-prod.sh && sudo /tmp/db-restore-prod.sh '$(DB_NAME)' /tmp/restore.dump '$(SERVICE)'; rm -f /tmp/db-restore-prod.sh /tmp/restore.dump"
 
 # ──────────────────────────────────────────────────────────────────────────────
 
