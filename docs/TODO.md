@@ -6,25 +6,12 @@
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* **Offsite backups to Cloudflare R2.** Local `pg_dump`s already run daily
-  (`make prod-backup-install` / `prod-backup-now` / `dev-db-restore-test`), but they
-  live on the same VPS — they don't survive losing the box. Copy the pattern
-  already proven in two sibling projects:
-  `~/workspace/audio-server/DEPLOY.md` ("Offsite backups" section — the
-  `db-backup-offsite.sh` no-op-until-configured hook, `OFFSITE_MODE=s3`,
-  `OFFSITE_RCLONE_REMOTE`) and `~/workspace/kito-platform/deploy/kito.env.example`
-  (`BACKUP_STATUS_FILE` last-success marker that `/healthz` reads).
-  Congopro needs: an offsite step at the end of `scripts/db-backup.sh`, an
-  `/opt/congopro-bridge/backup-offsite.env` (never in git), and an rclone R2
-  remote written directly to `~ops/.config/rclone/rclone.conf`.
-  Gotchas already paid for in audio-server — don't rediscover them: use a
-  **separate bucket and a separate scoped token** from any other project;
-  match the **jurisdiction segment** in the endpoint
-  (`<accountid>.eu.r2.cloudflarestorage.com` for EU buckets — a missing
-  `.eu.` returns 403, which looks exactly like a bad token); set
-  `no_check_bucket = true` (object-scoped tokens can't HeadBucket); the
-  rclone `endpoint` wants the `https://` scheme. Then extend
-  `dev-db-restore-test` to restore *from the offsite copy* — an untested backup
+* **Offsite backups — create the R2 bucket + token (5 min in the Cloudflare
+  dashboard), then run `make prod-backup-offsite-configure`.** All the
+  tooling shipped 2026-08-28 (see Done); the only missing piece is the
+  credential that must be created by hand. Steps and gotchas: DEPLOY.md
+  → "Offsite backups (Cloudflare R2)". Afterwards run
+  `make dev-db-restore-test-offsite` once — an untested offsite backup
   isn't a backup.
 
 * Telegram bot as notification/quick-action layer on top of the CMS.
@@ -77,6 +64,20 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Offsite backup tooling (2026-08-28): `scripts/db-backup-offsite.sh`
+  (no-op until `/opt/congopro-bridge/backup-offsite.env` exists; `rclone
+  copy` + 90-day age prune — deliberately NOT `sync`, which would collapse
+  offsite retention to the local 14-newest rotation and could wipe remote
+  history after a local disk loss), wired into `db-backup.sh` as a
+  never-fatal last step, plus `last-success`/`offsite-last-success` markers
+  (kito pattern). Make targets: `prod-backup-offsite-configure` (interactive,
+  secret over stdin, verified write/read/delete round trip),
+  `-status`, `-pull`, and `dev-db-restore-test-offsite` (restores the copy
+  fetched FROM the bucket). Runs as `postgres`, so both config files live
+  under `/opt/congopro-bridge` — not any home directory. Deployed; the
+  audio-server gotchas (`.eu.` endpoint, `no_check_bucket`, https scheme,
+  separate bucket+token) are baked into the generated config and DEPLOY.md.
 
 * Stripe production VERIFIED with a real payment (2026-08-27). Live product
   "Mise en avant" on `acct_1U5NcNLbym0EdjAY`, USD monthly price

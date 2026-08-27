@@ -35,3 +35,17 @@ if [[ "${#OLD[@]}" -gt 0 ]]; then
 fi
 
 echo "✓ backup complete — $(ls -1 "${BACKUP_DIR}/${DB_NAME}"-*.dump | wc -l) dump(s) retained"
+
+# Success marker: one line, timestamp + newest dump. `make prod-backup-status`
+# reads it, and an external monitor can watch its age (kito-platform pattern).
+printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(basename "${DEST}")" > "${BACKUP_DIR}/last-success"
+chmod 644 "${BACKUP_DIR}/last-success"
+
+# Optional offsite push — a clean no-op until /opt/congopro-bridge/
+# backup-offsite.env exists (see db-backup-offsite.sh's header). Never fails
+# this run: the local dump above already succeeded and is the primary safety
+# net, so an offsite hiccup is a journalled warning, not a failed unit.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -x "${SCRIPT_DIR}/db-backup-offsite.sh" ]]; then
+  "${SCRIPT_DIR}/db-backup-offsite.sh" "${BACKUP_DIR}" || echo "⚠ offsite push failed — local backup above is unaffected"
+fi

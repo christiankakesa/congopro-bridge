@@ -137,6 +137,46 @@ throwaway database, so testing a backup is cheap and safe to do often.
   restore succeeds or fails. Only run this after `dev-db-restore-test` has
   verified the same file.
 
+### Offsite backups (Cloudflare R2)
+
+Local dumps live on the same VPS they protect — they don't survive losing
+the box. `db-backup.sh` ends by calling `scripts/db-backup-offsite.sh`, a
+clean no-op until configured, which pushes every `*.dump` to an R2 bucket
+and prunes offsite copies older than 90 days (age-based, deliberately
+longer than the local 14-newest rotation: the offsite copy exists to
+survive events that also destroy local state).
+
+One-time, by hand in the Cloudflare dashboard (R2):
+
+1. Create a bucket used by **nothing else** (e.g. `congopro-db-backups`) —
+   one leaked credential must not expose every backup you own.
+2. On the bucket: *Manage API Tokens* → create an **Object Read & Write**
+   token **scoped to this bucket only**. Note the access key id, the
+   secret, and the endpoint **exactly as shown on that screen** — for a
+   jurisdiction-scoped bucket (EU) the endpoint carries a `.eu.` segment,
+   and the default endpoint answers **403 AccessDenied, which looks exactly
+   like a bad token**.
+
+Then:
+
+- `make prod-backup-offsite-configure` — interactive: writes
+  `/opt/congopro-bridge/backup-offsite.env` and
+  `backup-offsite.rclone.conf` (postgres-owned `0600`, never in git; the
+  token secret is typed with echo off and travels over stdin), then proves
+  the credentials with a write/read/delete round trip against the bucket.
+  The generated rclone config bakes in the non-obvious requirements:
+  `no_check_bucket = true` (object-scoped tokens can't HeadBucket) and the
+  `https://` scheme on the endpoint.
+- `make prod-backup-offsite-status` — offsite success marker + the dumps
+  currently in the bucket.
+- `make dev-db-restore-test-offsite` — fetches the newest dump **from the
+  bucket** (not from the VPS) and restores it into throwaway local
+  Postgres. This is the offsite guarantee: run it periodically.
+
+The push never fails the backup unit — the local dump is the primary
+safety net, so an offsite hiccup is a journalled `⚠` warning, not a failed
+run. `make prod-backup-status` shows both `last-success` markers.
+
 ## Secrets
 
 `make prod-secrets-init` (also run automatically by `prod-db-provision` and

@@ -68,11 +68,11 @@ RSYNC        := rsync -az --progress --delete \
 
 .PHONY: all build build-quick clean css help templ test vet image-build image-run image-save \
          dev dev-admin-create dev-db-down dev-db-import dev-db-import-ads dev-db-migrate \
-         dev-db-psql dev-db-reset dev-db-scrub dev-db-restore-test dev-db-up dev-deps-down dev-deps-reset \
+         dev-db-psql dev-db-reset dev-db-scrub dev-db-restore-test dev-db-restore-test-offsite dev-db-up dev-deps-down dev-deps-reset \
          dev-deps-up dev-mail-down dev-mail-test dev-mail-up dev-search-reset dev-stack-down \
          dev-stack-logs dev-stack-logs-app dev-stack-reset dev-stack-up dev-test-integration \
          prod-app-logs prod-app-push prod-app-restart prod-app-start prod-app-status \
-         prod-app-stop prod-backup-install prod-backup-list prod-backup-logs prod-backup-now \
+         prod-app-stop prod-backup-install prod-backup-list prod-backup-logs prod-backup-offsite-configure prod-backup-offsite-pull prod-backup-offsite-status prod-backup-now \
          prod-backup-pull prod-backup-status prod-bootstrap-all prod-bootstrap-app \
          prod-config-push prod-db-check prod-db-import prod-db-import-ads prod-db-install \
          prod-db-migrate prod-db-provision prod-db-restore prod-db-status prod-deploy \
@@ -628,8 +628,8 @@ prod-db-import-ads:
 prod-backup-install:
 	@echo "▶ Installing database backup script + timer on $(DEPLOY_HOST)…"
 	@$(SSH) "sudo mkdir -p $(REMOTE_DIR)/scripts $(BACKUP_DIR) && sudo chown postgres:postgres $(BACKUP_DIR)"
-	@$(RSYNC) scripts/db-backup.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-backup.sh
-	@$(SSH) "sudo mv /tmp/db-backup.sh $(REMOTE_DIR)/scripts/db-backup.sh && sudo chmod +x $(REMOTE_DIR)/scripts/db-backup.sh"
+	@$(RSYNC) scripts/db-backup.sh scripts/db-backup-offsite.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/
+	@$(SSH) "sudo mv /tmp/db-backup.sh /tmp/db-backup-offsite.sh $(REMOTE_DIR)/scripts/ && sudo chmod +x $(REMOTE_DIR)/scripts/db-backup.sh $(REMOTE_DIR)/scripts/db-backup-offsite.sh"
 	@$(RSYNC) deploy/systemd/congopro-bridge-db-backup.service $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/congopro-bridge-db-backup.service
 	@$(RSYNC) deploy/systemd/congopro-bridge-db-backup.timer $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/congopro-bridge-db-backup.timer
 	@$(SSH) "sudo mv /tmp/congopro-bridge-db-backup.service /tmp/congopro-bridge-db-backup.timer /etc/systemd/system/ && sudo systemctl daemon-reload"
@@ -644,6 +644,8 @@ prod-backup-now:
 
 prod-backup-status:
 	@$(SSH) "sudo systemctl status congopro-bridge-db-backup.timer --no-pager -l || true"
+	@$(SSH) "echo 'local last-success:   '\$$(cat $(BACKUP_DIR)/last-success 2>/dev/null || echo '(none)'); \
+	         echo 'offsite last-success: '\$$(cat $(BACKUP_DIR)/offsite-last-success 2>/dev/null || echo '(not configured)')"
 	@$(MAKE) prod-backup-list
 
 prod-backup-logs:
@@ -651,6 +653,69 @@ prod-backup-logs:
 
 prod-backup-list:
 	@$(SSH) "ls -lht $(BACKUP_DIR) 2>/dev/null || echo '(no backups yet)'"
+
+# ── Offsite backups (Cloudflare R2 via rclone) ──
+# The bucket and its bucket-scoped token are created by hand in the
+# Cloudflare dashboard (R2 → bucket → Manage API Tokens); everything after
+# that is these targets. The backup unit runs as postgres, so both config
+# files live under $(REMOTE_DIR), postgres-owned 0600 — never in git.
+
+# Interactive: writes backup-offsite.env + backup-offsite.rclone.conf on the
+# server and runs a real write/read/delete round trip against the bucket.
+# The token secret is read with echo off and travels over stdin (never argv,
+# never shell history). Paste the ENDPOINT exactly as the R2 token screen
+# shows it — that sidesteps the jurisdiction trap (.eu. buckets 403 through
+# the default endpoint, which looks exactly like a bad token).
+prod-backup-offsite-configure:
+	@printf "R2 access key id: "; IFS= read -r AKID; \
+	printf "R2 secret access key (hidden): "; stty -echo; IFS= read -r AKSECRET; stty echo; echo; \
+	printf "R2 endpoint (https://<accountid>[.<jurisdiction>].r2.cloudflarestorage.com): "; IFS= read -r ENDPOINT; \
+	printf "Bucket name: "; IFS= read -r BUCKET; \
+	case "$$ENDPOINT" in https://*) ;; *) echo "✗ endpoint must start with https:// (rclone convention)" >&2; exit 1;; esac; \
+	printf '%s\n' "$$AKSECRET" | $(SSH) "sudo tee /tmp/.r2secret >/dev/null && sudo chmod 600 /tmp/.r2secret"; \
+	$(SSH) "sudo bash -c 'umask 077; \
+	  { echo \"[r2congopro]\"; echo \"type = s3\"; echo \"provider = Cloudflare\"; \
+	    echo \"access_key_id = $$AKID\"; echo \"secret_access_key = \$$(cat /tmp/.r2secret)\"; \
+	    echo \"endpoint = $$ENDPOINT\"; echo \"region = auto\"; echo \"acl = private\"; \
+	    echo \"no_check_bucket = true\"; } > $(REMOTE_DIR)/backup-offsite.rclone.conf; \
+	  rm -f /tmp/.r2secret; \
+	  { echo \"OFFSITE_MODE=s3\"; echo \"OFFSITE_RCLONE_REMOTE=r2congopro:$$BUCKET/\"; \
+	    echo \"OFFSITE_RETENTION_DAYS=90\"; } > $(REMOTE_DIR)/backup-offsite.env; \
+	  chown postgres:postgres $(REMOTE_DIR)/backup-offsite.rclone.conf $(REMOTE_DIR)/backup-offsite.env; \
+	  chmod 600 $(REMOTE_DIR)/backup-offsite.rclone.conf $(REMOTE_DIR)/backup-offsite.env'"; \
+	echo "▶ verifying with a write/read/delete round trip (as postgres)…"; \
+	$(SSH) "sudo -u postgres bash -c 'set -e; \
+	  R=r2congopro:$$BUCKET/; C=$(REMOTE_DIR)/backup-offsite.rclone.conf; \
+	  echo ok | rclone --config \$$C rcat \$${R}.write-test; \
+	  rclone --config \$$C cat \$${R}.write-test >/dev/null; \
+	  rclone --config \$$C deletefile \$${R}.write-test'" \
+	  && echo "✓ offsite configured and verified — next timer run will push; or: make prod-backup-now"
+
+# Lists the dumps currently in the bucket (newest last) + the success marker.
+prod-backup-offsite-status:
+	@$(SSH) "echo 'offsite last-success: '\$$(cat $(BACKUP_DIR)/offsite-last-success 2>/dev/null || echo '(never)')"
+	@$(SSH) "sudo -u postgres bash -c 'test -f $(REMOTE_DIR)/backup-offsite.env || { echo \"(offsite not configured — run: make prod-backup-offsite-configure)\"; exit 0; }; . $(REMOTE_DIR)/backup-offsite.env && rclone --config $(REMOTE_DIR)/backup-offsite.rclone.conf lsl \"\$$OFFSITE_RCLONE_REMOTE\" --include \"*.dump\" | sort -k2,3 | tail -8'"
+
+# Fetches the newest dump FROM THE BUCKET (not the local dir) into
+# ./backups/offsite/ — the honest input for an offsite restore test.
+prod-backup-offsite-pull:
+	@mkdir -p $(LOCAL_BACKUP_DIR)/offsite
+	@echo "▶ fetching newest offsite dump from R2…"
+	@$(SSH) "sudo -u postgres bash -c '. $(REMOTE_DIR)/backup-offsite.env; \
+	  C=$(REMOTE_DIR)/backup-offsite.rclone.conf; \
+	  N=\$$(rclone --config \$$C lsl \"\$$OFFSITE_RCLONE_REMOTE\" --include \"*.dump\" | sort -k2,3 | tail -1 | awk \"{print \\\$$NF}\"); \
+	  [ -n \"\$$N\" ] || { echo \"✗ bucket holds no dumps yet\" >&2; exit 1; }; \
+	  echo \"  newest: \$$N\"; \
+	  rclone --config \$$C copyto \"\$$OFFSITE_RCLONE_REMOTE\$$N\" /tmp/offsite-verify.dump; \
+	  chmod 644 /tmp/offsite-verify.dump'"
+	@rsync -az --progress -e "ssh $(_ssh_opts)" $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/offsite-verify.dump $(LOCAL_BACKUP_DIR)/offsite/
+	@$(SSH) "sudo rm -f /tmp/offsite-verify.dump"
+	@echo "✓ pulled to $(LOCAL_BACKUP_DIR)/offsite/offsite-verify.dump"
+
+# Proves the OFFSITE copy restores: R2 → local throwaway Postgres → verify.
+# An untested backup isn't a backup, and an untested offsite backup doubly so.
+dev-db-restore-test-offsite: prod-backup-offsite-pull dev-db-up
+	@bash scripts/db-restore-test.sh "$(LOCAL_BACKUP_DIR)/offsite/offsite-verify.dump"
 
 # Downloads every backup currently on the server into LOCAL_BACKUP_DIR (no --delete,
 # so older backups you've already pulled and the server has since rotated away stay put).
@@ -717,6 +782,7 @@ help:
 	@echo "    dev-db-import            Load the embedded JSON export into local Postgres"
 	@echo "    dev-db-import-ads        Load the legacy ads.yml campaigns locally"
 	@echo "    dev-db-restore-test      Restore a backup into a throwaway local DB and verify it"
+	@echo "    dev-db-restore-test-offsite    Same, but fetched from R2 — proves the offsite copy restores"
 	@echo "    dev-search-reset         ⚠ DESTROYS the local Meilisearch index (rebuilds on next boot)"
 	@echo "    dev-admin-create         Interactively create a staff account (super_admin)"
 	@echo "    dev-test-integration     Integration-tagged tests against local Postgres"
@@ -753,6 +819,9 @@ help:
 	@echo "    prod-backup-install      Install backup script + daily systemd timer"
 	@echo "    prod-backup-now/-status/-logs/-list"
 	@echo "    prod-backup-pull         Download backups to ./backups/"
+	@echo "    prod-backup-offsite-configure  Set up the R2 push (interactive, verified round trip)"
+	@echo "    prod-backup-offsite-status     Offsite marker + dumps currently in the bucket"
+	@echo "    prod-backup-offsite-pull       Fetch the newest dump FROM the bucket"
 	@echo ""
 	@echo "  IMAGE — container build (local)"
 	@echo "    image-build / image-save / image-run"
