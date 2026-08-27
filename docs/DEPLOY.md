@@ -146,43 +146,89 @@ backup scripts or the Makefile's ssh plumbing — the 2026-08-28 drill found
 
 ### Offsite backups (Cloudflare R2)
 
-Local dumps live on the same VPS they protect — they don't survive losing
-the box. `db-backup.sh` ends by calling `scripts/db-backup-offsite.sh`, a
-clean no-op until configured, which pushes every `*.dump` to an R2 bucket
-and prunes offsite copies older than 90 days (age-based, deliberately
-longer than the local 14-newest rotation: the offsite copy exists to
-survive events that also destroy local state).
+Local dumps live on the same VPS they protect. `db-backup.sh` ends by calling
+`scripts/db-backup-offsite.sh`, which pushes every `*.dump` to an R2 bucket and
+prunes offsite copies older than 90 days — age-based and deliberately longer
+than the local 14-newest rotation, because the offsite copy exists to survive
+events that also destroy local state.
 
-One-time, by hand in the Cloudflare dashboard (R2):
+**Where each copy lives, and what that means for restores:**
 
-1. Create a bucket used by **nothing else** (e.g. `congopro-db-backups`) —
-   one leaked credential must not expose every backup you own.
-2. On the bucket: *Manage API Tokens* → create an **Object Read & Write**
-   token **scoped to this bucket only**. Note the access key id, the
-   secret, and the endpoint **exactly as shown on that screen** — for a
-   jurisdiction-scoped bucket (EU) the endpoint carries a `.eu.` segment,
-   and the default endpoint answers **403 AccessDenied, which looks exactly
-   like a bad token**.
+| Copy | Location | Retention |
+|---|---|---|
+| local | `/opt/congopro-bridge/backups/` on the VPS | 14 newest |
+| offsite | R2 bucket `congopro-db-backups` | 90 days |
+| working | `./backups/` on your machine (gitignored) | whatever you pull |
 
-Then:
+Dumps only ever reach your machine because you pulled them — nothing restores
+"from your laptop" by design. `prod-db-restore` happens to upload a local file,
+which is convenient for a recent dump you already tested; `prod-db-restore-offsite`
+skips your machine entirely and pulls straight from R2 onto the server.
 
-- `make prod-backup-offsite-configure` — interactive: writes
-  `/opt/congopro-bridge/backup-offsite.env` and
-  `backup-offsite.rclone.conf` (postgres-owned `0600`, never in git; the
-  token secret is typed with echo off and travels over stdin), then proves
-  the credentials with a write/read/delete round trip against the bucket.
-  The generated rclone config bakes in the non-obvious requirements:
-  `no_check_bucket = true` (object-scoped tokens can't HeadBucket) and the
-  `https://` scheme on the endpoint.
-- `make prod-backup-offsite-status` — offsite success marker + the dumps
-  currently in the bucket.
-- `make dev-db-restore-test-offsite` — fetches the newest dump **from the
-  bucket** (not from the VPS) and restores it into throwaway local
-  Postgres. This is the offsite guarantee: run it periodically.
+#### One-time setup
 
-The push never fails the backup unit — the local dump is the primary
-safety net, so an offsite hiccup is a journalled `⚠` warning, not a failed
-run. `make prod-backup-status` shows both `last-success` markers.
+By hand in the Cloudflare dashboard (R2):
+
+1. Create a bucket used by **nothing else** (e.g. `congopro-db-backups`) — one
+   leaked credential must not expose every backup you own. Pick the
+   jurisdiction deliberately; it is fixed at creation.
+2. On the bucket: *Manage API Tokens* → **Object Read & Write**, **scoped to
+   this bucket only**. Note the access key id, the secret, and the endpoint
+   **exactly as that screen shows it** — an EU bucket's endpoint carries a
+   `.eu.` segment, and the default endpoint answers **403 AccessDenied, which
+   looks exactly like a bad token**.
+
+Then `make prod-backup-offsite-configure`: interactive, writes
+`/opt/congopro-bridge/backup-offsite.{env,rclone.conf}` (postgres-owned `0600`,
+never in git; the secret is typed with echo off and travels over stdin), and
+proves the credentials with a real write/read/delete round trip. The generated
+config bakes in `no_check_bucket = true` (object-scoped tokens cannot
+HeadBucket) and the `https://` endpoint scheme.
+
+#### Day-to-day
+
+- `make prod-backup-offsite-status` — the offsite success marker plus the dumps
+  currently in the bucket (this is where you read a dump's exact name).
+- `make prod-backup-offsite-pull [BACKUP_NAME=…]` — copies a dump out of the
+  bucket into `./backups/offsite/`. Newest unless you name one.
+- `make dev-db-restore-test-offsite` — fetches from the bucket and restores into
+  throwaway local Postgres. Run periodically: an untested offsite backup is a
+  guess.
+
+#### Restoring: which path
+
+**The dump is recent (within 14 days) and the VPS is healthy.** Use the local
+copies — no R2 involved:
+
+```
+make prod-backup-pull                                  # VPS → ./backups/
+make dev-db-restore-test BACKUP_FILE=./backups/x.dump  # prove it restores
+make prod-db-restore      BACKUP_FILE=./backups/x.dump # then production
+```
+
+**The dump is older than 14 days** (rotated out locally, still in R2), or the
+server's backup directory is empty. Restore straight from the bucket, so the
+dump never round-trips through your machine:
+
+```
+make prod-backup-offsite-status                        # find the exact name
+make prod-backup-offsite-pull BACKUP_NAME=x.dump       # optional: to test it
+make dev-db-restore-test BACKUP_FILE=./backups/offsite/offsite-verify.dump
+make prod-db-restore-offsite  BACKUP_NAME=x.dump       # R2 → server → restore
+```
+
+**The VPS is gone.** Bootstrap a replacement (`make prod-bootstrap-all`), run
+`make prod-backup-offsite-configure` with the same bucket and token, then
+`make prod-db-restore-offsite` — the new box pulls its own history out of R2.
+
+Both destructive targets behave identically: the app is stopped, you type
+`RESTORE congopro_bridge` at a real prompt (the script refuses without a tty),
+`pg_restore --clean` runs, and the service restarts whether it succeeded or
+not.
+
+The offsite push never fails the backup unit — the local dump is the primary
+safety net, so an offsite hiccup is a journalled `⚠`, not a failed run.
+`make prod-backup-status` shows both `last-success` markers.
 
 ## Secrets
 

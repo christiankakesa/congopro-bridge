@@ -58,6 +58,10 @@ BACKUP_DIR       ?= /opt/congopro-bridge/backups
 BACKUP_KEEP      ?= 14
 LOCAL_BACKUP_DIR ?= ./backups
 BACKUP_FILE      ?=
+# Object name inside the R2 bucket (prod-backup-offsite-pull / -restore-offsite).
+# Namespaced deliberately: a bare NAME would be clobbered by any environment
+# variable of the same name, since make imports the environment.
+BACKUP_NAME      ?=
 
 _ssh_opts    := -p $(DEPLOY_PORT) -i $(SSH_KEY) \
                 -o StrictHostKeyChecking=accept-new \
@@ -72,7 +76,7 @@ RSYNC        := rsync -az --progress --delete \
          dev-deps-up dev-mail-down dev-mail-test dev-mail-up dev-search-reset dev-stack-down \
          dev-stack-logs dev-stack-logs-app dev-stack-reset dev-stack-up dev-test-integration \
          prod-app-logs prod-app-push prod-app-restart prod-app-start prod-app-status \
-         prod-app-stop prod-backup-install prod-backup-list prod-backup-logs prod-backup-offsite-configure prod-backup-offsite-pull prod-backup-offsite-status prod-backup-now \
+         prod-app-stop prod-backup-install prod-backup-list prod-backup-logs prod-backup-offsite-configure prod-backup-offsite-pull prod-backup-offsite-status prod-db-restore-offsite prod-backup-now \
          prod-backup-pull prod-backup-status prod-bootstrap-all prod-bootstrap-app \
          prod-config-push prod-db-check prod-db-import prod-db-import-ads prod-db-install \
          prod-db-migrate prod-db-provision prod-db-restore prod-db-status prod-deploy \
@@ -703,16 +707,18 @@ prod-backup-offsite-status:
 	@$(SSH) "echo 'offsite last-success: '\$$(cat $(BACKUP_DIR)/offsite-last-success 2>/dev/null || echo '(never)')"
 	@$(SSH) "sudo -u postgres bash -c 'test -f $(REMOTE_DIR)/backup-offsite.env || { echo \"(offsite not configured — run: make prod-backup-offsite-configure)\"; exit 0; }; . $(REMOTE_DIR)/backup-offsite.env && rclone --config $(REMOTE_DIR)/backup-offsite.rclone.conf lsl \"\$$OFFSITE_RCLONE_REMOTE\" --include \"*.dump\" | sort -k2,3 | tail -8'"
 
-# Fetches the newest dump FROM THE BUCKET (not the local dir) into
-# ./backups/offsite/ — the honest input for an offsite restore test.
+# Fetches a dump FROM THE BUCKET (not the local dir) into ./backups/offsite/
+# — the honest input for an offsite restore test. Newest by default; pass
+# BACKUP_NAME=congopro_bridge-….dump (see prod-backup-offsite-status) for a specific
+# one, which is how you reach anything older than the local 14-day window.
 prod-backup-offsite-pull:
 	@mkdir -p $(LOCAL_BACKUP_DIR)/offsite
-	@echo "▶ fetching newest offsite dump from R2…"
+	@echo "▶ fetching offsite dump from R2…"
 	@$(SSH) "sudo -u postgres bash -c '. $(REMOTE_DIR)/backup-offsite.env; \
-	  C=$(REMOTE_DIR)/backup-offsite.rclone.conf; \
-	  N=\$$(rclone --config \$$C lsl \"\$$OFFSITE_RCLONE_REMOTE\" --include \"*.dump\" | sort -k2,3 | tail -1 | awk \"{print \\\$$NF}\"); \
+	  C=$(REMOTE_DIR)/backup-offsite.rclone.conf; N=\"$(BACKUP_NAME)\"; \
+	  if [ -z \"\$$N\" ]; then N=\$$(rclone --config \$$C lsl \"\$$OFFSITE_RCLONE_REMOTE\" --include \"*.dump\" | sort -k2,3 | tail -1 | awk \"{print \\\$$NF}\"); fi; \
 	  [ -n \"\$$N\" ] || { echo \"✗ bucket holds no dumps yet\" >&2; exit 1; }; \
-	  echo \"  newest: \$$N\"; \
+	  echo \"  fetching: \$$N\"; \
 	  rclone --config \$$C copyto \"\$$OFFSITE_RCLONE_REMOTE\$$N\" /tmp/offsite-verify.dump; \
 	  chmod 644 /tmp/offsite-verify.dump'"
 	@rsync -az --progress -e "ssh $(_ssh_opts)" $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/offsite-verify.dump $(LOCAL_BACKUP_DIR)/offsite/
@@ -746,6 +752,26 @@ dev-db-restore-test: dev-db-up
 	fi; \
 	echo "▶ testing restore of $$FILE against local dev Postgres…"; \
 	bash scripts/db-restore-test.sh "$$FILE"
+
+# DESTRUCTIVE: restores production straight FROM R2, without the dump ever
+# touching your laptop. This is the path when the VPS is alive but the dump you
+# need is older than the local 14-day rotation (offsite keeps 90 days), and the
+# path on a rebuilt server, where /opt/congopro-bridge/backups is empty.
+# Newest by default; BACKUP_NAME=… picks one (prod-backup-offsite-status lists them).
+# Same guard rails as prod-db-restore: the app is stopped, a typed confirmation
+# is required, and the service restarts either way. Verify the same dump with
+# `dev-db-restore-test-offsite BACKUP_NAME=…` first.
+prod-db-restore-offsite:
+	@echo "▶ fetching dump from R2 onto $(DEPLOY_HOST) (never via this machine)…"
+	@$(SSH) "sudo -u postgres bash -c 'set -e; . $(REMOTE_DIR)/backup-offsite.env; \
+	  C=$(REMOTE_DIR)/backup-offsite.rclone.conf; N=\"$(BACKUP_NAME)\"; \
+	  if [ -z \"\$$N\" ]; then N=\$$(rclone --config \$$C lsl \"\$$OFFSITE_RCLONE_REMOTE\" --include \"*.dump\" | sort -k2,3 | tail -1 | awk \"{print \\\$$NF}\"); fi; \
+	  [ -n \"\$$N\" ] || { echo \"✗ bucket holds no dumps\" >&2; exit 1; }; \
+	  echo \"  restoring from: \$$N\"; \
+	  rclone --config \$$C copyto \"\$$OFFSITE_RCLONE_REMOTE\$$N\" /tmp/restore.dump; \
+	  chmod 644 /tmp/restore.dump'"
+	@$(RSYNC) scripts/db-restore-prod.sh $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/db-restore-prod.sh
+	@ssh -t $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST) "chmod +x /tmp/db-restore-prod.sh && sudo /tmp/db-restore-prod.sh '$(DB_NAME)' /tmp/restore.dump '$(SERVICE)'; rm -f /tmp/db-restore-prod.sh /tmp/restore.dump"
 
 # DESTRUCTIVE: overwrites the live production database. Requires dev-db-restore-test to have
 # been run first, and a typed confirmation on the server (ssh -t for the interactive prompt).
@@ -828,7 +854,8 @@ help:
 	@echo "    prod-backup-pull         Download backups to ./backups/"
 	@echo "    prod-backup-offsite-configure  Set up the R2 push (interactive, verified round trip)"
 	@echo "    prod-backup-offsite-status     Offsite marker + dumps currently in the bucket"
-	@echo "    prod-backup-offsite-pull       Fetch the newest dump FROM the bucket"
+	@echo "    prod-backup-offsite-pull [BACKUP_NAME=…]  Fetch a dump FROM the bucket to ./backups/offsite/"
+	@echo "    prod-db-restore-offsite [BACKUP_NAME=…]   ⚠ DESTROYS production, restoring straight from R2"
 	@echo ""
 	@echo "  IMAGE — container build (local)"
 	@echo "    image-build / image-save / image-run"
@@ -836,5 +863,5 @@ help:
 	@echo "  Variables (.env or env overrides):"
 	@echo "    DEPLOY_HOST DEPLOY_USER DEPLOY_PORT SSH_KEY REMOTE_DIR DOMAIN"
 	@echo "    MEILI_DIR MEILI_VERSION POSTGRES_PORT DB_NAME DB_USER PG_VERSION"
-	@echo "    BACKUP_DIR BACKUP_KEEP LOCAL_BACKUP_DIR BACKUP_FILE"
+	@echo "    BACKUP_DIR BACKUP_KEEP LOCAL_BACKUP_DIR BACKUP_FILE BACKUP_NAME"
 	@echo ""
