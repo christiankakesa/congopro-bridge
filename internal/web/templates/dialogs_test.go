@@ -45,6 +45,26 @@ func TestAdminConfirmDialogIsStyled(t *testing.T) {
 	}
 }
 
+// Resolving a claim blocks on a synchronous email send (~2-3s), so the
+// button must show it is working and refuse a second click meanwhile.
+func TestClaimButtonsShowBusyState(t *testing.T) {
+	nav := AdminNav{UserName: "CK", Active: "claims"}
+	h := render(t, AdminClaimsList("N", nav, "pending", []claims.Claim{
+		{ID: "c1", CompanyName: "Congopro", Status: "pending", CreatedAt: time.Now()},
+	}))
+	for _, want := range []string{
+		`class="btn-busy`, `btn-busy-label`, `btn-busy-spinner`,
+		`hx-disabled-elt="closest form"`, `spinner w-3 h-3`, "Envoi…",
+	} {
+		if !strings.Contains(h, want) {
+			t.Errorf("claim actions missing %q", want)
+		}
+	}
+	if n := strings.Count(h, `hx-disabled-elt="closest form"`); n != 2 {
+		t.Errorf("both approve and reject should disable during flight, got %d", n)
+	}
+}
+
 // The share button's clipboard path used to alert(). No native dialog should
 // remain in shipped markup or scripts.
 func TestNoNativeDialogsInSharedSurfaces(t *testing.T) {

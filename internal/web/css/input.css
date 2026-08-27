@@ -804,3 +804,26 @@ mark {
   background: var(--positive-soft) !important;
   color: var(--positive) !important;
 }
+
+/* ── Busy buttons ────────────────────────────────────────────────────
+   htmx sets .htmx-request on the element that triggered an in-flight
+   request. Resolving a claim sends its decision email synchronously
+   (~2-3s on OVH SMTP), long enough that a button with no feedback reads
+   as a dead click. Swap the label for a spinner; hx-disabled-elt on the
+   same button stops a second submission during the window. */
+.btn-busy-spinner {
+  display: none;
+}
+.btn-busy.htmx-request {
+  cursor: progress;
+  opacity: 0.9;
+}
+.btn-busy.htmx-request .btn-busy-label {
+  display: none;
+}
+.btn-busy.htmx-request .btn-busy-spinner {
+  display: inline-flex;
+}
+.btn-busy:disabled {
+  cursor: not-allowed;
+}

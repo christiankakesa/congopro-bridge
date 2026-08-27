@@ -70,9 +70,11 @@ templ AdminClaimsList(nonce string, nav AdminNav, statusFilter string, list []cl
 													hx-target="closest tr"
 													hx-swap="outerHTML"
 													hx-confirm="Approuver cette réclamation ?"
-													class="flex-1 rounded-md bg-positive hover:opacity-90 text-white text-xs font-medium py-1.5 transition-colors"
+													hx-disabled-elt="closest form"
+													class="btn-busy flex-1 rounded-md bg-positive hover:opacity-90 text-white text-xs font-medium py-1.5 transition-colors"
 												>
-													Approuver
+													<span class="btn-busy-label">Approuver</span>
+													@busySpinner("Envoi…")
 												</button>
 												<button
 													type="submit"
@@ -83,9 +85,11 @@ templ AdminClaimsList(nonce string, nav AdminNav, statusFilter string, list []cl
 													hx-swap="outerHTML"
 													hx-confirm="Refuser cette réclamation ?"
 													data-confirm-variant="danger"
-													class="flex-1 rounded-md bg-surface-raised border border-danger-soft hover:bg-danger-soft text-danger text-xs font-medium py-1.5 transition-colors"
+													hx-disabled-elt="closest form"
+													class="btn-busy flex-1 rounded-md bg-surface-raised border border-danger-soft hover:bg-danger-soft text-danger text-xs font-medium py-1.5 transition-colors"
 												>
-													Refuser
+													<span class="btn-busy-label">Refuser</span>
+													@busySpinner("Envoi…")
 												</button>
 											</div>
 										</form>
@@ -159,4 +163,20 @@ func resolvedRowClass(approved bool) string {
 		return "bg-positive-soft text-positive"
 	}
 	return "bg-danger-soft text-danger"
+}
+
+// busySpinner is the in-flight half of .btn-busy: hidden until htmx adds
+// htmx-request to the button, then it replaces the label. Resolving a claim
+// sends the decision email synchronously (OVH SMTP, ~2-3s observed in
+// production), so without this the admin clicks and watches nothing happen.
+// Paired with hx-disabled-elt, which also rules out a double submission
+// during that window.
+templ busySpinner(label string) {
+	<span class="btn-busy-spinner items-center justify-center gap-1.5">
+		<svg class="spinner w-3 h-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+			<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+			<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+		</svg>
+		{ label }
+	</span>
 }
