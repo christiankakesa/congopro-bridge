@@ -57,6 +57,14 @@ lands in Gmail spam on reputation alone)
 
 ## Done (highlights — full history in git)
 
+* Disaster recovery rehearsed on production (2026-08-28): `prod-db-restore`
+  run against the live database with a fresh dump — service stopped,
+  `pg_restore --clean`, auto-restart, and afterwards row counts identical to
+  the pre-restore baseline across all 12 tables, healthz ready, search
+  re-indexed, claim/promotion state intact. The drill paid for itself
+  immediately: it exposed `prod-db-restore` as broken by the Makefile rename
+  (`prod-ssh: not found`), a failure that would otherwise have appeared for
+  the first time during a real outage.
 * Offsite backups LIVE and verified (2026-08-28): bucket
   `congopro-db-backups` (EU jurisdiction, bucket-scoped token), 8 dumps
   pushed on the first run, and the full guarantee proven —

@@ -137,6 +137,13 @@ throwaway database, so testing a backup is cheap and safe to do often.
   restore succeeds or fails. Only run this after `dev-db-restore-test` has
   verified the same file.
 
+Both restore paths were rehearsed against production on 2026-08-28: the
+offsite copy restored into throwaway local Postgres, and `prod-db-restore`
+ran against the live database (row counts afterwards identical to the
+pre-restore baseline, app healthy). Rehearse again after any change to the
+backup scripts or the Makefile's ssh plumbing — the 2026-08-28 drill found
+`prod-db-restore` broken by a target rename, which nothing else exercises.
+
 ### Offsite backups (Cloudflare R2)
 
 Local dumps live on the same VPS they protect — they don't survive losing
