@@ -672,6 +672,9 @@ prod-backup-offsite-configure:
 	printf "R2 endpoint (https://<accountid>[.<jurisdiction>].r2.cloudflarestorage.com): "; IFS= read -r ENDPOINT; \
 	printf "Bucket name: "; IFS= read -r BUCKET; \
 	case "$$ENDPOINT" in https://*) ;; *) echo "✗ endpoint must start with https:// (rclone convention)" >&2; exit 1;; esac; \
+	echo "$$BUCKET" | grep -Eq '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$$' || { \
+	  echo "✗ '$$BUCKET' is not a valid R2 bucket name (lowercase letters, digits, hyphens)." >&2; \
+	  echo "  Use the bucket's NAME from the R2 bucket list — not the token label or a display name." >&2; exit 1; }; \
 	printf '%s\n' "$$AKSECRET" | $(SSH) "sudo tee /tmp/.r2secret >/dev/null && sudo chmod 600 /tmp/.r2secret"; \
 	$(SSH) "sudo bash -c 'umask 077; \
 	  { echo \"[r2congopro]\"; echo \"type = s3\"; echo \"provider = Cloudflare\"; \
@@ -685,10 +688,10 @@ prod-backup-offsite-configure:
 	  chmod 600 $(REMOTE_DIR)/backup-offsite.rclone.conf $(REMOTE_DIR)/backup-offsite.env'"; \
 	echo "▶ verifying with a write/read/delete round trip (as postgres)…"; \
 	$(SSH) "sudo -u postgres bash -c 'set -e; \
-	  R=r2congopro:$$BUCKET/; C=$(REMOTE_DIR)/backup-offsite.rclone.conf; \
-	  echo ok | rclone --config \$$C rcat \$${R}.write-test; \
-	  rclone --config \$$C cat \$${R}.write-test >/dev/null; \
-	  rclone --config \$$C deletefile \$${R}.write-test'" \
+	  R=\"r2congopro:$$BUCKET/\"; C=$(REMOTE_DIR)/backup-offsite.rclone.conf; \
+	  echo ok | rclone --config \"\$$C\" rcat \"\$${R}.write-test\"; \
+	  rclone --config \"\$$C\" cat \"\$${R}.write-test\" >/dev/null; \
+	  rclone --config \"\$$C\" deletefile \"\$${R}.write-test\"'" \
 	  && echo "✓ offsite configured and verified — next timer run will push; or: make prod-backup-now"
 
 # Lists the dumps currently in the bucket (newest last) + the success marker.
