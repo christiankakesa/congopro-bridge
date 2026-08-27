@@ -780,6 +780,15 @@ mark {
   color: var(--ink);
   padding: 0;
   width: min(26rem, calc(100vw - 2rem));
+  /* Upper-middle rather than dead centre: it lands nearer where the eye
+     already is (the row you just clicked) instead of pulling focus to the
+     middle of the screen, and it stays clear of a phone keyboard. inset+auto
+     margins do the centring so the entry animation keeps `transform` to
+     itself. clamp() keeps it sane on short viewports. */
+  inset: 0;
+  margin: clamp(1rem, 18vh, 11rem) auto auto;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
 }
 .confirm-dialog::backdrop {
   background: rgb(0 0 0 / 0.45);
