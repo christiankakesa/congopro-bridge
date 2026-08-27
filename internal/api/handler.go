@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"math/rand"
 	"net/http"
@@ -74,14 +73,12 @@ type AIResponse struct {
 const defaultTitle = "Congopro | Moteur de recherche boosté à l'IA"
 
 var (
-	startupTime    = time.Now()
-	cssHash        string
-	adsPreviewTmpl *template.Template
+	startupTime = time.Now()
+	cssHash     string
 )
 
 func init() {
 	cssHash = templates.CSSVersion
-	adsPreviewTmpl = template.Must(template.New("ads-preview").Parse(string(web.AdsPreviewHTML)))
 
 }
 
@@ -338,7 +335,7 @@ func (a *AppEngine) TermsHandler(w http.ResponseWriter, r *http.Request) {
 func (a *AppEngine) serveStaticPage(w http.ResponseWriter, r *http.Request, title, page, heading string) {
 	content, err := web.ContentFS.ReadFile("content/" + page + ".html")
 	if err != nil {
-		http.NotFound(w, r)
+		a.renderNotFound(w, r)
 		return
 	}
 
@@ -374,7 +371,7 @@ func (a *AppEngine) CompanyHandler(w http.ResponseWriter, r *http.Request) {
 
 	company, err := a.Engine.FindBySlug(slug)
 	if err != nil {
-		http.NotFound(w, r)
+		a.renderNotFound(w, r)
 		return
 	}
 
@@ -481,14 +478,9 @@ func (a *AppEngine) AdsPreviewPageHandler(w http.ResponseWriter, r *http.Request
 
 	nonce, _ := r.Context().Value(constants.NonceKey).(string)
 
-	data := struct {
-		CSSVersion string
-		Nonce      string
-	}{
-		CSSVersion: cssHash,
-		Nonce:      nonce,
+	if err := templates.AdsPreviewPage(canonicalURL(r), nonce, cssHash, ads.GetAdPreviews()).Render(r.Context(), w); err != nil {
+		log.Error().Msgf("[templates] render ads preview page: %v", err)
 	}
-	adsPreviewTmpl.Execute(w, data)
 }
 
 var (
@@ -536,7 +528,7 @@ func (a *AppEngine) FrontendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.URL.Path != "/" && !strings.HasPrefix(r.URL.Path, "/company/") && r.URL.Path != "/help" && r.URL.Path != "/privacy" && r.URL.Path != "/terms" {
-		http.NotFound(w, r)
+		a.renderNotFound(w, r)
 		return
 	}
 
@@ -551,6 +543,19 @@ func (a *AppEngine) serveSPA(w http.ResponseWriter, r *http.Request, title strin
 
 	if err := templates.HomePage(title, canonicalURL(r), nonce, cssHash, len(a.Engine.Companies())).Render(r.Context(), w); err != nil {
 		log.Error().Err(err).Msg("render home page")
+	}
+}
+
+// renderNotFound serves the branded 404 for HTML page routes. Asset and API
+// endpoints deliberately keep http.NotFound's plain response — an HTML page
+// is the wrong answer to a missing font or a JSON call.
+func (a *AppEngine) renderNotFound(w http.ResponseWriter, r *http.Request) {
+	nonce, _ := r.Context().Value(constants.NonceKey).(string)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNotFound)
+	if err := templates.NotFoundPage(canonicalURL(r), nonce, cssHash).Render(r.Context(), w); err != nil {
+		log.Error().Msgf("[templates] render 404 page: %v", err)
 	}
 }
 

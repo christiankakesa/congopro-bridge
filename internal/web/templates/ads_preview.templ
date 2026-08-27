@@ -1,0 +1,54 @@
+package templates
+
+import "congopro-bridge/internal/ads"
+
+// AdsPreviewPage is the advertiser-facing format reference at /ads-preview.
+// It renders the REAL ad components (adSlot / premiumHomepageAd) with sample
+// data rather than a client-side copy of them — the previous version carried
+// its own JS reimplementation, which had already drifted from what the site
+// actually serves. Same components here means the preview cannot lie.
+templ AdsPreviewPage(canonicalURL, nonce, cssVersion string, previews []ads.AdWire) {
+	@Layout("Formats publicitaires | Congopro Bridge", canonicalURL, nonce, cssVersion) {
+		@siteHeader()
+		<main class="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-10 pb-24">
+			<div class="text-center">
+				<h1 class="font-sora font-semibold text-3xl sm:text-4xl text-ink tracking-tight">Formats publicitaires</h1>
+				<p class="mt-3 text-[15px] text-ink-muted max-w-xl mx-auto leading-relaxed">
+					Guide de référence : voici exactement comment votre annonce apparaîtra sur
+					Congopro Bridge. Ces exemples utilisent les mêmes composants que le site en production.
+				</p>
+			</div>
+
+			<section class="mt-12">
+				<h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-ink-faint mb-4">
+					Emplacement : page d'accueil (premium)
+				</h2>
+				if len(previews) > 0 {
+					@premiumHomepageAd(previews[0], ValidateURL(previews[0].URL))
+				}
+			</section>
+
+			<section class="mt-14">
+				<h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-ink-faint mb-4">
+					Emplacement : résultats de recherche
+				</h2>
+				<p class="text-sm text-ink-muted mb-5">
+					Un libellé par style disponible — le libellé et la couleur d'accent sont
+					choisis à la création de la campagne.
+				</p>
+				for _, ad := range previews {
+					@adSlot(ad)
+				}
+			</section>
+
+			<section class="mt-14 rounded-2xl border border-line bg-surface-raised shadow-card p-5">
+				<h2 class="font-sora font-semibold text-[15px] text-ink mb-2">Vous souhaitez annoncer ?</h2>
+				<p class="text-sm text-ink-muted leading-relaxed">
+					Écrivez-nous depuis la page <a href="/help" preload="mousedown" class="text-accent hover:underline">Aide</a>
+					ou passez par votre <a href="/account" preload="mousedown" class="text-accent hover:underline">Espace entreprise</a>
+					pour mettre en avant votre fiche.
+				</p>
+			</section>
+		</main>
+	}
+}

@@ -14,11 +14,11 @@ import (
 )
 
 // SiteFooter is the shared "© Congopro · Support · Aide · Confidentialité ·
-// Conditions" bar used on every page — the SSR pages (via Layout) and the
-// SPA (index.html, rendered separately by the Go handler and injected as
-// pre-rendered HTML since index.html uses html/template, not templ).
-// mt-auto/shrink-0 assume a `flex flex-col` ancestor (see Layout's <body> and
-// index.html's <body>) — that's the "sticky footer" pattern: it sits at the
+// Conditions" bar used on every page via Layout (and AccountLayout). The
+// copyright line is a link to "/" — on deep-linked pages it is often the
+// only route back into the site.
+// mt-auto/shrink-0 assume a `flex flex-col` ancestor (see Layout's <body>)
+// — that's the "sticky footer" pattern: it sits at the
 // bottom of the viewport when content is short, and flows naturally after
 // content when there's more than a screenful, without a leftover scrollbar.
 func SiteFooter(nonce string) templ.Component {

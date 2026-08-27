@@ -1,0 +1,43 @@
+package templates
+
+// NotFoundPage is the branded 404 — every mistyped URL, stale inbound link
+// and dead company slug lands here, so it carries a real way back into the
+// site (brand header, working search, useful links) instead of Go's default
+// plain-text "404 page not found".
+templ NotFoundPage(canonicalURL, nonce, cssVersion string) {
+	@Layout("Page introuvable | Congopro", canonicalURL, nonce, cssVersion) {
+		@siteHeader()
+		<main class="w-full max-w-xl mx-auto px-4 sm:px-6 pt-16 pb-24 text-center">
+			<p class="font-sora font-semibold text-[64px] leading-none text-accent">404</p>
+			<h1 class="mt-4 font-sora font-semibold text-2xl text-ink">Cette page n'existe pas</h1>
+			<p class="mt-3 text-[15px] text-ink-muted leading-relaxed">
+				Le lien est peut-être périmé, ou l'adresse contient une faute de frappe.
+				Cherchez plutôt l'entreprise directement :
+			</p>
+			<form action="/" method="get" class="search-box mt-6 flex items-center gap-2 px-4 py-3 w-full text-left">
+				<svg class="w-5 h-5 text-ink-faint shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path>
+				</svg>
+				<input
+					type="text"
+					name="q"
+					aria-label="Rechercher une entreprise, un service ou un professionnel"
+					placeholder="Rechercher une entreprise…"
+					autocomplete="off"
+					spellcheck="false"
+					class="flex-1 text-base text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0"
+				/>
+				<button type="submit" aria-label="Rechercher" class="w-10 h-10 shrink-0 rounded-full bg-accent hover:bg-accent-hover text-on-accent flex items-center justify-center transition-colors">
+					<svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+						<path stroke-linecap="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path>
+					</svg>
+				</button>
+			</form>
+			<div class="mt-8 flex flex-wrap items-center justify-center gap-2">
+				<a href="/" preload="mousedown" class="btn btn-primary">Retour à l'accueil</a>
+				<a href="/help" preload="mousedown" class="btn btn-secondary">Aide</a>
+				<a href="/account" preload="mousedown" class="btn btn-secondary">Espace entreprise</a>
+			</div>
+		</main>
+	}
+}

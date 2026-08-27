@@ -43,7 +43,7 @@ func (a *AppEngine) AccountClaimFormHandler(w http.ResponseWriter, r *http.Reque
 
 	companyID, companyName, ok := a.companyForSlug(r.Context(), slug)
 	if !ok {
-		http.NotFound(w, r)
+		a.renderNotFound(w, r)
 		return
 	}
 	state, err := claims.StateForCompany(r.Context(), a.DB, companyID, cust.ID)
