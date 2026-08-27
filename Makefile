@@ -48,8 +48,10 @@ TEMPL_CLI    := $(shell which templ)
 POSTGRES_PORT     ?= 5433
 DB_NAME           ?= congopro_bridge
 DB_USER           ?= congopro_bridge
+DB_PASSWORD       ?= congopro_bridge
 PG_VERSION        ?= 16
-LOCAL_DATABASE_URL ?= postgres://congopro_bridge:congopro_bridge@localhost:$(POSTGRES_PORT)/congopro_bridge?sslmode=disable
+PG_CONTAINER      ?= congopro-bridge-postgres-1
+LOCAL_DATABASE_URL ?= postgres://$(DB_USER):$(DB_PASSWORD)@localhost:$(POSTGRES_PORT)/$(DB_NAME)?sslmode=disable
 
 # Database — backups (production)
 BACKUP_DIR       ?= /opt/congopro-bridge/backups
@@ -66,7 +68,7 @@ RSYNC        := rsync -az --progress --delete \
 
 .PHONY: all build build-quick clean css help templ test vet image-build image-run image-save \
          dev dev-admin-create dev-db-down dev-db-import dev-db-import-ads dev-db-migrate \
-         dev-db-psql dev-db-reset dev-db-restore-test dev-db-up dev-deps-down dev-deps-reset \
+         dev-db-psql dev-db-reset dev-db-scrub dev-db-restore-test dev-db-up dev-deps-down dev-deps-reset \
          dev-deps-up dev-mail-down dev-mail-test dev-mail-up dev-search-reset dev-stack-down \
          dev-stack-logs dev-stack-logs-app dev-stack-reset dev-stack-up dev-test-integration \
          prod-app-logs prod-app-push prod-app-restart prod-app-start prod-app-status \
@@ -228,9 +230,30 @@ dev-db-reset:
 	@$(MAKE) dev-db-migrate
 	@echo "✓ local database reset (empty schema) — run 'make dev-db-import' to reload companies"
 
+# DESTRUCTIVE (local only, narrow): removes customer-generated test data —
+# customers and, by foreign key, their claims, sessions and promotions. The
+# FKs also SET NULL companies.claimed_by_customer_id (so "Fiche vérifiée"
+# clears itself) and ads.customer_id (campaigns survive, just unlinked).
+# otp_codes is keyed by email, not customer_id, so it needs its own delete.
+#
+# Keeps the catalogue (companies, ads) and your staff account + TOTP enrolment
+# — that is the whole point over dev-db-reset, which would make you re-enrol.
+# Does NOT cancel Stripe test subscriptions; use `stripe subscriptions cancel`.
+dev-db-scrub: dev-db-up
+	@echo "▶ Scrubbing customer test data from the local database…"
+	@docker exec -e PGPASSWORD=$(DB_PASSWORD) $(PG_CONTAINER) psql -U $(DB_USER) -d $(DB_NAME) -q \
+	  -c "DELETE FROM otp_codes;" \
+	  -c "DELETE FROM customers;" \
+	  -c "SELECT 'customers: '||count(*) FROM customers UNION ALL \
+	      SELECT 'claims: '||count(*) FROM company_claims UNION ALL \
+	      SELECT 'promotions: '||count(*) FROM promotions UNION ALL \
+	      SELECT 'companies kept: '||count(*) FROM companies UNION ALL \
+	      SELECT 'staff users kept: '||count(*) FROM users;"
+	@echo "✓ scrubbed (catalogue and staff login untouched)"
+
 # Opens a psql shell on the local dev database.
 dev-db-psql: dev-db-up
-	@docker exec -it -e PGPASSWORD=$(DB_USER) congopro-bridge-postgres-1 psql -U $(DB_USER) -d $(DB_NAME)
+	@docker exec -it -e PGPASSWORD=$(DB_PASSWORD) $(PG_CONTAINER) psql -U $(DB_USER) -d $(DB_NAME)
 
 # One-time (idempotent) import of the legacy embedded JSON export into local Postgres.
 dev-db-import: dev-db-migrate
@@ -660,6 +683,7 @@ help:
 	@echo "    dev-db-up/-down          Start/stop local Postgres only"
 	@echo "    dev-db-migrate           Apply migrations locally"
 	@echo "    dev-db-reset             ⚠ DESTROYS the local database, then re-migrates (empty schema)"
+	@echo "    dev-db-scrub             ⚠ DELETES customers/claims/promotions (keeps catalogue + admin)"
 	@echo "    dev-db-psql              psql shell on the local database"
 	@echo "    dev-db-import            Load the embedded JSON export into local Postgres"
 	@echo "    dev-db-import-ads        Load the legacy ads.yml campaigns locally"
