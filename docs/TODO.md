@@ -6,14 +6,6 @@
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* **Offsite backups — create the R2 bucket + token (5 min in the Cloudflare
-  dashboard), then run `make prod-backup-offsite-configure`.** All the
-  tooling shipped 2026-08-28 (see Done); the only missing piece is the
-  credential that must be created by hand. Steps and gotchas: DEPLOY.md
-  → "Offsite backups (Cloudflare R2)". Afterwards run
-  `make dev-db-restore-test-offsite` once — an untested offsite backup
-  isn't a backup.
-
 * Telegram bot as notification/quick-action layer on top of the CMS.
 * Promoted-listing ranking (pin/badge-weight in Meilisearch) — v1 ships
   badges only.
@@ -65,6 +57,15 @@ lands in Gmail spam on reputation alone)
 
 ## Done (highlights — full history in git)
 
+* Offsite backups LIVE and verified (2026-08-28): bucket
+  `congopro-db-backups` (EU jurisdiction, bucket-scoped token), 8 dumps
+  pushed on the first run, and the full guarantee proven —
+  `dev-db-restore-test-offsite` fetched the newest dump FROM the bucket and
+  restored 1500 companies into throwaway local Postgres. One R2 quirk found
+  live: `rclone rcat` streams without Content-Length and R2 answers **501
+  NotImplemented**, which reads like broken credentials — the configure
+  round trip now uses `copyto` of a temp file, the same operation the
+  backup itself uses.
 * Offsite backup tooling (2026-08-28): `scripts/db-backup-offsite.sh`
   (no-op until `/opt/congopro-bridge/backup-offsite.env` exists; `rclone
   copy` + 90-day age prune — deliberately NOT `sync`, which would collapse

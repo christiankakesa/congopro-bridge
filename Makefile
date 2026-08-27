@@ -665,7 +665,9 @@ prod-backup-list:
 # The token secret is read with echo off and travels over stdin (never argv,
 # never shell history). Paste the ENDPOINT exactly as the R2 token screen
 # shows it — that sidesteps the jurisdiction trap (.eu. buckets 403 through
-# the default endpoint, which looks exactly like a bad token).
+# the default endpoint, which looks exactly like a bad token). The round trip
+# uses copyto of a temp file, not rcat: rcat streams without Content-Length
+# and R2 answers 501 NotImplemented, which reads like broken credentials.
 prod-backup-offsite-configure:
 	@printf "R2 access key id: "; IFS= read -r AKID; \
 	printf "R2 secret access key (hidden): "; stty -echo; IFS= read -r AKSECRET; stty echo; echo; \
@@ -689,9 +691,11 @@ prod-backup-offsite-configure:
 	echo "▶ verifying with a write/read/delete round trip (as postgres)…"; \
 	$(SSH) "sudo -u postgres bash -c 'set -e; \
 	  R=\"r2congopro:$$BUCKET/\"; C=$(REMOTE_DIR)/backup-offsite.rclone.conf; \
-	  echo ok | rclone --config \"\$$C\" rcat \"\$${R}.write-test\"; \
+	  T=\$$(mktemp); echo ok > \"\$$T\"; \
+	  rclone --config \"\$$C\" copyto \"\$$T\" \"\$${R}.write-test\"; \
 	  rclone --config \"\$$C\" cat \"\$${R}.write-test\" >/dev/null; \
-	  rclone --config \"\$$C\" deletefile \"\$${R}.write-test\"'" \
+	  rclone --config \"\$$C\" deletefile \"\$${R}.write-test\"; \
+	  rm -f \"\$$T\"'" \
 	  && echo "✓ offsite configured and verified — next timer run will push; or: make prod-backup-now"
 
 # Lists the dumps currently in the bucket (newest last) + the success marker.
