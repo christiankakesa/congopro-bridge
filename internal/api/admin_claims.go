@@ -73,7 +73,14 @@ func (a *AppEngine) resolveClaim(w http.ResponseWriter, r *http.Request, approve
 		return
 	}
 
-	a.sendClaimDecisionEmail(approve, claimantEmail, companyName, note)
+	// Fire and forget: the decision is already committed, and OVH SMTP takes
+	// ~2-3s to accept a message — long enough to make the admin wait on
+	// something the outcome doesn't depend on. Same shape as
+	// reloadEngineAsync. The trade is a small window where a process restart
+	// between here and the send loses the notification; the claimant still
+	// sees the decision on /account, and this was already best-effort (a
+	// failed send was only ever logged).
+	go a.sendClaimDecisionEmail(approve, claimantEmail, companyName, note)
 
 	flash := "rejected"
 	if approve {
@@ -102,7 +109,10 @@ func (a *AppEngine) staffUserID(r *http.Request) string {
 	return ""
 }
 
-// sendClaimDecisionEmail is best-effort: logged, never fatal.
+// sendClaimDecisionEmail is best-effort: logged, never fatal. Called on its
+// own goroutine (see resolveClaim), so it deliberately takes no context — a
+// request-scoped one would be cancelled the moment the response is written,
+// which is exactly when this starts running.
 func (a *AppEngine) sendClaimDecisionEmail(approve bool, to, companyName, note string) {
 	if !a.MailEnabled || a.Mailer == nil || to == "" {
 		return

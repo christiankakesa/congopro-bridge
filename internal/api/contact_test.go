@@ -12,12 +12,12 @@ import (
 	"congopro-bridge/internal/mail"
 )
 
-type captureMailer struct {
+type contactMailer struct {
 	sent []mail.Message
 	err  error
 }
 
-func (c *captureMailer) Send(m mail.Message) error {
+func (c *contactMailer) Send(m mail.Message) error {
 	if c.err != nil {
 		return c.err
 	}
@@ -45,7 +45,7 @@ func validForm() url.Values {
 }
 
 func TestContact_SendsToConfiguredAddressOnly(t *testing.T) {
-	m := &captureMailer{}
+	m := &contactMailer{}
 	a := &AppEngine{Mailer: m, MailEnabled: true, ContactTo: "ask@congopro.com"}
 
 	form := validForm()
@@ -70,7 +70,7 @@ func TestContact_SendsToConfiguredAddressOnly(t *testing.T) {
 }
 
 func TestContact_HoneypotSilentlyDiscards(t *testing.T) {
-	m := &captureMailer{}
+	m := &contactMailer{}
 	a := &AppEngine{Mailer: m, MailEnabled: true, ContactTo: "ask@congopro.com"}
 
 	form := validForm()
@@ -86,7 +86,7 @@ func TestContact_HoneypotSilentlyDiscards(t *testing.T) {
 }
 
 func TestContact_ValidationKeepsInputAndFlagsFields(t *testing.T) {
-	m := &captureMailer{}
+	m := &contactMailer{}
 	a := &AppEngine{Mailer: m, MailEnabled: true, ContactTo: "ask@congopro.com"}
 
 	form := url.Values{"name": {""}, "email": {"not-an-email"}, "message": {"court"}}
