@@ -97,7 +97,7 @@ yet; that may stop being true once destructive migrations show up).
   `make prod-db-status` shows the systemd unit status.
 - Migrations live in `internal/db/migrations/*.sql` (goose format, embedded
   into the binary via `go:embed`). `<binary> -migrate` applies pending ones
-  and exits — that's what both `db-migrate` (local) and `db-migrate-remote`
+  and exits — that's what both `db-migrate` (local) and `prod-db-migrate`
   (production) ultimately run.
 - The app loads companies from Postgres (`status = 'published'` only — drafts
   stay hidden) and no longer touches the embedded JSON at runtime.
@@ -127,24 +127,24 @@ throwaway database, so testing a backup is cheap and safe to do often.
 - `make dev-db-restore-test [BACKUP_FILE=./backups/x.dump]` — restores a dump into
   a throwaway database on **local dev Postgres**, runs a sanity query, drops
   the throwaway database. Defaults to the newest file in `./backups/`. Never
-  touches production. Run this periodically (e.g. after every `db-backup-pull`)
+  touches production. Run this periodically (e.g. after every `prod-backup-pull`)
   — a backup you haven't restored is a guess, not a guarantee.
 - `make prod-db-restore [BACKUP_FILE=./backups/x.dump]` — **destructive.** Uploads
   the dump, stops the `congopro-bridge` service, terminates other connections,
   and runs `pg_restore --clean` against the live database. Requires typing
   `RESTORE <db_name>` at an interactive prompt (the script refuses to run
   without a tty), and the service is restarted automatically whether the
-  restore succeeds or fails. Only run this after `db-restore-test` has
+  restore succeeds or fails. Only run this after `dev-db-restore-test` has
   verified the same file.
 
 ## Secrets
 
-`make prod-secrets-init` (also run automatically by `db-provision` and
+`make prod-secrets-init` (also run automatically by `prod-db-provision` and
 `meili-setup`) generates `MEILI_MASTER_KEY` and `DATABASE_URL` directly on the
 server — they're never downloaded to your machine or printed to your
 terminal — and writes them to `/opt/congopro-bridge/congopro-bridge.env`
 (`chmod 600`, `root:root`), which the app's systemd unit loads via
-`EnvironmentFile=`. Re-running `secrets-init` after adding a new secret only
+`EnvironmentFile=`. Re-running `prod-secrets-init` after adding a new secret only
 fills in what's missing; it won't rotate existing keys.
 
 ## Verification checklist after a fresh bootstrap

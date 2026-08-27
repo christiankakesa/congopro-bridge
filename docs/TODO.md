@@ -7,7 +7,7 @@
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
 * **Offsite backups to Cloudflare R2.** Local `pg_dump`s already run daily
-  (`make prod-backup-install` / `db-backup-now` / `db-restore-test`), but they
+  (`make prod-backup-install` / `prod-backup-now` / `dev-db-restore-test`), but they
   live on the same VPS — they don't survive losing the box. Copy the pattern
   already proven in two sibling projects:
   `~/workspace/audio-server/DEPLOY.md` ("Offsite backups" section — the
@@ -24,7 +24,7 @@
   `.eu.` returns 403, which looks exactly like a bad token); set
   `no_check_bucket = true` (object-scoped tokens can't HeadBucket); the
   rclone `endpoint` wants the `https://` scheme. Then extend
-  `db-restore-test` to restore *from the offsite copy* — an untested backup
+  `dev-db-restore-test` to restore *from the offsite copy* — an untested backup
   isn't a backup.
 
 * Telegram bot as notification/quick-action layer on top of the CMS.
@@ -204,5 +204,5 @@ lands in Gmail spam on reputation alone)
   `/(fr|en)` i18n routing, legacy congopro.com redirect handling.
 * Cookie consent banner; YAML-driven ads with rotation.
 * Full deploy tooling: systemd + Traefik, secrets-init, daily backups with
-  tested-restore path (`db-restore-test`).
+  tested-restore path (`dev-db-restore-test`).
 * Logo, favicon pipeline, social banners, OG images.
