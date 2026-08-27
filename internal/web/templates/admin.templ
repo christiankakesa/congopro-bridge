@@ -158,6 +158,7 @@ templ AdminLayout(title, nonce string, nav AdminNav) {
 					{ children... }
 				</main>
 			}
+			@confirmDialog(nonce)
 			<div id="toasts" class="fixed bottom-6 right-4 md:right-6 z-[95] flex flex-col items-end gap-2" role="status" aria-live="polite">
 				if nav.Flash != "" {
 					@adminToast(adminFlashMessage(nav.Flash))
@@ -285,4 +286,56 @@ templ AdminLoginPage(nonce, errorMsg string) {
 			</form>
 		</div>
 	}
+}
+
+// confirmDialog styles htmx's hx-confirm. htmx implements that attribute
+// with window.confirm(), which ignores the theme and prefixes the message
+// with the hostname — a visible seam in an otherwise designed UI. Hooking
+// htmx:confirm keeps hx-confirm as the single source of the question, so
+// buttons need no extra markup beyond an optional danger variant.
+//
+// Native <dialog>.showModal() is doing the unglamorous work: focus trap,
+// Escape to dismiss, background inert, backdrop element. Cancel takes
+// initial focus deliberately — these actions email a real person.
+templ confirmDialog(nonce string) {
+	<dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmTitle">
+		<form method="dialog" class="p-5">
+			<p id="confirmTitle" class="font-sora font-semibold text-[15px] text-ink">Confirmer</p>
+			<p id="confirmMessage" class="mt-2 text-sm text-ink-muted leading-relaxed"></p>
+			<div class="mt-5 flex items-center justify-end gap-2">
+				<button id="confirmCancel" value="cancel" class="btn btn-secondary h-9 px-4 text-xs">Annuler</button>
+				<button id="confirmOk" value="ok" class="btn btn-primary h-9 px-4 text-xs">Confirmer</button>
+			</div>
+		</form>
+	</dialog>
+	<script nonce={ nonce }>
+		(function () {
+			var dlg = document.getElementById("confirmDialog");
+			var msg = document.getElementById("confirmMessage");
+			var ok = document.getElementById("confirmOk");
+			var cancel = document.getElementById("confirmCancel");
+			if (!dlg || typeof dlg.showModal !== "function") return; // no <dialog>: htmx falls back to window.confirm
+			var pending = null;
+
+			document.body.addEventListener("htmx:confirm", function (e) {
+				if (!e.detail.question) return; // element has no hx-confirm
+				e.preventDefault();
+				pending = e.detail;
+				msg.textContent = e.detail.question;
+				var elt = e.detail.elt;
+				ok.textContent = (elt.textContent || "Confirmer").trim() || "Confirmer";
+				var danger = elt.getAttribute("data-confirm-variant") === "danger";
+				ok.classList.toggle("btn-primary", !danger);
+				ok.classList.toggle("btn-danger", danger);
+				dlg.showModal();
+				cancel.focus(); // these actions email someone — don't arm Enter on the destructive button
+			});
+
+			dlg.addEventListener("close", function () {
+				var p = pending;
+				pending = null;
+				if (p && dlg.returnValue === "ok") p.issueRequest(true);
+			});
+		})();
+	</script>
 }

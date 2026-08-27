@@ -175,6 +175,14 @@ body {
   }
 }
 
+@utility btn-danger {
+  background: var(--danger);
+  color: #ffffff;
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
 @utility btn-secondary {
   background: var(--card);
   border: 1px solid var(--line);
@@ -739,4 +747,60 @@ mark {
 .switch-input:focus-visible + .switch-track {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ── Confirm dialog ──────────────────────────────────────────────────
+   Replaces the browser's window.confirm() behind htmx's hx-confirm: the
+   native box ignores the theme and announces the hostname, which reads as
+   a bug in a designed UI. Native <dialog> keeps the accessibility that
+   matters (focus trap, Escape to dismiss, inert background) for free. */
+.confirm-dialog {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  padding: 0;
+  width: min(26rem, calc(100vw - 2rem));
+}
+.confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+@supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .confirm-dialog::backdrop {
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+}
+.confirm-dialog[open] {
+  animation: confirm-in 0.12s ease;
+}
+.confirm-dialog[open]::backdrop {
+  animation: confirm-fade 0.12s ease;
+}
+@keyframes confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+@keyframes confirm-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confirm-dialog[open],
+  .confirm-dialog[open]::backdrop {
+    animation: none;
+  }
+}
+
+/* ── Inline "copied" feedback ──
+   The share button briefly becomes its own confirmation. An alert() for
+   "link copied" costs a click to dismiss and blocks the page for a message
+   nobody needs to acknowledge. */
+.share-done {
+  background: var(--positive-soft) !important;
+  color: var(--positive) !important;
 }

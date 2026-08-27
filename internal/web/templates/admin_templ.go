@@ -290,6 +290,10 @@ func AdminLayout(title, nonce string, nav AdminNav) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
+		templ_7745c5c3_Err = confirmDialog(nonce).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<div id=\"toasts\" class=\"fixed bottom-6 right-4 md:right-6 z-[95] flex flex-col items-end gap-2\" role=\"status\" aria-live=\"polite\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -372,7 +376,7 @@ func adminNavLink(nav AdminNav, key, href, label string, withBadgeID bool) templ
 		var templ_7745c5c3_Var9 templ.SafeURL
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 182, Col: 24}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 183, Col: 24}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -398,7 +402,7 @@ func adminNavLink(nav AdminNav, key, href, label string, withBadgeID bool) templ
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 185, Col: 15}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 186, Col: 15}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -417,7 +421,7 @@ func adminNavLink(nav AdminNav, key, href, label string, withBadgeID bool) templ
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(formatTotal(nav.PendingClaims))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 189, Col: 37}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 190, Col: 37}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -435,7 +439,7 @@ func adminNavLink(nav AdminNav, key, href, label string, withBadgeID bool) templ
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(formatTotal(nav.PendingClaims))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 193, Col: 37}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 194, Col: 37}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -493,7 +497,7 @@ func AdminClaimsBadgeOOB(count int) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(formatTotal(count))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 212, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 213, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -541,7 +545,7 @@ func adminToast(msg string) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(msg)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 224, Col: 7}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 225, Col: 7}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -670,7 +674,7 @@ func AdminLoginPage(nonce, errorMsg string) templ.Component {
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(errorMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 268, Col: 15}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 269, Col: 15}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -688,6 +692,57 @@ func AdminLoginPage(nonce, errorMsg string) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = AdminLayout("Connexion", nonce, AdminNav{}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var20), templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+// confirmDialog styles htmx's hx-confirm. htmx implements that attribute
+// with window.confirm(), which ignores the theme and prefixes the message
+// with the hostname — a visible seam in an otherwise designed UI. Hooking
+// htmx:confirm keeps hx-confirm as the single source of the question, so
+// buttons need no extra markup beyond an optional danger variant.
+//
+// Native <dialog>.showModal() is doing the unglamorous work: focus trap,
+// Escape to dismiss, background inert, backdrop element. Cancel takes
+// initial focus deliberately — these actions email a real person.
+func confirmDialog(nonce string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var22 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var22 == nil {
+			templ_7745c5c3_Var22 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<dialog id=\"confirmDialog\" class=\"confirm-dialog\" aria-labelledby=\"confirmTitle\"><form method=\"dialog\" class=\"p-5\"><p id=\"confirmTitle\" class=\"font-sora font-semibold text-[15px] text-ink\">Confirmer</p><p id=\"confirmMessage\" class=\"mt-2 text-sm text-ink-muted leading-relaxed\"></p><div class=\"mt-5 flex items-center justify-end gap-2\"><button id=\"confirmCancel\" value=\"cancel\" class=\"btn btn-secondary h-9 px-4 text-xs\">Annuler</button> <button id=\"confirmOk\" value=\"ok\" class=\"btn btn-primary h-9 px-4 text-xs\">Confirmer</button></div></form></dialog><script nonce=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var23 string
+		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/admin.templ`, Line: 311, Col: 22}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "\">\n\t\t(function () {\n\t\t\tvar dlg = document.getElementById(\"confirmDialog\");\n\t\t\tvar msg = document.getElementById(\"confirmMessage\");\n\t\t\tvar ok = document.getElementById(\"confirmOk\");\n\t\t\tvar cancel = document.getElementById(\"confirmCancel\");\n\t\t\tif (!dlg || typeof dlg.showModal !== \"function\") return; // no <dialog>: htmx falls back to window.confirm\n\t\t\tvar pending = null;\n\n\t\t\tdocument.body.addEventListener(\"htmx:confirm\", function (e) {\n\t\t\t\tif (!e.detail.question) return; // element has no hx-confirm\n\t\t\t\te.preventDefault();\n\t\t\t\tpending = e.detail;\n\t\t\t\tmsg.textContent = e.detail.question;\n\t\t\t\tvar elt = e.detail.elt;\n\t\t\t\tok.textContent = (elt.textContent || \"Confirmer\").trim() || \"Confirmer\";\n\t\t\t\tvar danger = elt.getAttribute(\"data-confirm-variant\") === \"danger\";\n\t\t\t\tok.classList.toggle(\"btn-primary\", !danger);\n\t\t\t\tok.classList.toggle(\"btn-danger\", danger);\n\t\t\t\tdlg.showModal();\n\t\t\t\tcancel.focus(); // these actions email someone — don't arm Enter on the destructive button\n\t\t\t});\n\n\t\t\tdlg.addEventListener(\"close\", function () {\n\t\t\t\tvar p = pending;\n\t\t\t\tpending = null;\n\t\t\t\tif (p && dlg.returnValue === \"ok\") p.issueRequest(true);\n\t\t\t});\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

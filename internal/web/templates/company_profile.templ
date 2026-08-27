@@ -341,28 +341,49 @@ templ viewItemTrackingScript(nonce string) {
 
 // shareButtonScript wires up .js-share-btn on standalone pages that don't
 // have the SPA's global delegated click handler for it (search results do).
+// shareButtonScript powers every .js-share-btn: Web Share where the browser
+// offers it, clipboard otherwise. Delegated from document so it also covers
+// buttons that arrive later in an htmx swap (a search narrowing to one result
+// renders this same profile card).
+//
+// The clipboard path used to alert() — a modal demanding a click to dismiss a
+// message nobody needs to acknowledge. The button briefly becoming "Lien
+// copié" says it without interrupting, and matches the snap-speed feel of the
+// rest of the UI.
 templ shareButtonScript(nonce string) {
 	<script nonce={ nonce }>
-		document.querySelectorAll(".js-share-btn").forEach(function (btn) {
-			btn.addEventListener("click", async function () {
-				const title = btn.getAttribute("data-title") || "Congopro Bridge";
-				const url = window.location.href;
+		(function () {
+			if (window.__shareBound) return; // both Layout pages may include this
+			window.__shareBound = true;
+			document.addEventListener("click", async function (e) {
+				var btn = e.target.closest(".js-share-btn");
+				if (!btn) return;
+				e.preventDefault();
+				var title = btn.getAttribute("data-title") || "Congopro Bridge";
+				var url = window.location.href;
 				if (navigator.share) {
 					try {
 						await navigator.share({ title: title, url: url });
 					} catch (err) {
 						if (err.name !== "AbortError") console.error("Erreur de partage:", err);
 					}
-				} else {
-					try {
-						await navigator.clipboard.writeText(url);
-						alert("Lien copié dans le presse-papier !");
-					} catch (err) {
-						console.error("Erreur de copie:", err);
-					}
+					return;
+				}
+				try {
+					await navigator.clipboard.writeText(url);
+					var label = btn.querySelector("[data-share-label]") || btn;
+					var original = label.textContent;
+					label.textContent = "Lien copié";
+					btn.classList.add("share-done");
+					setTimeout(function () {
+						label.textContent = original;
+						btn.classList.remove("share-done");
+					}, 1800);
+				} catch (err) {
+					console.error("Erreur de copie:", err);
 				}
 			});
-		});
+		})();
 	</script>
 }
 

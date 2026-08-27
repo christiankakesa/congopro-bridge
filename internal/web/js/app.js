@@ -487,35 +487,9 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  const shareBtn = e.target.closest(".js-share-btn");
-  if (shareBtn) {
-    e.preventDefault();
-
-    const companyTitle =
-      shareBtn.getAttribute("data-title") || "Congopro Bridge";
-    const currentUrl = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: companyTitle,
-          url: currentUrl,
-        });
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          console.error("Erreur de partage:", err);
-        }
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(currentUrl);
-        alert("Lien copié dans le presse-papier !");
-      } catch (err) {
-        console.error("Erreur de copie:", err);
-      }
-    }
-
-    return;
-  }
+  // Share buttons: handled by templates.shareButtonScript, a delegated
+  // listener included by home.templ and the standalone profile page, so both
+  // share one implementation instead of two copies drifting apart.
 
   // This SPA only owns "/" (home and /?q= shared searches). Every
   // other same-host path — /help, /account, /company/*, … — is a real

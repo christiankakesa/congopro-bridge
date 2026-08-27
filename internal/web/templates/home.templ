@@ -163,6 +163,7 @@ templ HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int
 		    </div>
 		  </main>
 		</div>
+		@shareButtonScript(nonce)
 		<script nonce={ nonce } src="/js/htmx.min.js"></script>
 		<script nonce={ nonce } src="/js/preload.min.js"></script>
 		<script nonce={ nonce } src={ "/js/app.js?h=" + AppJSVersion }></script>

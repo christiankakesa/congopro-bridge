@@ -823,6 +823,15 @@ func viewItemTrackingScript(nonce string) templ.Component {
 
 // shareButtonScript wires up .js-share-btn on standalone pages that don't
 // have the SPA's global delegated click handler for it (search results do).
+// shareButtonScript powers every .js-share-btn: Web Share where the browser
+// offers it, clipboard otherwise. Delegated from document so it also covers
+// buttons that arrive later in an htmx swap (a search narrowing to one result
+// renders this same profile card).
+//
+// The clipboard path used to alert() — a modal demanding a click to dismiss a
+// message nobody needs to acknowledge. The button briefly becoming "Lien
+// copié" says it without interrupting, and matches the snap-speed feel of the
+// rest of the UI.
 func shareButtonScript(nonce string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -851,13 +860,13 @@ func shareButtonScript(nonce string) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/company_profile.templ`, Line: 345, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/company_profile.templ`, Line: 354, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "\">\n\t\tdocument.querySelectorAll(\".js-share-btn\").forEach(function (btn) {\n\t\t\tbtn.addEventListener(\"click\", async function () {\n\t\t\t\tconst title = btn.getAttribute(\"data-title\") || \"Congopro Bridge\";\n\t\t\t\tconst url = window.location.href;\n\t\t\t\tif (navigator.share) {\n\t\t\t\t\ttry {\n\t\t\t\t\t\tawait navigator.share({ title: title, url: url });\n\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\tif (err.name !== \"AbortError\") console.error(\"Erreur de partage:\", err);\n\t\t\t\t\t}\n\t\t\t\t} else {\n\t\t\t\t\ttry {\n\t\t\t\t\t\tawait navigator.clipboard.writeText(url);\n\t\t\t\t\t\talert(\"Lien copié dans le presse-papier !\");\n\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\tconsole.error(\"Erreur de copie:\", err);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t});\n\t\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "\">\n\t\t(function () {\n\t\t\tif (window.__shareBound) return; // both Layout pages may include this\n\t\t\twindow.__shareBound = true;\n\t\t\tdocument.addEventListener(\"click\", async function (e) {\n\t\t\t\tvar btn = e.target.closest(\".js-share-btn\");\n\t\t\t\tif (!btn) return;\n\t\t\t\te.preventDefault();\n\t\t\t\tvar title = btn.getAttribute(\"data-title\") || \"Congopro Bridge\";\n\t\t\t\tvar url = window.location.href;\n\t\t\t\tif (navigator.share) {\n\t\t\t\t\ttry {\n\t\t\t\t\t\tawait navigator.share({ title: title, url: url });\n\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\tif (err.name !== \"AbortError\") console.error(\"Erreur de partage:\", err);\n\t\t\t\t\t}\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\ttry {\n\t\t\t\t\tawait navigator.clipboard.writeText(url);\n\t\t\t\t\tvar label = btn.querySelector(\"[data-share-label]\") || btn;\n\t\t\t\t\tvar original = label.textContent;\n\t\t\t\t\tlabel.textContent = \"Lien copié\";\n\t\t\t\t\tbtn.classList.add(\"share-done\");\n\t\t\t\t\tsetTimeout(function () {\n\t\t\t\t\t\tlabel.textContent = original;\n\t\t\t\t\t\tbtn.classList.remove(\"share-done\");\n\t\t\t\t\t}, 1800);\n\t\t\t\t} catch (err) {\n\t\t\t\t\tconsole.error(\"Erreur de copie:\", err);\n\t\t\t\t}\n\t\t\t});\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

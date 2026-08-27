@@ -82,6 +82,7 @@ templ AdminClaimsList(nonce string, nav AdminNav, statusFilter string, list []cl
 													hx-target="closest tr"
 													hx-swap="outerHTML"
 													hx-confirm="Refuser cette réclamation ?"
+													data-confirm-variant="danger"
 													class="flex-1 rounded-md bg-surface-raised border border-danger-soft hover:bg-danger-soft text-danger text-xs font-medium py-1.5 transition-colors"
 												>
 													Refuser
