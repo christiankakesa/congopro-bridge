@@ -155,7 +155,12 @@ templ AccountDashboard(nonce string, cust *customers.Customer, myClaims []claims
 								<p class="text-sm font-medium text-ink truncate">{ cl.CompanyName }</p>
 								<p class="text-xs text-ink-faint mt-0.5">{ cl.CreatedAt.Format("02/01/2006") }</p>
 							</div>
-							@claimStatusBadge(cl.Status)
+							<div class="flex items-center gap-2 shrink-0">
+								@claimStatusBadge(cl.Status)
+								if cl.Status == "approved" {
+									<a href="/account/promote" preload="mousedown" class="btn btn-primary h-9 px-3.5 text-xs">Mettre en avant</a>
+								}
+							</div>
 						</div>
 					}
 				</div>
@@ -165,6 +170,14 @@ templ AccountDashboard(nonce string, cust *customers.Customer, myClaims []claims
 					«&nbsp;Réclamer cette entreprise&nbsp;» pour la rattacher à votre compte.
 				</div>
 			}
+
+			<div class="mt-8 rounded-2xl border border-line bg-surface-raised shadow-card p-4 flex items-center justify-between gap-3">
+				<div class="min-w-0">
+					<p class="text-sm font-medium text-ink">Mise en avant</p>
+					<p class="text-xs text-ink-muted mt-0.5">Faites ressortir une entreprise que vous avez réclamée.</p>
+				</div>
+				<a href="/account/promote" preload="mousedown" class="btn btn-secondary h-9 px-3.5 text-xs shrink-0">Voir l'offre</a>
+			</div>
 
 			<form method="post" action="/account/logout" class="mt-6">
 				<button

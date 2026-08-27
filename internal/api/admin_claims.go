@@ -111,7 +111,7 @@ func (a *AppEngine) sendClaimDecisionEmail(approve bool, to, companyName, note s
 	body := fmt.Sprintf(
 		"Bonjour,\n\n"+
 			"Votre réclamation sur « %s » a été %s.\n"+
-			"%s"+
+			"%s%s"+
 			"L'équipe Congopro — https://congopro.com\n",
 		companyName,
 		map[bool]string{true: "approuvée : l'entreprise est désormais rattachée à votre compte", false: "refusée"}[approve],
@@ -120,6 +120,14 @@ func (a *AppEngine) sendClaimDecisionEmail(approve bool, to, companyName, note s
 				return ""
 			}
 			return "\nNote de l'équipe : " + note + "\n"
+		}(),
+		// An approval with no next step leaves the owner nowhere: the promote
+		// page is otherwise only reachable by typing the URL.
+		func() string {
+			if !approve {
+				return ""
+			}
+			return "\nVous pouvez maintenant la mettre en avant :\nhttps://congopro.com/account/promote\n"
 		}(),
 	)
 	if err := a.Mailer.Send(mail.Message{To: to, Subject: subject, Body: body}); err != nil {

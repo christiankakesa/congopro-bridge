@@ -18,12 +18,24 @@ import (
 )
 
 // Customer account flows: passwordless email-OTP login under /account.
-// Conventions mirror admin auth (SameSite=Strict cookie as the CSRF defense,
-// PRG redirects, generic French error messages) — see admin_auth.go.
+// Conventions mirror admin auth (PRG redirects, generic French error
+// messages) — see admin_auth.go — except for SameSite, see below.
 
 // setCustomerSessionCookie writes or clears the customer session cookie.
-// Path is /account only; SameSite=Strict blocks it on every cross-site
-// request, which is the CSRF strategy (same contract as the admin cookie).
+// Path is /account only.
+//
+// SameSite=Lax, deliberately, where the admin cookie is Strict: customers
+// come back from Stripe Checkout, and that return is a cross-site top-level
+// navigation (checkout.stripe.com → congopro.com/account/promote?ok=1).
+// Strict withholds the cookie on exactly that request, so a customer who had
+// just paid landed on the login page and looked to have been signed out —
+// with a live subscription already created. Observed in production, 2026-08-27.
+//
+// Lax keeps the CSRF property that mattered: the cookie is still withheld on
+// cross-site POST, and every state-changing endpoint here (/account/claim,
+// /account/promote, /account/logout) is a POST. What Lax adds is the
+// top-level GET navigation, which is precisely the payment return.
+// The admin cookie stays Strict — it has no external redirect flow.
 func setCustomerSessionCookie(w http.ResponseWriter, r *http.Request, token string, maxAge int) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     customers.CustomerSessionCookieName,
@@ -31,7 +43,7 @@ func setCustomerSessionCookie(w http.ResponseWriter, r *http.Request, token stri
 		Path:     "/account",
 		HttpOnly: true,
 		Secure:   isHTTPS(r),
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   maxAge,
 	})
 }
