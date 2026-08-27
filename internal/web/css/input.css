@@ -128,6 +128,24 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Browsers default <button> to an arrow, so every button needs cursor:pointer
+   or it reads as non-interactive next to real links. Setting it once here
+   beats remembering it on each of them (19 were missing it when this landed).
+   In @layer base so utilities and component classes still win — .btn-busy's
+   cursor:progress during an htmx request, for instance. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label:has(> .switch-input) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 .font-sora {
   font-family: var(--font-display);
 }

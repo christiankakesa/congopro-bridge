@@ -18,6 +18,28 @@ import (
 // label accent-red on an accent-red background, and why rewriting it as
 // zero-specificity `:where()` did not fix it — only moving it into a layer
 // did.
+// Browsers render <button> with an arrow cursor, which makes buttons read as
+// non-interactive beside real links. One base rule covers every button, so
+// new ones inherit it — 19 were missing the hand when this was added.
+func TestButtonsGetPointerCursor(t *testing.T) {
+	css, err := os.ReadFile("../css/input.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(css)
+	if !strings.Contains(src, "button:not(:disabled)") {
+		t.Error("no base rule giving buttons cursor:pointer")
+	}
+	if !strings.Contains(src, "button:disabled") || !strings.Contains(src, "not-allowed") {
+		t.Error("disabled buttons should show not-allowed, not the hand")
+	}
+	// it must sit in @layer base so .btn-busy's cursor:progress still wins
+	i := strings.Index(src, "button:not(:disabled)")
+	if j := strings.LastIndex(src[:i], "@layer base {"); j < 0 {
+		t.Error("the cursor rule must live in @layer base, or component/utility cursors cannot override it")
+	}
+}
+
 func TestContentPageDefaultsAreLayered(t *testing.T) {
 	css, err := os.ReadFile("../css/input.css")
 	if err != nil {
