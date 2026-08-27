@@ -30,19 +30,6 @@ Later:
   `db-restore-test` to restore *from the offsite copy* — an untested backup
   isn't a backup.
 
-* **Stripe production — final verification.** Keys, product, price and
-  webhook are all configured and live (2026-08-27, see Done). What is left is
-  proving it with money rather than inference:
-  - Sign in as a customer with an approved claim and open `/account/promote`
-    — it must display the real amount. That is the only thing that exercises
-    `price.Get()` with the live key; everything else is already verified.
-  - Send a signed test `checkout.session.completed` from the Dashboard
-    endpoint (Tentatives → Send test event) and confirm a 200 delivery.
-  - Then one real card end to end, and refund it.
-  - Decide the currency question: the live product's MRR panel reads in EUR
-    while the recorded pricing decision was $15/month. Harmless if
-    deliberate — the app displays whatever currency Stripe returns.
-
 * Telegram bot as notification/quick-action layer on top of the CMS.
 * Promoted-listing ranking (pin/badge-weight in Meilisearch) — v1 ships
   badges only.
@@ -64,8 +51,10 @@ Recorded 2026-08-17 (details in [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md)):
 
 * Email provider: **OVH EmailPro SMTP** (STARTTLS, AUTH PLAIN) — sender in
   `internal/mail`; SPF/DKIM/DMARC setup required on the sending domain.
-* Payment processor: **Stripe** — account live, DEV verified end to end
-  (2026-08-27); production keys/product still to create, see Next.
+* Payment processor: **Stripe** — live and verified with a real payment
+  (2026-08-27). Note the CLI on this machine is logged into a **sandbox**
+  (`acct_1U5NcX…`) which can never do livemode; the real account is
+  `acct_1U5NcNLbym0EdjAY` and production work happens in the Dashboard.
 * Scale: **~10 staff over 12 months** — role enum stays, no permissions
   matrix.
 
@@ -91,6 +80,31 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Stripe production VERIFIED with a real payment (2026-08-27). Live product
+  "Mise en avant" on `acct_1U5NcNLbym0EdjAY`, USD monthly price
+  `price_1U95Jh…`, webhook `https://congopro.com/webhooks/stripe`. Proven end
+  to end against live Stripe by promoting Congopro's own listing at a
+  temporary $1 price: Checkout → signed webhook 200 → `promotions` row active
+  → "Promu" badge live → cancel → webhook → row `canceled` → badge gone. The
+  $1 price was then archived, the $15 price restored, subscription cancelled
+  and the charge refunded. Note prices are immutable once used: editing the
+  amount works only while a price has no subscription, otherwise create a new
+  price and repoint `STRIPE_PRICE_ID`.
+
+  Three real bugs surfaced only because the payment was run for real, all
+  fixed in `ed180c7`:
+  - `/account/promote` was unreachable from anywhere in the UI — the only
+    mention of it in the template tree was the form action on the page
+    itself, and the account dashboard had no links at all. The paid feature
+    could not be bought without typing the URL.
+  - The customer session cookie was `SameSite=Strict`, so the cross-site
+    return from Stripe Checkout arrived without it: customers were bounced to
+    the login page seconds after paying, subscription already created. Now
+    `Lax` (still withheld on cross-site POST, which is where CSRF lives); the
+    admin cookie stays Strict.
+  - "Réclamer" stayed on profiles that already had an approved owner, where
+    the endpoint can only answer ErrAlreadyClaimed.
 
 * Stripe PRODUCTION configured (2026-08-27): live product "Mise en avant"
   with a monthly price on `acct_1U5NcNLbym0EdjAY`, webhook endpoint
