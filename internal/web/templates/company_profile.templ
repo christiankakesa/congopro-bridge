@@ -159,6 +159,7 @@ templ companyProfileCard(c *data.Company, promoted, verified bool) {
 							<h1 itemprop="name" class="text-2xl sm:text-3xl font-sora font-semibold text-ink leading-tight group-hover:text-accent transition-colors">
 								{ name }
 							</h1>
+							@promotedBadge(promoted)
 							@verifiedBadge(verified)
 							<svg class="w-5 h-5 text-ink-faint opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
 						</a>
@@ -171,6 +172,7 @@ templ companyProfileCard(c *data.Company, promoted, verified bool) {
 							<h1 itemprop="name" class="text-2xl sm:text-3xl font-sora font-semibold text-ink leading-tight">
 								{ name }
 							</h1>
+							@promotedBadge(promoted)
 							@verifiedBadge(verified)
 						</div>
 					}
@@ -363,6 +365,19 @@ templ verifiedBadge(verified bool) {
 		<span class="badge bg-positive-soft text-positive mt-1.5 shrink-0" title="Propriété vérifiée par l'équipe Congopro">
 			<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="9"></circle></svg>
 			Fiche vérifiée
+		</span>
+	}
+}
+
+// promotedBadge marks a company with an active paid promotion. Same visual
+// language as the badge in result_row.templ so the two surfaces agree —
+// /account/promote promises the badge "sur sa fiche et dans les résultats",
+// and until now the fiche silently didn't show it.
+templ promotedBadge(promoted bool) {
+	if promoted {
+		<span class="badge bg-positive-soft text-positive border border-positive-soft mt-1.5 shrink-0" title="Fiche mise en avant">
+			<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"></path></svg>
+			Promu
 		</span>
 	}
 }

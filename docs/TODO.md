@@ -30,20 +30,22 @@ Later:
   `db-restore-test` to restore *from the offsite copy* — an untested backup
   isn't a backup.
 
-* **Stripe products + webhook keys (pairing session — needs Christian's
-  Stripe account).** Promoted listings are coded against `STRIPE_SECRET_KEY`,
-  `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` (see
-  [PROMOTIONS.md](PROMOTIONS.md)) but no products exist yet. Do together, in
-  one sitting:
-  1. **DEV** — create the promoted-listing product + price in Stripe **test
-     mode**, grab the test `sk_test_…` and `price_…`, and register the
-     webhook endpoint to get its signing secret (`whsec_…`); for local work
-     use the Stripe CLI listener rather than a public URL.
-  2. **PROD** — create the same product + price in **live mode**, register
-     the production webhook against the real domain, and store the live
-     keys as deploy secrets (`make secrets-init`), never in git.
-  Verify end to end in test mode before flipping live: checkout → webhook
-  received → promotion row written → badge visible on the profile.
+* **Stripe PRODUCTION setup (pairing session — needs Christian's Stripe
+  account).** DEV is done and verified (2026-08-27, details below); only the
+  live-mode half remains:
+  - Create the "Mise en avant" product + monthly price in **live mode**
+    (test-mode price is $10.00 USD/month — confirm the real number before
+    going live; the app reads the amount from Stripe at runtime, so changing
+    it is a new price, not a code change).
+  - Register the webhook endpoint `https://congopro.com/webhooks/stripe`
+    with events checkout.session.completed, customer.subscription.updated,
+    customer.subscription.deleted, and copy its signing secret. NOTE: unlike
+    dev, production's `whsec_…` comes from the **Dashboard** endpoint, not
+    from `stripe listen`.
+  - Store `sk_live_…`, that `whsec_…` and the live `price_…` as deploy
+    secrets via `make secrets-init` — never in git, never in .env.
+  - Re-run the end-to-end check against production with a real card, then
+    refund/cancel it.
 
 * Telegram bot as notification/quick-action layer on top of the CMS.
 * Promoted-listing ranking (pin/badge-weight in Meilisearch) — v1 ships
@@ -66,8 +68,8 @@ Recorded 2026-08-17 (details in [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md)):
 
 * Email provider: **OVH EmailPro SMTP** (STARTTLS, AUTH PLAIN) — sender in
   `internal/mail`; SPF/DKIM/DMARC setup required on the sending domain.
-* Payment processor: **Stripe** (account pending — webhook checklist under
-  Next).
+* Payment processor: **Stripe** — account live, DEV verified end to end
+  (2026-08-27); production keys/product still to create, see Next.
 * Scale: **~10 staff over 12 months** — role enum stays, no permissions
   matrix.
 
@@ -94,6 +96,21 @@ lands in Gmail spam on reputation alone)
 
 ## Done (highlights — full history in git)
 
+* Stripe DEV configured and verified end to end (2026-08-27): test-mode
+  product "Mise en avant" + $10.00 USD/month price, keys in `.env`. Full
+  chain exercised for real — OTP login → claim → staff approval (admin htmx
+  flow) → Checkout → `checkout.session.completed` → `promotions` row
+  (`status=active`, period end +1 month) → "Promu" badge. Two things learned
+  worth keeping: the dev `whsec_…` comes from `stripe listen --print-secret`
+  (the Dashboard only issues one for a registered HTTPS endpoint), and air
+  does NOT watch `.env`, so touch a `.go` file to make the app re-read keys.
+  Dev SMTP now points at the Mailpit container (localhost:1025) instead of
+  live OVH, so test mail never leaves the machine.
+* "Promu" badge on company profiles (2026-08-27) — the paid feature had
+  shipped with the badge on result rows only, while `/account/promote`
+  promised it "sur sa fiche et dans les résultats"; `companyProfileCard`
+  took a `promoted` param it never used. Pinned by a test covering both
+  surfaces plus the unpromoted control.
 * Contact page (2026-08-27): `/contact` with a rate-limited form that mails
   `CONTACT_TO` (default ask@congopro.com) — honeypot, per-field validation,
   input preserved on error, form hidden (not silently broken) when SMTP is
