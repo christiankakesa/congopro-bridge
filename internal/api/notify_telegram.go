@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	"congopro-bridge/internal/telegram"
 )
 
 // Staff notifications to Telegram. Everything here is best-effort by
@@ -33,6 +35,41 @@ func (a *AppEngine) notifyTelegram(text string) {
 // ── Message builders ─────────────────────────────────────────────────────
 // Plain text (the client sends no parse_mode) — user-supplied names and
 // subjects need no escaping, and bare URLs auto-link in Telegram.
+
+// TelegramResponder is the api-side seam for the bot's rich operations,
+// satisfied by *telegram.Client and faked in tests. Consumer-side on
+// purpose: the telegram package stays transport-only.
+type TelegramResponder interface {
+	SendMessage(ctx context.Context, text string, opts telegram.SendOptions) error
+	AnswerCallbackQuery(ctx context.Context, callbackID, text string, showAlert bool) error
+	EditMessageText(ctx context.Context, messageID int64, text string, keyboard *telegram.InlineKeyboardMarkup) error
+}
+
+// claimKeyboard builds the approve/reject buttons for one claim.
+// callback_data is "clm:a:<uuid>" / "clm:r:<uuid>" — 42 bytes, safely
+// under Telegram's 64-byte cap.
+func claimKeyboard(claimID string) *telegram.InlineKeyboardMarkup {
+	return &telegram.InlineKeyboardMarkup{InlineKeyboard: [][]telegram.InlineKeyboardButton{{
+		{Text: "✅ Approuver", CallbackData: "clm:a:" + claimID},
+		{Text: "❌ Refuser", CallbackData: "clm:r:" + claimID},
+	}}}
+}
+
+// notifyTelegramNewClaim is the buttoned variant of notifyTelegram for new
+// claims: same fire-and-forget contract, falling back to the plain
+// Notifier when the rich client isn't wired (v1-only tests, disabled bot).
+func (a *AppEngine) notifyTelegramNewClaim(companyName, customerEmail, adminBase, claimID string) {
+	if a.TelegramBot == nil {
+		a.notifyTelegram(msgNewClaim(companyName, customerEmail, adminBase))
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := a.TelegramBot.SendMessage(ctx, msgNewClaim(companyName, customerEmail, adminBase),
+		telegram.SendOptions{Keyboard: claimKeyboard(claimID)}); err != nil {
+		log.Warn().Msgf("[telegram] notify new claim failed: %v", err)
+	}
+}
 
 func msgNewClaim(companyName, customerEmail, adminBase string) string {
 	return "📋 Nouvelle réclamation — " + companyName +

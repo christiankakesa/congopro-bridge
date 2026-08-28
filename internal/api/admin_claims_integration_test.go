@@ -112,7 +112,7 @@ func TestResolveClaimDoesNotWaitForEmail(t *testing.T) {
 		pool.Exec(ctx, `DELETE FROM companies WHERE id = $1`, companyID)
 		pool.Exec(ctx, `DELETE FROM customers WHERE id = $1`, cust.ID)
 	})
-	if err := claims.Submit(ctx, pool, companyID, cust.ID, email, "", "owner", "Je suis le gérant de cette entreprise, test d'intégration."); err != nil {
+	if _, err := claims.Submit(ctx, pool, companyID, cust.ID, email, "", "owner", "Je suis le gérant de cette entreprise, test d'intégration."); err != nil {
 		t.Fatal(err)
 	}
 	var claimID string

@@ -62,6 +62,11 @@ type AppEngine struct {
 	// promotion events…) to a private chat. nil disables them silently —
 	// notifications are best-effort by design, see notify_telegram.go.
 	Telegram telegram.Notifier
+	// TelegramBot is the rich side of the same client (inline keyboards,
+	// callback answers, message edits) — the bot v2 responder. nil when
+	// Telegram is disabled or in v1-only tests; the new-claim notification
+	// then falls back to the plain Notifier without buttons.
+	TelegramBot TelegramResponder
 }
 
 type ErrorResponse struct {

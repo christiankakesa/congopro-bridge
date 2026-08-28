@@ -89,7 +89,7 @@ func (a *AppEngine) AccountClaimSubmitHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	err := claims.Submit(r.Context(), a.DB,
+	claimID, err := claims.Submit(r.Context(), a.DB,
 		companyID, cust.ID, cust.Email,
 		r.FormValue("phone"), r.FormValue("relationship"), r.FormValue("evidence"))
 	if err != nil {
@@ -101,7 +101,8 @@ func (a *AppEngine) AccountClaimSubmitHandler(w http.ResponseWriter, r *http.Req
 		renderErr(http.StatusInternalServerError, "Une erreur est survenue. Réessayez dans un instant.")
 		return
 	}
-	// Staff otherwise only discover claims by visiting /admin/claims.
-	go a.notifyTelegram(msgNewClaim(companyName, cust.Email, baseUrl(r)))
+	// Staff otherwise only discover claims by visiting /admin/claims. The
+	// message carries approve/reject buttons keyed on the new claim id.
+	go a.notifyTelegramNewClaim(companyName, cust.Email, baseUrl(r), claimID)
 	http.Redirect(w, r, "/account", http.StatusSeeOther)
 }

@@ -114,7 +114,7 @@ func TestClaims_LifecycleApprove(t *testing.T) {
 	}
 
 	// Submit → pending.
-	if err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "+243900000001", RelationshipOwner, goodEvidence); err != nil {
+	if _, err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "+243900000001", RelationshipOwner, goodEvidence); err != nil {
 		t.Fatalf("submit: %v", err)
 	}
 	st, _ = StateForCompany(ctx, claimsPool, company, cust.ID)
@@ -123,7 +123,7 @@ func TestClaims_LifecycleApprove(t *testing.T) {
 	}
 
 	// Another customer cannot pile on while pending.
-	if err := Submit(ctx, claimsPool, company, other.ID, other.Email, "", RelationshipOwner, goodEvidence); err != ErrAlreadyPending {
+	if _, err := Submit(ctx, claimsPool, company, other.ID, other.Email, "", RelationshipOwner, goodEvidence); err != ErrAlreadyPending {
 		t.Fatalf("second submit: got %v, want ErrAlreadyPending", err)
 	}
 
@@ -147,7 +147,7 @@ func TestClaims_LifecycleApprove(t *testing.T) {
 	}
 
 	// New claims on an approved company are refused.
-	if err := Submit(ctx, claimsPool, company, other.ID, other.Email, "", RelationshipManager, goodEvidence); err != ErrAlreadyClaimed {
+	if _, err := Submit(ctx, claimsPool, company, other.ID, other.Email, "", RelationshipManager, goodEvidence); err != ErrAlreadyClaimed {
 		t.Fatalf("submit after approve: got %v, want ErrAlreadyClaimed", err)
 	}
 }
@@ -159,7 +159,7 @@ func TestClaims_LifecycleRejectThenRetry(t *testing.T) {
 	company := newCompany(t, "reject")
 	staff := newStaff(t)
 
-	if err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "", RelationshipOther, goodEvidence); err != nil {
+	if _, err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "", RelationshipOther, goodEvidence); err != nil {
 		t.Fatalf("submit: %v", err)
 	}
 	claimID := firstClaimID(t, company)
@@ -174,7 +174,7 @@ func TestClaims_LifecycleRejectThenRetry(t *testing.T) {
 	if st.Claimed || st.Pending {
 		t.Fatalf("after reject state = %+v", st)
 	}
-	if err := Submit(ctx, claimsPool, company, other.ID, other.Email, "", RelationshipOwner, goodEvidence+" Second essai."); err != nil {
+	if _, err := Submit(ctx, claimsPool, company, other.ID, other.Email, "", RelationshipOwner, goodEvidence+" Second essai."); err != nil {
 		t.Fatalf("retry after reject: %v", err)
 	}
 
@@ -191,13 +191,13 @@ func TestClaims_Validation(t *testing.T) {
 	cust := newCustomer(t, "val")
 	company := newCompany(t, "val")
 
-	if err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "", "boss", goodEvidence); err != ErrInvalidRelationship {
+	if _, err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "", "boss", goodEvidence); err != ErrInvalidRelationship {
 		t.Fatalf("bad relationship: got %v", err)
 	}
-	if err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "", RelationshipOwner, "trop court"); err != ErrEvidenceTooShort {
+	if _, err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "", RelationshipOwner, "trop court"); err != ErrEvidenceTooShort {
 		t.Fatalf("short evidence: got %v", err)
 	}
-	if err := Submit(ctx, claimsPool, "missing-company", cust.ID, cust.Email, "", RelationshipOwner, goodEvidence); err != ErrCompanyNotFound {
+	if _, err := Submit(ctx, claimsPool, "missing-company", cust.ID, cust.Email, "", RelationshipOwner, goodEvidence); err != ErrCompanyNotFound {
 		t.Fatalf("missing company: got %v", err)
 	}
 }
@@ -208,7 +208,7 @@ func TestClaims_Lists(t *testing.T) {
 	company := newCompany(t, "list")
 	staff := newStaff(t)
 
-	if err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "", RelationshipOwner, goodEvidence); err != nil {
+	if _, err := Submit(ctx, claimsPool, company, cust.ID, cust.Email, "", RelationshipOwner, goodEvidence); err != nil {
 		t.Fatal(err)
 	}
 

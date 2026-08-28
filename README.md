@@ -99,6 +99,11 @@ whole stack including the app in Docker: `make dev-stack-up`.
 | `TELEGRAM_BOT_TOKEN` | *(empty = disabled)* | Bot token for staff notifications — both Telegram keys required together |
 | `TELEGRAM_CHAT_ID` | *(empty)* | Private staff chat id (negative for groups; read it from `getUpdates`) |
 
+When Telegram is configured the server also long-polls for bot updates: claim
+notifications carry approve/reject buttons, and the staff chat answers
+`/pending` and `/stats` (no extra env vars). One consumer per bot token — dev
+runs need their own bot, or they steal the production bot's updates.
+
 ## CLI flags
 
 | Flag | Purpose |
@@ -107,6 +112,7 @@ whole stack including the app in Docker: `make dev-stack-up`.
 | `-import` | Upsert the embedded legacy JSON into Postgres and exit |
 | `-create-admin` | Interactively create the first staff account and exit |
 | `-digest` | Send the daily staff digest to Telegram and exit (run by a systemd timer) |
+| `-link-telegram` | Interactively link a staff account to a Telegram user id and exit |
 
 ## API
 

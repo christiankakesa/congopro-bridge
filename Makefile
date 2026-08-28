@@ -76,7 +76,7 @@ RSYNC        := rsync -az --progress --delete \
          dev-deps-up dev-mail-down dev-mail-test dev-mail-up dev-search-reset dev-stack-down \
          dev-stack-logs dev-stack-logs-app dev-stack-reset dev-stack-up dev-test-integration \
          prod-app-logs prod-app-push prod-app-restart prod-app-start prod-app-status \
-         prod-digest-install prod-digest-now prod-digest-status \
+         prod-digest-install prod-digest-now prod-digest-status prod-staff-telegram-link \
          prod-app-stop prod-backup-install prod-backup-list prod-backup-logs prod-backup-offsite-configure prod-backup-offsite-pull prod-backup-offsite-status prod-db-restore-offsite prod-backup-now \
          prod-backup-pull prod-backup-status prod-bootstrap-all prod-bootstrap-app \
          prod-config-push prod-db-check prod-db-import prod-db-import-ads prod-db-install \
@@ -673,6 +673,15 @@ prod-digest-now:
 prod-digest-status:
 	@$(SSH) "sudo systemctl status congopro-bridge-digest.timer --no-pager -l || true"
 	@$(SSH) "sudo journalctl -u congopro-bridge-digest.service -n 10 --no-pager || true"
+
+# Links a staff account to a Telegram user id so bot quick actions
+# (approve/reject from the chat) are attributed to a real user. Interactive
+# wizard runs ON the server (binary + env live there — prod-db-migrate's
+# pattern, plus an explicit -t: the sudo'd stdin prompts need a TTY). The
+# id to enter is what the bot shows when an unlinked person taps a button.
+prod-staff-telegram-link:
+	@echo "▶ Linking staff ↔ Telegram on $(DEPLOY_HOST)…"
+	@ssh -t $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -link-telegram'"
 
 prod-backup-status:
 	@$(SSH) "sudo systemctl status congopro-bridge-db-backup.timer --no-pager -l || true"

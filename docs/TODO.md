@@ -6,12 +6,12 @@
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* Telegram bot v2: quick actions (approve/reject claims from the chat via
-  callback queries — needs a receiver and Telegram↔staff identity mapping;
-  v1 is deliberately send-only).
+* (nothing — pull from Later when ready)
 
 ## Later
 
+* PageSpeed milestone
+* SEO: Google Search Console & Google Analytics
 * Research: paid MCP server / API for B2B customers to point their own BI
   tools at their filtered data slice (Phase 4 in BACKEND_PROPOSAL.md — only
   worth building once auth + billing exist).
@@ -55,6 +55,15 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Telegram bot v2 (2026-08-29): quick actions — claim notifications carry
+  inline Approuver/Refuser buttons (callback queries via a getUpdates
+  long-poller; no webhook), plus /pending and /stats commands. Identity via
+  users.telegram_user_id (migration 00007) linked with `-link-telegram`
+  (`make prod-staff-telegram-link`); unlinked taps answer with the person's
+  Telegram id. Idempotent by claims.ErrAlreadyResolved (double-taps,
+  restart redelivery); decisions reuse the async decision email; one
+  getUpdates consumer per token — dev needs its own bot.
 
 * Telegram staff notifications v1 (2026-08-28): send-only bot posting to a
   private chat — new claims (with /admin/claims deep link), contact

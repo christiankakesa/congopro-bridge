@@ -92,16 +92,18 @@ func isUniqueViolation(err error, index string) bool {
 // Submit records a new pending claim for companyID by customerID. Friendly
 // errors come both from pre-checks and from the unique indexes (the latter
 // is what actually wins races).
-func Submit(ctx context.Context, db *pgxpool.Pool, companyID, customerID, claimantEmail, phone, relationship, evidence string) error {
+// Submit returns the new claim's id — the Telegram notification attaches
+// approve/reject buttons keyed on it.
+func Submit(ctx context.Context, db *pgxpool.Pool, companyID, customerID, claimantEmail, phone, relationship, evidence string) (claimID string, err error) {
 	if !ValidateRelationship(relationship) {
-		return ErrInvalidRelationship
+		return "", ErrInvalidRelationship
 	}
 	evidence = strings.TrimSpace(evidence)
 	if len(evidence) < 20 {
-		return ErrEvidenceTooShort
+		return "", ErrEvidenceTooShort
 	}
 	if len(evidence) > 4000 {
-		return ErrEvidenceTooLong
+		return "", ErrEvidenceTooLong
 	}
 
 	var claimed bool
@@ -109,28 +111,29 @@ func Submit(ctx context.Context, db *pgxpool.Pool, companyID, customerID, claima
 		`SELECT claimed_by_customer_id IS NOT NULL FROM companies WHERE id = $1`, companyID,
 	).Scan(&claimed); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrCompanyNotFound
+			return "", ErrCompanyNotFound
 		}
-		return err
+		return "", err
 	}
 	if claimed {
-		return ErrAlreadyClaimed
+		return "", ErrAlreadyClaimed
 	}
 
-	_, err := db.Exec(ctx, `
+	err = db.QueryRow(ctx, `
 		INSERT INTO company_claims (company_id, customer_id, claimant_email, contact_phone, relationship, evidence)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id`,
 		companyID, customerID, claimantEmail,
-		strings.TrimSpace(phone), relationship, evidence)
+		strings.TrimSpace(phone), relationship, evidence).Scan(&claimID)
 	switch {
 	case err == nil:
-		return nil
+		return claimID, nil
 	case isUniqueViolation(err, "one_pending_per_company"):
-		return ErrAlreadyPending
+		return "", ErrAlreadyPending
 	case isUniqueViolation(err, "one_approved_per_company"):
-		return ErrAlreadyClaimed
+		return "", ErrAlreadyClaimed
 	default:
-		return err
+		return "", err
 	}
 }
 

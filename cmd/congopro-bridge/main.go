@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -29,6 +30,7 @@ func main() {
 	importAdsFlag := flag.Bool("import-ads", false, "import campaigns from the legacy embedded ads.yml into postgres and exit")
 	createAdminFlag := flag.Bool("create-admin", false, "interactively create the first staff account and exit")
 	digestFlag := flag.Bool("digest", false, "compute and send the daily staff digest to Telegram, then exit")
+	linkTelegramFlag := flag.Bool("link-telegram", false, "interactively link a staff account to a Telegram user id and exit")
 	flag.Parse()
 
 	logLevel := logger.DetectLogLevel()
@@ -97,6 +99,21 @@ func main() {
 		defer pool.Close()
 		if err := createAdmin(ctx, pool); err != nil {
 			log.Fatal().Msgf("[create-admin] failed: %v", err)
+		}
+		return
+	}
+
+	if *linkTelegramFlag {
+		if cfg.DatabaseURL == "" {
+			log.Fatal().Msg("[link-telegram] DATABASE_URL is not set")
+		}
+		pool, err := db.New(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Fatal().Msgf("[link-telegram] failed to connect: %v", err)
+		}
+		defer pool.Close()
+		if err := linkTelegram(ctx, pool); err != nil {
+			log.Fatal().Msgf("[link-telegram] failed: %v", err)
 		}
 		return
 	}
@@ -208,11 +225,28 @@ func main() {
 	// log events to the staff chat — the hook is rate-limited and loop-safe
 	// (see internal/telegram/hook.go); flag modes returned earlier, so a CLI
 	// run never attaches it.
+	// Telegram: outbound notifications, the error-forwarding hook, and the
+	// bot v2 poller (inline approve/reject, /pending, /stats). The poller
+	// gets its own cancel func so shutdown can abort the in-flight 50s
+	// long poll immediately, and a done channel so we wait for it (capped).
+	pollCancel := func() {}
+	var pollerDone chan struct{}
 	if cfg.TelegramEnabled() {
 		tg := telegram.New(cfg.TelegramBotToken, cfg.TelegramChatID)
 		apiAppEngine.Telegram = tg
+		apiAppEngine.TelegramBot = tg
 		log.Logger = log.Logger.Hook(telegram.NewErrorHook(tg, 5))
-		log.Info().Msg("[startup] Telegram staff notifications enabled")
+
+		chatID, _ := strconv.ParseInt(cfg.TelegramChatID, 10, 64) // shape enforced by ValidateTelegram at boot
+		handler := &api.TelegramHandler{App: apiAppEngine, Resp: tg, ChatID: chatID}
+		var pollCtx context.Context
+		pollCtx, pollCancel = context.WithCancel(context.Background())
+		pollerDone = make(chan struct{})
+		go func() {
+			defer close(pollerDone)
+			telegram.Poll(pollCtx, tg, handler.HandleUpdate)
+		}()
+		log.Info().Msg("[startup] Telegram staff notifications + bot commands enabled")
 	} else {
 		log.Info().Msg("[startup] Telegram not configured — staff notifications disabled")
 	}
@@ -336,11 +370,23 @@ func main() {
 	<-stop
 	log.Info().Msg("[server] shutdown signal received, finishing active requests...")
 
+	// Aborts the poller's in-flight long poll immediately — without this,
+	// shutdown could sit behind up to 50s of quiet getUpdates.
+	pollCancel()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Error().Msgf("[server] forced shutdown due to error/timeout: %v", err)
+	}
+
+	if pollerDone != nil {
+		select {
+		case <-pollerDone:
+		case <-time.After(3 * time.Second):
+			log.Warn().Msg("[telegram] poller did not stop in time — exiting anyway")
+		}
 	}
 
 	log.Info().Msg("[server] successfully stopped")
