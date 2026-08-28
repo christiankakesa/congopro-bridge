@@ -21,8 +21,10 @@
   local Lighthouse against production measured **100/100/100/100**
   (round 1: 93/94/100/100; CLS 0.151 → 0.001, see SEO.md "Round 2").
 * Search Console: sitemap `https://congopro.com/sitemap.xml` submitted
-  2026-08-29 ✓. Watch Indexing → Pages while the www→apex consolidation
-  drains through as "Page with redirect" entries.
+  2026-08-29 ✓. Baseline captured in SEO.md (exports through ~08-21):
+  952 apex pages sat excluded as "alternate of www" — watch that bucket
+  flip to Indexed and the 5xx bucket (176, deploy-window 503s, fixed via
+  DataReady) drain. Re-export Coverage in ~2 weeks and compare.
 
 ## Later
 

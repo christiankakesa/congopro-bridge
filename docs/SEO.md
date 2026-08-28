@@ -109,6 +109,32 @@ not worth a Node build dependency); htmx's ES5 patterns ("legacy
 JavaScript"). Speed Index reflects the late cookie-banner paint, which is
 the banner doing its job.
 
+## Search Console baseline (exports of 2026-08-29, data through ~08-21 — pre-fix)
+
+The coverage report taken just before the canonical fix shows exactly the
+damage the fix targets. Keep these numbers; the buckets should drain against
+them over the following weeks:
+
+| Bucket | Pages | What it actually is |
+|---|---|---|
+| Alternate page with proper canonical | 952 | **The www bug live**: apex `/company/*` pages excluded because their canonical said www. Should flip to Indexed as recrawl sees apex self-canonicals. |
+| Duplicate, Google chose different canonical | 252 | www URLs where Google overrode the tag and picked apex anyway. Moves to "Page with redirect". |
+| Crawled – currently not indexed | 1385 | Mostly host/lang variants of the same profile splitting signals; expect shrink after consolidation. What remains is thin-content profiles. |
+| Page with redirect | 1330 | Legacy `/fr/…`, `/en/…` 301s doing their job; www joins this bucket now. Not a problem. |
+| Blocked by robots.txt | 1307 | Stale June entries: legacy `?page=&q=` and `/fr/company/*` URLs blocked by the *old* site's robots.txt; ours blocks nothing. Drains as recrawled. |
+| Server error (5xx) | 176 | Real bug, fixed 2026-08-29: company pages 503'd during every deploy's Meilisearch indexing+embedding wait. Profiles now gate on `DataReady` (in-memory data, ready in seconds). |
+| Excluded by noindex | 824 | Legacy `/proposals/*` URLs from the old platform (April dates). Ages out; not ours. |
+| Not found (404) | 53 | Dead legacy slugs; 404 is the correct answer. |
+
+Search performance (92 days to 08-26): 533 clicks / 32.5k impressions,
+month-over-month **doubling** (126→234 clicks, 6.9k→11.9k impressions),
+avg position ~9. Every top page is indexed under **www** — the traffic will
+migrate to apex URLs as consolidation lands; a dip-and-recover in the Pages
+report during the move is normal. Traffic is 74% mobile, 61% RDC. Crawl
+stats: www ate 3,491 of 13,735 crawl requests (25% of budget, freed by the
+301); "robots.txt not available" was 3.5% of fetches — deploy-restart blips
+that pause all crawling; both hosts show "Problems in the past" for it.
+
 ## Search Console — property exists for years; what this milestone changes
 
 No setup needed. After deploying this milestone:

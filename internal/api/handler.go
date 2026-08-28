@@ -408,13 +408,18 @@ func (a *AppEngine) CompanyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// DataReady, not IndexingDone: the profile is served from the in-memory
+	// maps, which are ready seconds after boot — waiting for Meilisearch
+	// indexing + embeddings here turned every deploy into a 503 window that
+	// Googlebot kept catching (GSC "Server error (5xx)": 176 company URLs).
 	select {
-	case <-a.Engine.IndexingDone:
+	case <-a.Engine.DataReady:
 	case <-r.Context().Done():
 		return
 	default:
+		w.Header().Set("Retry-After", "30")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("server still indexing, please retry"))
+		w.Write([]byte("server starting, please retry"))
 		return
 	}
 

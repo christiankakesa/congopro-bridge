@@ -128,6 +128,16 @@ type Engine struct {
 	initErr      error
 	IndexingDone chan struct{}
 
+	// DataReady closes as soon as the companies are loaded in memory —
+	// seconds after boot, long before IndexingDone, which also waits out
+	// Meilisearch indexing + embeddings ("minutes, under load"). Company
+	// profiles only need the in-memory maps, and gating them on
+	// IndexingDone made every deploy a minutes-long 503 window for ~1500
+	// company URLs — the "Server error (5xx)" bucket (176 pages) in Search
+	// Console's coverage report.
+	DataReady     chan struct{}
+	dataReadyOnce sync.Once
+
 	// SitemapCache is the plain XML (served at /sitemap.xml, compressed on
 	// the wire by Traefik); SitemapGzCache is the same bytes pre-gzipped,
 	// served at /sitemap.xml.gz as an actual .gz file per the sitemap spec.
@@ -153,6 +163,7 @@ func NewEngine(cfg *config.Config, pool *pgxpool.Pool) *Engine {
 		Config:       cfg,
 		db:           pool,
 		IndexingDone: make(chan struct{}),
+		DataReady:    make(chan struct{}),
 		companyMap:   make(map[string]*Company),
 		slugMap:      make(map[string]*Company),
 		meiliClient:  client,
@@ -277,6 +288,8 @@ func (e *Engine) loadAndIndexOnce() error {
 	e.companyMap = companyMap
 	e.slugMap = slugMap
 	e.mu.Unlock()
+
+	e.dataReadyOnce.Do(func() { close(e.DataReady) })
 
 	if err := e.indexMeili(companies); err != nil {
 		return fmt.Errorf("meilisearch indexing: %w", err)
