@@ -12,3 +12,10 @@
 .claude/*
 !.claude/skills/
 congopro-bridge-logos.zip
+
+# DMARC aggregate reports dropped here while debugging deliverability.
+# They live in ~/dmarc-reports/<domain>/ — the repo is not an inbox.
+*!congopro.com!*.zip
+*!congopro.com!*.xml.gz
+# WSL alternate-data-stream files left behind by Windows downloads.
+*:Zone.Identifier
