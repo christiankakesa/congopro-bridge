@@ -52,6 +52,10 @@ type AppEngine struct {
 	StripeCheckout      CheckoutCreator
 	StripeEnabled       bool
 	StripeWebhookSecret string
+	// StripeSubs reads live subscription amounts for /admin/revenue.
+	// nil (Stripe disabled or faked out in tests) renders the page with a
+	// warning banner and blank amounts instead of failing.
+	StripeSubs SubscriptionReader
 }
 
 type ErrorResponse struct {

@@ -10,6 +10,9 @@ import (
 	stripeg "github.com/stripe/stripe-go/v82"
 	stripecheckout "github.com/stripe/stripe-go/v82/checkout/session"
 	stripeprice "github.com/stripe/stripe-go/v82/price"
+	stripesub "github.com/stripe/stripe-go/v82/subscription"
+
+	"congopro-bridge/internal/promotions"
 )
 
 // Stripe plumbing for promoted listings. The service is wired into
@@ -33,6 +36,29 @@ type PriceDisplay struct {
 	Interval string // "month" | "year"
 }
 
+// SubAmount is one subscription's recurring amount, live from Stripe.
+// Prices are immutable once used, so subscribers created at different
+// times can be on different amounts — the local promotions table stores
+// none of this on purpose (Stripe stays the source of truth for money).
+type SubAmount struct {
+	Amount   int64  // cents per interval
+	Currency string // lowercase ISO code
+	Interval string // "month" | "year"
+}
+
+// SubscriptionReader fetches live amounts for the revenue page and the
+// daily digest. Separate from CheckoutCreator so existing fakes keep
+// compiling and tests can fake just the read side.
+type SubscriptionReader interface {
+	SubscriptionAmounts(ctx context.Context, subIDs []string) (map[string]SubAmount, error)
+}
+
+// StripeService is what NewStripeService returns: checkout plus read side.
+type StripeService interface {
+	CheckoutCreator
+	SubscriptionReader
+}
+
 type stripeService struct {
 	apiKey  string
 	priceID string
@@ -40,15 +66,17 @@ type stripeService struct {
 	mu          sync.Mutex
 	priceOnce   bool
 	priceCached PriceDisplay
+	subsCached  map[string]SubAmount
+	subsFetched time.Time
 }
 
-// NewStripeService builds the real CheckoutCreator for AppEngine wiring.
-func NewStripeService(apiKey, priceID string) CheckoutCreator {
+// NewStripeService builds the real Stripe service for AppEngine wiring.
+func NewStripeService(apiKey, priceID string) StripeService {
 	stripeg.Key = apiKey
 	return &stripeService{apiKey: apiKey, priceID: priceID}
 }
 
-var _ CheckoutCreator = (*stripeService)(nil)
+var _ StripeService = (*stripeService)(nil)
 
 func (s *stripeService) CreatePromotionSession(ctx context.Context, promotionID, customerEmail, successURL, cancelURL string) (string, string, error) {
 	params := &stripeg.CheckoutSessionParams{
@@ -89,6 +117,85 @@ func (s *stripeService) PriceDisplay(ctx context.Context) (PriceDisplay, bool) {
 	s.priceCached = display
 	s.priceOnce = true
 	return display, true
+}
+
+// subsCacheTTL keeps admin page reloads from hammering Stripe; one minute
+// of staleness on a revenue readout costs nothing.
+const subsCacheTTL = time.Minute
+
+// SubscriptionAmounts fetches each subscription's recurring amount. Per-ID
+// Get is fine at this scale (a handful of live promotions); all-or-nothing
+// on error keeps the caller's degradation story simple (banner + blank
+// amounts, never a half-filled table).
+func (s *stripeService) SubscriptionAmounts(ctx context.Context, subIDs []string) (map[string]SubAmount, error) {
+	s.mu.Lock()
+	if s.subsCached != nil && time.Since(s.subsFetched) < subsCacheTTL && coversAll(s.subsCached, subIDs) {
+		cached := s.subsCached
+		s.mu.Unlock()
+		return cached, nil
+	}
+	s.mu.Unlock()
+
+	out := make(map[string]SubAmount, len(subIDs))
+	for _, id := range subIDs {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		sub, err := stripesub.Get(id, nil)
+		if err != nil {
+			return nil, fmt.Errorf("stripe subscription %s: %w", id, err)
+		}
+		if len(sub.Items.Data) == 0 || sub.Items.Data[0].Price == nil {
+			continue // defensive: a subscription without a priced item has no amount to show
+		}
+		item := sub.Items.Data[0]
+		amt := SubAmount{
+			Amount:   item.Price.UnitAmount * max(item.Quantity, 1),
+			Currency: string(item.Price.Currency),
+		}
+		if item.Price.Recurring != nil {
+			amt.Interval = string(item.Price.Recurring.Interval)
+		}
+		out[id] = amt
+	}
+
+	s.mu.Lock()
+	s.subsCached = out
+	s.subsFetched = time.Now()
+	s.mu.Unlock()
+	return out, nil
+}
+
+func coversAll(cache map[string]SubAmount, ids []string) bool {
+	for _, id := range ids {
+		if _, ok := cache[id]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// ComputeMRR sums monthly-equivalent cents over ACTIVE promotions with a
+// known amount; yearly intervals divide by 12 (integer cents). past_due is
+// excluded — revenue at risk is not revenue.
+func ComputeMRR(promos []promotions.Promotion, amounts map[string]SubAmount) int64 {
+	var mrr int64
+	for _, p := range promos {
+		if p.Status != "active" {
+			continue
+		}
+		amt, ok := amounts[p.StripeSubscriptionID]
+		if !ok {
+			continue
+		}
+		switch amt.Interval {
+		case "year":
+			mrr += amt.Amount / 12
+		default: // "month" and anything unrecognized counts as-is
+			mrr += amt.Amount
+		}
+	}
+	return mrr
 }
 
 // FormatPrice renders a PriceDisplay for the French UI: "10.00 $ / mois".

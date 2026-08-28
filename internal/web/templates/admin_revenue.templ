@@ -1,0 +1,173 @@
+package templates
+
+import (
+	"fmt"
+	"strings"
+)
+
+// AdminRevenueData backs /admin/revenue. Money arrives as cents and is
+// formatted here; rows carry preformatted display strings — the template
+// stays dumb.
+type AdminRevenueData struct {
+	MRRCents    int64
+	StripeWarn  bool // Stripe unreachable or disabled: banner + blank amounts
+	ActiveCount int  // live promotions (active + past_due)
+
+	Promotions []RevenuePromotion
+	Ads        []RevenueAd
+
+	AdsTotalCents  int64
+	AdsActiveCents int64
+}
+
+// RevenuePromotion is one subscription row; Amount is empty when Stripe
+// could not be read.
+type RevenuePromotion struct {
+	CompanyName   string
+	CompanySlug   string
+	CustomerEmail string
+	Status        string
+	Amount        string // "15.00 $ / mois", "" when unknown
+	PeriodEnd     string // "02/01/2006", "" when unset
+	CreatedAt     string
+}
+
+// RevenueAd is one priced campaign from the ads sales ledger.
+type RevenueAd struct {
+	Title         string
+	Status        string
+	Price         string
+	CustomerEmail string
+	SoldBy        string
+	CreatedAt     string
+}
+
+templ AdminRevenue(nonce string, nav AdminNav, d AdminRevenueData) {
+	@AdminLayout("Revenus", nonce, nav) {
+		<div class="mb-6">
+			<h1 class="text-xl font-sora font-semibold text-ink">Revenus</h1>
+		</div>
+		if d.StripeWarn {
+			<div class="mb-6 flex items-center gap-2.5 rounded-xl bg-warning-soft border border-warning-soft text-warning text-sm px-4 py-3">
+				<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+				Stripe injoignable — montants indisponibles, données locales affichées.
+			</div>
+		}
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+			@revenueTile("MRR (mises en avant)", mrrDisplay(d))
+			@revenueTile("Mises en avant actives", formatTotal(d.ActiveCount))
+			@revenueTile("Publicités (actives)", FormatMoney(d.AdsActiveCents, "usd"))
+			@revenueTile("Publicités (total vendu)", FormatMoney(d.AdsTotalCents, "usd"))
+		</div>
+		<section class="mb-10">
+			<h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-ink-faint mb-3">Mises en avant</h2>
+			<div class="bg-surface-raised rounded-2xl border border-line shadow-card overflow-x-auto">
+				if len(d.Promotions) == 0 {
+					<div class="px-4 py-8 text-sm text-ink-faint text-center">Aucune mise en avant pour l'instant.</div>
+				} else {
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="text-left text-xs text-ink-faint uppercase border-b border-line bg-surface-sunken">
+								<th class="px-4 py-2.5 font-medium">Entreprise</th>
+								<th class="px-4 py-2.5 font-medium">Client</th>
+								<th class="px-4 py-2.5 font-medium">Statut</th>
+								<th class="px-4 py-2.5 font-medium">Montant</th>
+								<th class="px-4 py-2.5 font-medium">Fin de période</th>
+								<th class="px-4 py-2.5 font-medium">Depuis</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-line">
+							for _, p := range d.Promotions {
+								<tr class="hover:bg-surface-sunken transition-colors">
+									<td class="px-4 py-3">
+										<a href={ templ.URL("/company/" + p.CompanySlug) } class="font-medium text-ink hover:text-accent">{ p.CompanyName }</a>
+									</td>
+									<td class="px-4 py-3 text-ink-muted">{ p.CustomerEmail }</td>
+									<td class="px-4 py-3">@promoStatusBadge(p.Status)</td>
+									<td class="px-4 py-3 text-ink whitespace-nowrap">
+										if p.Amount != "" {
+											{ p.Amount }
+										} else {
+											<span class="text-ink-faint">—</span>
+										}
+									</td>
+									<td class="px-4 py-3 text-ink-faint whitespace-nowrap">{ p.PeriodEnd }</td>
+									<td class="px-4 py-3 text-ink-faint whitespace-nowrap">{ p.CreatedAt }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				}
+			</div>
+		</section>
+		<section>
+			<h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-ink-faint mb-3">Publicités vendues</h2>
+			<div class="bg-surface-raised rounded-2xl border border-line shadow-card overflow-x-auto">
+				if len(d.Ads) == 0 {
+					<div class="px-4 py-8 text-sm text-ink-faint text-center">Aucune campagne avec un prix enregistré.</div>
+				} else {
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="text-left text-xs text-ink-faint uppercase border-b border-line bg-surface-sunken">
+								<th class="px-4 py-2.5 font-medium">Campagne</th>
+								<th class="px-4 py-2.5 font-medium">Statut</th>
+								<th class="px-4 py-2.5 font-medium">Prix</th>
+								<th class="px-4 py-2.5 font-medium">Client</th>
+								<th class="px-4 py-2.5 font-medium">Vendue par</th>
+								<th class="px-4 py-2.5 font-medium">Créée le</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-line">
+							for _, ad := range d.Ads {
+								<tr class="hover:bg-surface-sunken transition-colors">
+									<td class="px-4 py-3 font-medium text-ink">{ ad.Title }</td>
+									<td class="px-4 py-3">@adStatusBadge(ad.Status)</td>
+									<td class="px-4 py-3 text-ink whitespace-nowrap">{ ad.Price }</td>
+									<td class="px-4 py-3 text-ink-muted">{ ad.CustomerEmail }</td>
+									<td class="px-4 py-3 text-ink-muted">{ ad.SoldBy }</td>
+									<td class="px-4 py-3 text-ink-faint whitespace-nowrap">{ ad.CreatedAt }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				}
+			</div>
+		</section>
+	}
+}
+
+// revenueTile is a non-link stat tile — unlike the dashboard's statTile
+// there is nowhere further to click through to.
+templ revenueTile(label, value string) {
+	<div class="rounded-2xl border border-line bg-surface-raised shadow-card p-4">
+		<p class="text-xs font-medium text-ink-faint">{ label }</p>
+		<p class="font-sora font-semibold text-[26px] text-ink mt-1">{ value }</p>
+	</div>
+}
+
+// Status badges are shared: promoStatusBadge from account.templ (same
+// states, same colors) and adStatusBadge from admin_ads.templ.
+
+func mrrDisplay(d AdminRevenueData) string {
+	if d.StripeWarn {
+		return "—"
+	}
+	return FormatMoney(d.MRRCents, "usd") + " / mois"
+}
+
+// FormatMoney renders cents as "1 234.56 $" — two decimals like FormatPrice,
+// thousands grouped with thin spaces like formatTotal. Currency case is
+// normalized (Stripe sends "usd", the ads table stores "USD").
+func FormatMoney(cents int64, currency string) string {
+	sign := ""
+	if cents < 0 {
+		sign = "-"
+		cents = -cents
+	}
+	whole := formatTotal(int(cents / 100))
+	symbol := map[string]string{"usd": "$", "eur": "€"}[strings.ToLower(currency)]
+	if symbol == "" {
+		symbol = strings.ToUpper(currency)
+	}
+	return fmt.Sprintf("%s%s.%02d %s", sign, whole, cents%100, symbol)
+}

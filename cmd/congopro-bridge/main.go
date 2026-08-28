@@ -162,7 +162,9 @@ func main() {
 	// Promoted listings (Stripe). All-or-nothing keys; none disables the
 	// promote endpoints cleanly.
 	if cfg.StripeEnabled() {
-		apiAppEngine.StripeCheckout = api.NewStripeService(cfg.StripeSecretKey, cfg.StripePriceID)
+		stripeSvc := api.NewStripeService(cfg.StripeSecretKey, cfg.StripePriceID)
+		apiAppEngine.StripeCheckout = stripeSvc
+		apiAppEngine.StripeSubs = stripeSvc
 		apiAppEngine.StripeEnabled = true
 		apiAppEngine.StripeWebhookSecret = cfg.StripeWebhookSecret
 		log.Info().Msgf("[startup] Stripe enabled (price %s)", cfg.StripePriceID)
@@ -225,6 +227,7 @@ func main() {
 	mux.HandleFunc("GET /admin/claims", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimsListHandler)))
 	mux.HandleFunc("POST /admin/claims/{id}/approve", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimApproveHandler)))
 	mux.HandleFunc("POST /admin/claims/{id}/reject", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminClaimRejectHandler)))
+	mux.HandleFunc("GET /admin/revenue", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminRevenueHandler)))
 	mux.HandleFunc("GET /admin/ads", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdsListHandler)))
 	mux.HandleFunc("POST /admin/ads/settings", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdsSettingsHandler)))
 	mux.HandleFunc("GET /admin/ads/new", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdNewFormHandler)))

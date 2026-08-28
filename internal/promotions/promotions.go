@@ -31,6 +31,7 @@ type Promotion struct {
 	CompanyName          string
 	CompanyNameSeo       string
 	CustomerID           string
+	CustomerEmail        string // joined for the admin revenue view; empty elsewhere
 	StripeCustomerID     string
 	StripeSubscriptionID string
 	StripeSessionID      string
@@ -130,6 +131,36 @@ func ForCustomer(ctx context.Context, db *pgxpool.Pool, customerID string) ([]Pr
 		if err := rows.Scan(&p.ID, &p.CompanyID, &p.CompanyName, &p.CompanyNameSeo,
 			&p.CustomerID, &p.StripeCustomerID, &p.StripeSubscriptionID, &p.StripeSessionID,
 			&p.Status, &p.CurrentPeriodEnd, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// AllForAdmin lists every promotion for the revenue page, newest first,
+// with company name and customer email joined for display. LIMIT 200 keeps
+// the page bounded; refine with filters if the business ever outgrows it.
+func AllForAdmin(ctx context.Context, db *pgxpool.Pool) ([]Promotion, error) {
+	rows, err := db.Query(ctx, `
+		SELECT p.id, p.company_id, co.name, co.name_seo, p.customer_id, cu.email,
+		       p.stripe_customer_id, p.stripe_subscription_id, p.stripe_session_id,
+		       p.status, p.current_period_end, p.created_at
+		FROM promotions p
+		JOIN companies co ON co.id = p.company_id
+		JOIN customers cu ON cu.id = p.customer_id
+		ORDER BY p.created_at DESC
+		LIMIT 200`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Promotion
+	for rows.Next() {
+		var p Promotion
+		if err := rows.Scan(&p.ID, &p.CompanyID, &p.CompanyName, &p.CompanyNameSeo,
+			&p.CustomerID, &p.CustomerEmail, &p.StripeCustomerID, &p.StripeSubscriptionID,
+			&p.StripeSessionID, &p.Status, &p.CurrentPeriodEnd, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, p)

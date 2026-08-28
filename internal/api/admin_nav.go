@@ -30,6 +30,8 @@ func (a *AppEngine) adminNav(r *http.Request) templates.AdminNav {
 		nav.Active = "claims"
 	case strings.HasPrefix(r.URL.Path, "/admin/ads"):
 		nav.Active = "ads"
+	case strings.HasPrefix(r.URL.Path, "/admin/revenue"):
+		nav.Active = "revenue"
 	default:
 		nav.Active = "dashboard"
 	}

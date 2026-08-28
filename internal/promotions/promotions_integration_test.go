@@ -112,6 +112,28 @@ func TestPromotions_FullLifecycle(t *testing.T) {
 		t.Fatalf("replay: %v", err)
 	}
 
+	// The admin revenue listing sees the promotion with the customer email
+	// joined (the display join is the whole point of AllForAdmin).
+	all, err := AllForAdmin(ctx, promoPool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, p := range all {
+		if p.CompanyID == companyID {
+			found = true
+			if p.CustomerEmail == "" {
+				t.Error("AllForAdmin: customer email not joined")
+			}
+			if p.Status != "active" {
+				t.Errorf("AllForAdmin: status = %q, want active", p.Status)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("AllForAdmin: activated promotion not listed")
+	}
+
 	// subscription.updated → past_due; badge still shows (grace).
 	if err := ApplySubscriptionUpdated(ctx, promoPool, "sub_test_1", "past_due", periodEnd); err != nil {
 		t.Fatal(err)

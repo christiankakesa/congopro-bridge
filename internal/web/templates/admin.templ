@@ -87,7 +87,7 @@ type AdminNav struct {
 	UserName      string
 	Role          string
 	PendingClaims int
-	Active        string // "dashboard" | "companies" | "claims" | "ads"
+	Active        string // "dashboard" | "companies" | "claims" | "ads" | "revenue"
 	Flash         string
 }
 
@@ -117,6 +117,7 @@ templ AdminLayout(title, nonce string, nav AdminNav) {
 							@adminNavLink(nav, "companies", "/admin/companies", "Entreprises", true)
 							@adminNavLink(nav, "claims", "/admin/claims", "Réclamations", true)
 							@adminNavLink(nav, "ads", "/admin/ads", "Publicités", true)
+							@adminNavLink(nav, "revenue", "/admin/revenue", "Revenus", true)
 						</nav>
 						<div class="mt-auto flex flex-col gap-3 text-xs">
 							@themeToggle(nonce)
@@ -147,6 +148,7 @@ templ AdminLayout(title, nonce string, nav AdminNav) {
 							@adminNavLink(nav, "companies", "/admin/companies", "Entreprises", false)
 							@adminNavLink(nav, "claims", "/admin/claims", "Réclamations", false)
 							@adminNavLink(nav, "ads", "/admin/ads", "Publicités", false)
+							@adminNavLink(nav, "revenue", "/admin/revenue", "Revenus", false)
 						</nav>
 						<main class="max-w-5xl px-4 sm:px-6 py-6 md:py-8">
 							{ children... }

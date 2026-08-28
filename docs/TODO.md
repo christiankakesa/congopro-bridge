@@ -7,7 +7,6 @@
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
 * Telegram bot as notification/quick-action layer on top of the CMS.
-* Admin revenue view (promotions + ads attribution).
 
 ## Later
 
@@ -54,6 +53,13 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Admin revenue view (2026-08-28): /admin/revenue — MRR and per-subscription
+  amounts fetched live from Stripe (prices are immutable, so old subscribers
+  can be on different amounts; the local table deliberately stores no money),
+  60s cache, 5s timeout, warning-banner degradation when Stripe is down;
+  promotions table with customer emails joined, ads sales ledger with
+  attribution from price_cents/sold_by.
 
 * Promoted-listing ranking (2026-08-28): promoted companies pin to the top
   of matching search results, Go-side (`pinPromoted` in the search handler)
