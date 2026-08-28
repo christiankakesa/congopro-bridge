@@ -271,7 +271,8 @@ func main() {
 	contactRL := ratelimiter.NewRateLimiter(5) // sending mail costs money
 	mux.HandleFunc("GET /contact", apiAppEngine.WithSecurityHeaders(apiAppEngine.ContactPageHandler))
 	mux.HandleFunc("POST /contact", apiAppEngine.WithSecurityHeaders(contactRL.WithRateLimit(apiAppEngine.ContactSubmitHandler)))
-	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapHandler)
+	mux.HandleFunc("GET /sitemap.xml", apiAppEngine.SitemapHandler)
+	mux.HandleFunc("GET /sitemap.xml.gz", apiAppEngine.SitemapGzHandler)
 
 	// Ads preview
 	mux.HandleFunc("GET /ads-preview", apiAppEngine.WithSecurityHeaders(apiAppEngine.AdsPreviewPageHandler))

@@ -78,7 +78,7 @@ func AdsPreviewPage(canonicalURL, nonce, cssVersion string, previews []ads.AdWir
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Formats publicitaires | Congopro Bridge", canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Formats publicitaires | Congopro Bridge", "Guide de référence des formats publicitaires sur Congopro Bridge : emplacements, tailles et exemples réels.", canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

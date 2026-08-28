@@ -207,7 +207,7 @@ func ContactPage(canonicalURL, nonce, cssVersion string, form ContactForm, field
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Contact | Congopro Bridge", canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Contact | Congopro Bridge", "Contactez l'équipe Congopro : question, correction d'une fiche entreprise ou demande publicitaire. Réponse sous 48 heures ouvrées.", canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

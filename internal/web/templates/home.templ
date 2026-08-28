@@ -7,7 +7,8 @@ package templates
 // with the oob fragments in search_results.templ / ads.templ — keep them
 // stable. Footer, scroll-to-top and cookie consent come from Layout.
 templ HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int) {
-	@Layout(title, canonicalURL, nonce, cssVersion) {
+	@Layout(title, "", canonicalURL, nonce, cssVersion) {
+		@homeStructuredData()
 		<div id="homepage" class="relative w-full flex flex-col items-center justify-center flex-1 px-4 pt-20 pb-12">
 		  <div class="absolute top-0 inset-x-0">
 		    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3 text-sm">
@@ -174,4 +175,12 @@ templ HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int
 // for the hero stats line ("12 800+").
 func approxCompanies(n int) string {
 	return formatTotal(n/100*100) + "+"
+}
+
+// homeStructuredData is the site-level JSON-LD, emitted on the homepage only
+// (Google reads WebSite/Organization markup from the homepage). SearchAction
+// mirrors the real search URL shape (/?q=…) so Google can offer a sitelinks
+// search box. JSON-LD data blocks never execute, so CSP needs no nonce here.
+templ homeStructuredData() {
+	@templ.Raw(`<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://congopro.com/#website","url":"https://congopro.com/","name":"Congopro","inLanguage":"fr","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://congopro.com/?q={search_term_string}"},"query-input":"required name=search_term_string"}},{"@type":"Organization","@id":"https://congopro.com/#organization","name":"Congopro","url":"https://congopro.com/","logo":"https://congopro.com/images/android-chrome-512x512.png"}]}</script>`)
 }

@@ -25,7 +25,7 @@ type ContactForm struct {
 // limit, fixed recipient) protect the form, not a published address.
 // Replying from the mailbox is what gives a correspondent the address.
 templ ContactPage(canonicalURL, nonce, cssVersion string, form ContactForm, fieldErrors map[string]string, sent, mailEnabled bool) {
-	@Layout("Contact | Congopro Bridge", canonicalURL, nonce, cssVersion) {
+	@Layout("Contact | Congopro Bridge", "Contactez l'équipe Congopro : question, correction d'une fiche entreprise ou demande publicitaire. Réponse sous 48 heures ouvrées.", canonicalURL, nonce, cssVersion) {
 		@siteHeader()
 		<main class="w-full max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-24">
 			<h1 class="font-sora font-semibold text-3xl text-ink tracking-tight">Nous contacter</h1>

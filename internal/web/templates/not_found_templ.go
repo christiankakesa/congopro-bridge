@@ -55,7 +55,7 @@ func NotFoundPage(canonicalURL, nonce, cssVersion string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Page introuvable | Congopro", canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Page introuvable | Congopro", "", canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

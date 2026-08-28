@@ -1,5 +1,4 @@
 User-agent: *
-Crawl-delay: 5
 
 # Sitemap location
-Sitemap: https://congopro.com/sitemap.xml.gz
+Sitemap: https://congopro.com/sitemap.xml

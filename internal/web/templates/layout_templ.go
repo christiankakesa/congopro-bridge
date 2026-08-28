@@ -18,7 +18,7 @@ package templates
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-func Layout(title, canonicalURL, nonce, cssVersion string) templ.Component {
+func Layout(title, description, canonicalURL, nonce, cssVersion string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -52,20 +52,111 @@ func Layout(title, canonicalURL, nonce, cssVersion string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><meta name=\"description\" content=\"Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA.\"><meta name=\"keywords\" content=\"Congopro, moteur de recherche RDC, annuaire entreprises Congo, professionnels RDC, services Kinshasa, intelligence artificielle Congo, trouver entreprise RDC, business RDC, IA Congo\"><meta name=\"robots\" content=\"index,follow\"><meta name=\"author\" content=\"Congopro\"><link rel=\"canonical\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><meta name=\"description\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var3 templ.SafeURL
-		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(canonicalURL)
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(metaDescription(description))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 29, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 19, Col: 66}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"><!-- ========================================== --><!-- Open Graph (Facebook, LinkedIn, WhatsApp) --><!-- ========================================== --><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"https://www.congopro.com/\"><meta property=\"og:title\" content=\"Congopro | Moteur de recherche boosté à l'IA\"><meta property=\"og:description\" content=\"Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA.\"><meta property=\"og:image\" content=\"https://www.congopro.com/images/og-image.png\"><meta property=\"og:site_name\" content=\"Congopro\"><meta property=\"og:locale\" content=\"fr_FR\"><!-- ========================================== --><!-- Twitter Card --><!-- ========================================== --><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:url\" content=\"https://www.congopro.com/\"><meta name=\"twitter:title\" content=\"Congopro | Moteur de recherche boosté à l'IA\"><meta name=\"twitter:description\" content=\"Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance en RDC grâce à l'IA.\"><meta name=\"twitter:image\" content=\"https://www.congopro.com/images/twitter-image.png\"><meta name=\"twitter:site\" content=\"@Congopro\"><!-- ========================================== --><!-- Favicons & App Icons --><!-- ========================================== --><link rel=\"icon\" href=\"/images/favicon.svg\" type=\"image/svg+xml\"><link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/images/favicon-32x32.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/images/favicon-16x16.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"192x192\" href=\"/images/android-chrome-192x192.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"512x512\" href=\"/images/android-chrome-512x512.png\"><link rel=\"icon\" href=\"/favicon.ico\"><!-- Favicon standard (Anciens navigateurs) --><link rel=\"shortcut icon\" href=\"/favicon.ico\" type=\"image/x-icon\"><!-- Apple Touch Icon (iOS) --><link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/images/apple-touch-icon.png\"><!-- Android / Web App Manifest (Chrome, Firefox, etc.) --><link rel=\"manifest\" href=\"/site.webmanifest\"><meta name=\"theme-color\" content=\"#be0203\"><!-- Microsoft / Windows Tiles --><meta name=\"msapplication-TileColor\" content=\"#ffffff\"><meta name=\"msapplication-TileImage\" content=\"/images/mstile-150x150.png\"><meta name=\"application-name\" content=\"Congopro\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"><meta name=\"robots\" content=\"index,follow\"><meta name=\"author\" content=\"Congopro\"><link rel=\"canonical\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 templ.SafeURL
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(canonicalURL)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 22, Col: 44}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><!-- ========================================== --><!-- Open Graph (Facebook, LinkedIn, WhatsApp) --><!-- ========================================== --><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(canonicalURL)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 28, Col: 49}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"><meta property=\"og:title\" content=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 string
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(pageTitle(title))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 29, Col: 55}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"><meta property=\"og:description\" content=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 string
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(metaDescription(description))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 30, Col: 73}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><meta property=\"og:image\" content=\"https://congopro.com/images/og-image.png\"><meta property=\"og:site_name\" content=\"Congopro\"><meta property=\"og:locale\" content=\"fr_FR\"><!-- ========================================== --><!-- Twitter Card --><!-- ========================================== --><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:url\" content=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(canonicalURL)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 39, Col: 50}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><meta name=\"twitter:title\" content=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(pageTitle(title))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 40, Col: 56}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"><meta name=\"twitter:description\" content=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var10 string
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(metaDescription(description))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 41, Col: 74}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><meta name=\"twitter:image\" content=\"https://congopro.com/images/twitter-image.png\"><meta name=\"twitter:site\" content=\"@Congopro\"><!-- ========================================== --><!-- Favicons & App Icons --><!-- ========================================== --><link rel=\"icon\" href=\"/images/favicon.svg\" type=\"image/svg+xml\"><link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/images/favicon-32x32.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/images/favicon-16x16.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"192x192\" href=\"/images/android-chrome-192x192.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"512x512\" href=\"/images/android-chrome-512x512.png\"><link rel=\"icon\" href=\"/favicon.ico\"><!-- Favicon standard (Anciens navigateurs) --><link rel=\"shortcut icon\" href=\"/favicon.ico\" type=\"image/x-icon\"><!-- Apple Touch Icon (iOS) --><link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/images/apple-touch-icon.png\"><!-- Android / Web App Manifest (Chrome, Firefox, etc.) --><link rel=\"manifest\" href=\"/site.webmanifest\"><meta name=\"theme-color\" content=\"#be0203\"><!-- Microsoft / Windows Tiles --><meta name=\"msapplication-TileColor\" content=\"#ffffff\"><meta name=\"msapplication-TileImage\" content=\"/images/mstile-150x150.png\"><meta name=\"application-name\" content=\"Congopro\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -73,33 +164,20 @@ func Layout(title, canonicalURL, nonce, cssVersion string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<script async nonce=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<script nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
+		var templ_7745c5c3_Var11 string
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 84, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 71, Col: 24}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" src=\"https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG\"></script><script nonce=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 85, Col: 24}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">\n\t\t\t\twindow.dataLayer = window.dataLayer || [];\n\t\t\t\tfunction gtag() {\n\t\t\t\t\tdataLayer.push(arguments);\n\t\t\t\t}\n\t\t\t\tgtag(\"consent\", \"default\", {\n\t\t\t\t\tanalytics_storage: \"denied\",\n\t\t\t\t\tad_storage: \"denied\",\n\t\t\t\t\tad_user_data: \"denied\",\n\t\t\t\t\tad_personalization: \"denied\",\n\t\t\t\t\twait_for_update: 500,\n\t\t\t\t});\n\t\t\t\ttry {\n\t\t\t\t\tif (localStorage.getItem(\"sb_cookie_consent\") === \"all\")\n\t\t\t\t\t\tgtag(\"consent\", \"update\", {\n\t\t\t\t\t\t\tanalytics_storage: \"granted\",\n\t\t\t\t\t\t\tad_storage: \"granted\",\n\t\t\t\t\t\t\tad_user_data: \"granted\",\n\t\t\t\t\t\t\tad_personalization: \"granted\",\n\t\t\t\t\t\t});\n\t\t\t\t} catch (e) {}\n\t\t\t\tgtag(\"js\", new Date());\n\t\t\t\tgtag(\"config\", \"G-VS32J060KG\");\n\t\t\t</script></head><body class=\"bg-surface text-ink antialiased min-h-screen flex flex-col overflow-x-hidden\" hx-ext=\"preload\"><div class=\"flex-1 w-full flex flex-col\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">\n\t\t\t\twindow.dataLayer = window.dataLayer || [];\n\t\t\t\tfunction gtag() {\n\t\t\t\t\tdataLayer.push(arguments);\n\t\t\t\t}\n\t\t\t\tgtag(\"consent\", \"default\", {\n\t\t\t\t\tanalytics_storage: \"denied\",\n\t\t\t\t\tad_storage: \"denied\",\n\t\t\t\t\tad_user_data: \"denied\",\n\t\t\t\t\tad_personalization: \"denied\",\n\t\t\t\t\twait_for_update: 500,\n\t\t\t\t});\n\t\t\t\ttry {\n\t\t\t\t\tif (localStorage.getItem(\"sb_cookie_consent\") === \"all\")\n\t\t\t\t\t\tgtag(\"consent\", \"update\", {\n\t\t\t\t\t\t\tanalytics_storage: \"granted\",\n\t\t\t\t\t\t\tad_storage: \"granted\",\n\t\t\t\t\t\t\tad_user_data: \"granted\",\n\t\t\t\t\t\t\tad_personalization: \"granted\",\n\t\t\t\t\t\t});\n\t\t\t\t} catch (e) {}\n\t\t\t\tgtag(\"js\", new Date());\n\t\t\t\tgtag(\"config\", \"G-VS32J060KG\");\n\t\t\t\t// gtag.js is injected only after the load event: everything above\n\t\t\t\t// queues in dataLayer and flushes when the library arrives, so no\n\t\t\t\t// events are lost, but the ~100 KB of Google script stays out of\n\t\t\t\t// the LCP/TBT window that PageSpeed measures.\n\t\t\t\t(function () {\n\t\t\t\t\tfunction load() {\n\t\t\t\t\t\tvar s = document.createElement(\"script\");\n\t\t\t\t\t\ts.async = true;\n\t\t\t\t\t\ts.src = \"https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG\";\n\t\t\t\t\t\tdocument.head.appendChild(s);\n\t\t\t\t\t}\n\t\t\t\t\tif (document.readyState === \"complete\") load();\n\t\t\t\t\telse window.addEventListener(\"load\", load);\n\t\t\t\t})();\n\t\t\t</script></head><body class=\"bg-surface text-ink antialiased min-h-screen flex flex-col overflow-x-hidden\" hx-ext=\"preload\"><div class=\"flex-1 w-full flex flex-col\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -107,7 +185,7 @@ func Layout(title, canonicalURL, nonce, cssVersion string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -123,7 +201,7 @@ func Layout(title, canonicalURL, nonce, cssVersion string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -153,51 +231,51 @@ func commonHead(nonce, cssVersion string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var6 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var6 == nil {
-			templ_7745c5c3_Var6 = templ.NopComponent
+		templ_7745c5c3_Var12 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var12 == nil {
+			templ_7745c5c3_Var12 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<meta name=\"color-scheme\" content=\"light dark\"><script nonce=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<meta name=\"color-scheme\" content=\"light dark\"><script nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
+		var templ_7745c5c3_Var13 string
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 129, Col: 22}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">\n\t\t(function () {\n\t\t\ttry {\n\t\t\t\tvar t = localStorage.getItem(\"cp_theme\");\n\t\t\t\tif (t === \"auto\")\n\t\t\t\t\tt = matchMedia(\"(prefers-color-scheme: dark)\").matches ? \"dark\" : \"light\";\n\t\t\t\telse if (t !== \"dark\") t = \"light\";\n\t\t\t\tdocument.documentElement.dataset.theme = t;\n\t\t\t} catch (e) {}\n\t\t})();\n\t</script><link rel=\"preload\" href=\"/fonts/inter-400.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"><link rel=\"preload\" href=\"/fonts/sora-600.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"><link rel=\"preload\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\">\n\t\t(function () {\n\t\t\ttry {\n\t\t\t\tvar t = localStorage.getItem(\"cp_theme\");\n\t\t\t\tif (t === \"auto\")\n\t\t\t\t\tt = matchMedia(\"(prefers-color-scheme: dark)\").matches ? \"dark\" : \"light\";\n\t\t\t\telse if (t !== \"dark\") t = \"light\";\n\t\t\t\tdocument.documentElement.dataset.theme = t;\n\t\t\t} catch (e) {}\n\t\t})();\n\t</script><link rel=\"preload\" href=\"/fonts/inter-400.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"><link rel=\"preload\" href=\"/fonts/sora-600.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"><link rel=\"preload\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var8 templ.SafeURL
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs("/css/style.min.css?h=" + cssVersion)
+		var templ_7745c5c3_Var14 templ.SafeURL
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs("/css/style.min.css?h=" + cssVersion)
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 142, Col: 64}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" as=\"style\"><link rel=\"stylesheet\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\" as=\"style\"><link rel=\"stylesheet\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var9 templ.SafeURL
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs("/css/style.min.css?h=" + cssVersion)
+		var templ_7745c5c3_Var15 templ.SafeURL
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs("/css/style.min.css?h=" + cssVersion)
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 143, Col: 67}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -210,6 +288,17 @@ func pageTitle(title string) string {
 		return "Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
 	}
 	return title
+}
+
+// metaDescription falls back to the site-wide pitch when a page doesn't
+// supply its own copy. Pages that ARE the product surface (company profiles,
+// help, contact) pass a specific description so search snippets differ per
+// page instead of repeating the homepage line everywhere.
+func metaDescription(description string) string {
+	if description == "" {
+		return "Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA."
+	}
+	return description
 }
 
 // scrollToTop mirrors the SPA's results-page scroll-to-top widget
@@ -233,25 +322,25 @@ func scrollToTop(nonce string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var10 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var10 == nil {
-			templ_7745c5c3_Var10 = templ.NopComponent
+		templ_7745c5c3_Var16 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var16 == nil {
+			templ_7745c5c3_Var16 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<button id=\"scrollToTopBtn\" aria-label=\"Retour en haut\" class=\"fixed bottom-8 right-4 md:right-8 z-[90] p-3 bg-surface-raised text-ink-muted rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-line transition-all duration-300 transform opacity-0 translate-y-8 pointer-events-none hover:bg-surface-sunken hover:text-accent focus:outline-none\"><svg class=\"w-6 h-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5 15l7-7 7 7\"></path></svg></button><script nonce=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<button id=\"scrollToTopBtn\" aria-label=\"Retour en haut\" class=\"fixed bottom-8 right-4 md:right-8 z-[90] p-3 bg-surface-raised text-ink-muted rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.15)] border border-line transition-all duration-300 transform opacity-0 translate-y-8 pointer-events-none hover:bg-surface-sunken hover:text-accent focus:outline-none\"><svg class=\"w-6 h-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5 15l7-7 7 7\"></path></svg></button><script nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
+		var templ_7745c5c3_Var17 string
+		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 168, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 179, Col: 22}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">\n\t\t(function () {\n\t\t\tconst btn = document.getElementById(\"scrollToTopBtn\");\n\t\t\twindow.addEventListener(\"scroll\", () => {\n\t\t\t\tif (window.scrollY > 300) {\n\t\t\t\t\tbtn.classList.remove(\"opacity-0\", \"translate-y-8\", \"pointer-events-none\");\n\t\t\t\t\tbtn.classList.add(\"opacity-100\", \"translate-y-0\");\n\t\t\t\t} else {\n\t\t\t\t\tbtn.classList.add(\"opacity-0\", \"translate-y-8\", \"pointer-events-none\");\n\t\t\t\t\tbtn.classList.remove(\"opacity-100\", \"translate-y-0\");\n\t\t\t\t}\n\t\t\t});\n\t\t\tbtn.addEventListener(\"click\", () => {\n\t\t\t\twindow.scrollTo({ top: 0, behavior: \"smooth\" });\n\t\t\t});\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\">\n\t\t(function () {\n\t\t\tconst btn = document.getElementById(\"scrollToTopBtn\");\n\t\t\twindow.addEventListener(\"scroll\", () => {\n\t\t\t\tif (window.scrollY > 300) {\n\t\t\t\t\tbtn.classList.remove(\"opacity-0\", \"translate-y-8\", \"pointer-events-none\");\n\t\t\t\t\tbtn.classList.add(\"opacity-100\", \"translate-y-0\");\n\t\t\t\t} else {\n\t\t\t\t\tbtn.classList.add(\"opacity-0\", \"translate-y-8\", \"pointer-events-none\");\n\t\t\t\t\tbtn.classList.remove(\"opacity-100\", \"translate-y-0\");\n\t\t\t\t}\n\t\t\t});\n\t\t\tbtn.addEventListener(\"click\", () => {\n\t\t\t\twindow.scrollTo({ top: 0, behavior: \"smooth\" });\n\t\t\t});\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -275,25 +364,25 @@ func cookieConsent(nonce string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var12 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var12 == nil {
-			templ_7745c5c3_Var12 = templ.NopComponent
+		templ_7745c5c3_Var18 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var18 == nil {
+			templ_7745c5c3_Var18 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div id=\"cookieBanner\" class=\"fixed bottom-0 inset-x-0 z-[100] hidden\" tabindex=\"-1\" role=\"dialog\" aria-live=\"polite\" aria-label=\"Avis relatif aux cookies\" aria-modal=\"true\"><div class=\"bg-surface-raised/95 backdrop-blur border-t border-line shadow-[0_-4px_24px_rgba(0,0,0,0.08)]\"><div class=\"max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4\"><span class=\"text-2xl shrink-0 select-none\" aria-hidden=\"true\">🔒</span><div class=\"flex-1 min-w-0\"><p class=\"text-sm text-ink-muted leading-relaxed\"><strong class=\"font-semibold text-ink\">Votre vie privée est importante.</strong> Nous utilisons uniquement des cookies essentiels et des SDK partenaires de confiance pour la sécurité, les performances et les statistiques anonymisées. <strong class=\"font-semibold text-ink\">Nous ne vendons jamais vos données personnelles et ne les partageons pas avec des annonceurs.</strong> <button id=\"cookieLearnMore\" class=\"ml-1 text-accent hover:underline text-sm font-medium whitespace-nowrap\">En savoir plus</button></p></div><div class=\"flex items-center gap-2 shrink-0 flex-wrap\"><button id=\"cookieDecline\" class=\"px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface-sunken rounded-full transition-colors\">Uniquement les essentiels</button> <button id=\"cookieAccept\" class=\"px-5 py-2 text-sm font-semibold text-white bg-accent hover:bg-accent-hover rounded-full transition-colors\">Tout accepter</button></div></div></div></div><div id=\"cookieModal\" class=\"fixed inset-0 z-[110] hidden items-center justify-center p-4\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"modalTitle\"><div class=\"absolute inset-0 bg-black/40 backdrop-blur-sm\" id=\"cookieModalBackdrop\"></div><div class=\"relative bg-surface-raised rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden\"><div class=\"px-6 pt-6 pb-4 border-b border-line flex items-center justify-between\"><h2 id=\"modalTitle\" class=\"text-base font-semibold text-ink\">Détails sur les cookies et la confidentialité</h2><button id=\"cookieModalClose\" class=\"text-ink-faint hover:text-ink transition-colors\" aria-label=\"Fermer\"><svg class=\"w-5 h-5\" viewBox=\"0 0 20 20\" fill=\"currentColor\"><path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z\" clip-rule=\"evenodd\"></path></svg></button></div><div class=\"px-6 py-5 space-y-5 text-sm text-ink-muted max-h-[60vh] overflow-y-auto\"><p class=\"text-ink-muted\">Nous pensons que vous devez savoir exactement ce qui s'exécute lorsque vous utilisez Congopro Bridge.</p><div class=\"rounded-xl border border-line p-4 space-y-1.5\"><div class=\"flex items-center justify-between\"><span class=\"font-semibold text-ink flex items-center gap-1.5\"><span class=\"w-2 h-2 rounded-full bg-positive inline-block\"></span> Cookies essentiels</span> <span class=\"text-xs font-medium text-positive bg-positive-soft px-2 py-0.5 rounded-full\">Toujours actifs</span></div><p>Nécessaires au fonctionnement du site - gestion des sessions et jetons de sécurité. Aucune donnée personnelle n'est stockée.</p></div><div class=\"rounded-xl border border-line p-4 space-y-1.5\"><div class=\"flex items-center justify-between\"><span class=\"font-semibold text-ink flex items-center gap-1.5\"><span class=\"w-2 h-2 rounded-full bg-accent inline-block\"></span> Statistiques anonymes</span> <span class=\"text-xs font-medium text-ink-faint bg-surface-sunken px-2 py-0.5 rounded-full\">Optionnel</span></div><p>Les statistiques d'utilisation agrégées et anonymisées (par exemple les recherches populaires ou les taux d'erreur) nous aident à améliorer le produit. Aucune adresse IP ni identifiant n'est conservé.</p></div><div class=\"rounded-xl bg-surface-sunken border border-line p-4 space-y-2\"><p class=\"font-semibold text-ink\">Ce que nous ne faisons pas</p><ul class=\"space-y-1 text-ink-muted\"><li class=\"flex items-start gap-2\"><span class=\"mt-0.5\">✗</span> Vendre ou louer vos données à des tiers</li><li class=\"flex items-start gap-2\"><span class=\"mt-0.5\">✗</span> Créer des profils publicitaires</li><li class=\"flex items-start gap-2\"><span class=\"mt-0.5\">✗</span> Partager les requêtes de recherche avec des réseaux publicitaires externes</li><li class=\"flex items-start gap-2\"><span class=\"mt-0.5\">✗</span> Vous suivre sur d'autres sites web</li></ul></div></div><div class=\"px-6 py-4 border-t border-line flex justify-end gap-2\"><button id=\"modalDecline\" class=\"px-4 py-2 text-sm font-medium text-ink-muted hover:bg-surface-sunken rounded-full transition-colors\">Uniquement les essentiels</button> <button id=\"modalAccept\" class=\"px-5 py-2 text-sm font-semibold text-white bg-accent hover:bg-accent-hover rounded-full transition-colors\">Tout accepter</button></div></div></div><script nonce=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div id=\"cookieBanner\" class=\"fixed bottom-0 inset-x-0 z-[100] hidden\" tabindex=\"-1\" role=\"dialog\" aria-live=\"polite\" aria-label=\"Avis relatif aux cookies\" aria-modal=\"true\"><div class=\"bg-surface-raised/95 backdrop-blur border-t border-line shadow-[0_-4px_24px_rgba(0,0,0,0.08)]\"><div class=\"max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4\"><span class=\"text-2xl shrink-0 select-none\" aria-hidden=\"true\">🔒</span><div class=\"flex-1 min-w-0\"><p class=\"text-sm text-ink-muted leading-relaxed\"><strong class=\"font-semibold text-ink\">Votre vie privée est importante.</strong> Nous utilisons uniquement des cookies essentiels et des SDK partenaires de confiance pour la sécurité, les performances et les statistiques anonymisées. <strong class=\"font-semibold text-ink\">Nous ne vendons jamais vos données personnelles et ne les partageons pas avec des annonceurs.</strong> <button id=\"cookieLearnMore\" class=\"ml-1 text-accent hover:underline text-sm font-medium whitespace-nowrap\">En savoir plus</button></p></div><div class=\"flex items-center gap-2 shrink-0 flex-wrap\"><button id=\"cookieDecline\" class=\"px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink hover:bg-surface-sunken rounded-full transition-colors\">Uniquement les essentiels</button> <button id=\"cookieAccept\" class=\"px-5 py-2 text-sm font-semibold text-white bg-accent hover:bg-accent-hover rounded-full transition-colors\">Tout accepter</button></div></div></div></div><div id=\"cookieModal\" class=\"fixed inset-0 z-[110] hidden items-center justify-center p-4\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"modalTitle\"><div class=\"absolute inset-0 bg-black/40 backdrop-blur-sm\" id=\"cookieModalBackdrop\"></div><div class=\"relative bg-surface-raised rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden\"><div class=\"px-6 pt-6 pb-4 border-b border-line flex items-center justify-between\"><h2 id=\"modalTitle\" class=\"text-base font-semibold text-ink\">Détails sur les cookies et la confidentialité</h2><button id=\"cookieModalClose\" class=\"text-ink-faint hover:text-ink transition-colors\" aria-label=\"Fermer\"><svg class=\"w-5 h-5\" viewBox=\"0 0 20 20\" fill=\"currentColor\"><path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z\" clip-rule=\"evenodd\"></path></svg></button></div><div class=\"px-6 py-5 space-y-5 text-sm text-ink-muted max-h-[60vh] overflow-y-auto\"><p class=\"text-ink-muted\">Nous pensons que vous devez savoir exactement ce qui s'exécute lorsque vous utilisez Congopro Bridge.</p><div class=\"rounded-xl border border-line p-4 space-y-1.5\"><div class=\"flex items-center justify-between\"><span class=\"font-semibold text-ink flex items-center gap-1.5\"><span class=\"w-2 h-2 rounded-full bg-positive inline-block\"></span> Cookies essentiels</span> <span class=\"text-xs font-medium text-positive bg-positive-soft px-2 py-0.5 rounded-full\">Toujours actifs</span></div><p>Nécessaires au fonctionnement du site - gestion des sessions et jetons de sécurité. Aucune donnée personnelle n'est stockée.</p></div><div class=\"rounded-xl border border-line p-4 space-y-1.5\"><div class=\"flex items-center justify-between\"><span class=\"font-semibold text-ink flex items-center gap-1.5\"><span class=\"w-2 h-2 rounded-full bg-accent inline-block\"></span> Statistiques anonymes</span> <span class=\"text-xs font-medium text-ink-faint bg-surface-sunken px-2 py-0.5 rounded-full\">Optionnel</span></div><p>Les statistiques d'utilisation agrégées et anonymisées (par exemple les recherches populaires ou les taux d'erreur) nous aident à améliorer le produit. Aucune adresse IP ni identifiant n'est conservé.</p></div><div class=\"rounded-xl bg-surface-sunken border border-line p-4 space-y-2\"><p class=\"font-semibold text-ink\">Ce que nous ne faisons pas</p><ul class=\"space-y-1 text-ink-muted\"><li class=\"flex items-start gap-2\"><span class=\"mt-0.5\">✗</span> Vendre ou louer vos données à des tiers</li><li class=\"flex items-start gap-2\"><span class=\"mt-0.5\">✗</span> Créer des profils publicitaires</li><li class=\"flex items-start gap-2\"><span class=\"mt-0.5\">✗</span> Partager les requêtes de recherche avec des réseaux publicitaires externes</li><li class=\"flex items-start gap-2\"><span class=\"mt-0.5\">✗</span> Vous suivre sur d'autres sites web</li></ul></div></div><div class=\"px-6 py-4 border-t border-line flex justify-end gap-2\"><button id=\"modalDecline\" class=\"px-4 py-2 text-sm font-medium text-ink-muted hover:bg-surface-sunken rounded-full transition-colors\">Uniquement les essentiels</button> <button id=\"modalAccept\" class=\"px-5 py-2 text-sm font-semibold text-white bg-accent hover:bg-accent-hover rounded-full transition-colors\">Tout accepter</button></div></div></div><script nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
+		var templ_7745c5c3_Var19 string
+		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 321, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 332, Col: 22}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\">\n\t\t(function () {\n\t\t\tconst COOKIE_KEY = \"sb_cookie_consent\";\n\t\t\tconst banner = document.getElementById(\"cookieBanner\");\n\t\t\tconst modal = document.getElementById(\"cookieModal\");\n\n\t\t\tfunction getConsent() {\n\t\t\t\ttry {\n\t\t\t\t\treturn localStorage.getItem(COOKIE_KEY);\n\t\t\t\t} catch {\n\t\t\t\t\treturn null;\n\t\t\t\t}\n\t\t\t}\n\t\t\tfunction setConsent(v) {\n\t\t\t\ttry {\n\t\t\t\t\tlocalStorage.setItem(COOKIE_KEY, v);\n\t\t\t\t} catch {}\n\t\t\t}\n\t\t\tfunction hideBanner() {\n\t\t\t\tbanner.classList.add(\"hidden\");\n\t\t\t}\n\t\t\tfunction showBanner() {\n\t\t\t\tbanner.classList.remove(\"hidden\");\n\t\t\t\tbanner.focus();\n\t\t\t}\n\t\t\tfunction openModal() {\n\t\t\t\tmodal.classList.remove(\"hidden\");\n\t\t\t\tmodal.classList.add(\"flex\");\n\t\t\t}\n\t\t\tfunction closeModal() {\n\t\t\t\tmodal.classList.add(\"hidden\");\n\t\t\t\tmodal.classList.remove(\"flex\");\n\t\t\t}\n\n\t\t\tfunction accept() {\n\t\t\t\tsetConsent(\"all\");\n\t\t\t\thideBanner();\n\t\t\t\tcloseModal();\n\t\t\t\tif (typeof gtag === \"function\")\n\t\t\t\t\tgtag(\"consent\", \"update\", {\n\t\t\t\t\t\tanalytics_storage: \"granted\",\n\t\t\t\t\t\tad_storage: \"granted\",\n\t\t\t\t\t});\n\t\t\t}\n\t\t\tfunction decline() {\n\t\t\t\tsetConsent(\"essential\");\n\t\t\t\thideBanner();\n\t\t\t\tcloseModal();\n\t\t\t\tif (typeof gtag === \"function\")\n\t\t\t\t\tgtag(\"consent\", \"update\", {\n\t\t\t\t\t\tanalytics_storage: \"denied\",\n\t\t\t\t\t\tad_storage: \"denied\",\n\t\t\t\t\t});\n\t\t\t}\n\n\t\t\tdocument.getElementById(\"cookieAccept\").addEventListener(\"click\", accept);\n\t\t\tdocument.getElementById(\"cookieDecline\").addEventListener(\"click\", decline);\n\t\t\tdocument.getElementById(\"cookieLearnMore\").addEventListener(\"click\", openModal);\n\t\t\tdocument.getElementById(\"cookieModalClose\").addEventListener(\"click\", closeModal);\n\t\t\tdocument.getElementById(\"cookieModalBackdrop\").addEventListener(\"click\", closeModal);\n\t\t\tdocument.getElementById(\"modalAccept\").addEventListener(\"click\", accept);\n\t\t\tdocument.getElementById(\"modalDecline\").addEventListener(\"click\", decline);\n\t\t\tdocument.addEventListener(\"keydown\", (e) => {\n\t\t\t\tif (e.key === \"Escape\") closeModal();\n\t\t\t});\n\n\t\t\tif (!getConsent()) showBanner();\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\">\n\t\t(function () {\n\t\t\tconst COOKIE_KEY = \"sb_cookie_consent\";\n\t\t\tconst banner = document.getElementById(\"cookieBanner\");\n\t\t\tconst modal = document.getElementById(\"cookieModal\");\n\n\t\t\tfunction getConsent() {\n\t\t\t\ttry {\n\t\t\t\t\treturn localStorage.getItem(COOKIE_KEY);\n\t\t\t\t} catch {\n\t\t\t\t\treturn null;\n\t\t\t\t}\n\t\t\t}\n\t\t\tfunction setConsent(v) {\n\t\t\t\ttry {\n\t\t\t\t\tlocalStorage.setItem(COOKIE_KEY, v);\n\t\t\t\t} catch {}\n\t\t\t}\n\t\t\tfunction hideBanner() {\n\t\t\t\tbanner.classList.add(\"hidden\");\n\t\t\t}\n\t\t\tfunction showBanner() {\n\t\t\t\tbanner.classList.remove(\"hidden\");\n\t\t\t\tbanner.focus();\n\t\t\t}\n\t\t\tfunction openModal() {\n\t\t\t\tmodal.classList.remove(\"hidden\");\n\t\t\t\tmodal.classList.add(\"flex\");\n\t\t\t}\n\t\t\tfunction closeModal() {\n\t\t\t\tmodal.classList.add(\"hidden\");\n\t\t\t\tmodal.classList.remove(\"flex\");\n\t\t\t}\n\n\t\t\tfunction accept() {\n\t\t\t\tsetConsent(\"all\");\n\t\t\t\thideBanner();\n\t\t\t\tcloseModal();\n\t\t\t\tif (typeof gtag === \"function\")\n\t\t\t\t\tgtag(\"consent\", \"update\", {\n\t\t\t\t\t\tanalytics_storage: \"granted\",\n\t\t\t\t\t\tad_storage: \"granted\",\n\t\t\t\t\t});\n\t\t\t}\n\t\t\tfunction decline() {\n\t\t\t\tsetConsent(\"essential\");\n\t\t\t\thideBanner();\n\t\t\t\tcloseModal();\n\t\t\t\tif (typeof gtag === \"function\")\n\t\t\t\t\tgtag(\"consent\", \"update\", {\n\t\t\t\t\t\tanalytics_storage: \"denied\",\n\t\t\t\t\t\tad_storage: \"denied\",\n\t\t\t\t\t});\n\t\t\t}\n\n\t\t\tdocument.getElementById(\"cookieAccept\").addEventListener(\"click\", accept);\n\t\t\tdocument.getElementById(\"cookieDecline\").addEventListener(\"click\", decline);\n\t\t\tdocument.getElementById(\"cookieLearnMore\").addEventListener(\"click\", openModal);\n\t\t\tdocument.getElementById(\"cookieModalClose\").addEventListener(\"click\", closeModal);\n\t\t\tdocument.getElementById(\"cookieModalBackdrop\").addEventListener(\"click\", closeModal);\n\t\t\tdocument.getElementById(\"modalAccept\").addEventListener(\"click\", accept);\n\t\t\tdocument.getElementById(\"modalDecline\").addEventListener(\"click\", decline);\n\t\t\tdocument.addEventListener(\"keydown\", (e) => {\n\t\t\t\tif (e.key === \"Escape\") closeModal();\n\t\t\t});\n\n\t\t\tif (!getConsent()) showBanner();\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

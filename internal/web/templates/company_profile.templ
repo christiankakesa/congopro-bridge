@@ -12,7 +12,7 @@ import (
 // /company/{slug} served the generic SPA shell and JS resolved the company
 // via a "-company-slug:" search-endpoint hack.
 templ CompanyPage(title, canonicalURL, nonce, cssVersion string, c *data.Company, promoted, verified bool) {
-	@Layout(title, canonicalURL, nonce, cssVersion) {
+	@Layout(title, companyMetaDescription(c), canonicalURL, nonce, cssVersion) {
 		@companyTopBar()
 		<main class="px-4 sm:px-6 pt-5 pb-20 w-full max-w-2xl mx-auto">
 			@companyProfileVerified(c, promoted, verified)
@@ -26,6 +26,46 @@ templ CompanyPage(title, canonicalURL, nonce, cssVersion string, c *data.Company
 		@shareButtonScript(nonce)
 		@viewItemTrackingScript(nonce)
 	}
+}
+
+// companyMetaDescription builds the per-company search snippet. The
+// company's own description wins when it has one (that's the page's real
+// content); otherwise the snippet is composed from name, activity and city.
+// Either way it is capped near Google's ~160-character display limit.
+func companyMetaDescription(c *data.Company) string {
+	if d := strings.TrimSpace(c.Description); d != "" {
+		return truncateSnippet(d, 160)
+	}
+	name := c.Name
+	if name == "" {
+		name = "Entreprise"
+	}
+	var b strings.Builder
+	b.WriteString(name)
+	if c.Activity != "" {
+		b.WriteString(" — ")
+		b.WriteString(c.Activity)
+	}
+	if c.City != "" {
+		b.WriteString(" à ")
+		b.WriteString(c.City)
+	}
+	b.WriteString(". Coordonnées, téléphone, email et site web sur Congopro.")
+	return truncateSnippet(b.String(), 160)
+}
+
+// truncateSnippet cuts s to at most max runes, backing up to the previous
+// word boundary and appending an ellipsis when it had to cut.
+func truncateSnippet(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	cut := string(r[:max-1])
+	if i := strings.LastIndex(cut, " "); i > max/2 {
+		cut = cut[:i]
+	}
+	return cut + "…"
 }
 
 templ companyTopBar() {

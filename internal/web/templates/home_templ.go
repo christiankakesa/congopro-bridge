@@ -47,7 +47,11 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"homepage\" class=\"relative w-full flex flex-col items-center justify-center flex-1 px-4 pt-20 pb-12\"><div class=\"absolute top-0 inset-x-0\"><div class=\"max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3 text-sm\"><span class=\"hidden sm:block text-ink-faint\">Moteur de recherche et annuaire professionnel</span><div class=\"flex items-center gap-3 ml-auto\"><a href=\"/account\" preload=\"mousedown\" class=\"inline-flex items-center h-9 px-4 rounded-full border border-line bg-surface-raised text-ink font-medium hover:bg-surface-sunken transition-colors\">Espace entreprise</a></div></div></div><div class=\"mb-7 select-none text-center flex flex-col items-center\">")
+			templ_7745c5c3_Err = homeStructuredData().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <div id=\"homepage\" class=\"relative w-full flex flex-col items-center justify-center flex-1 px-4 pt-20 pb-12\"><div class=\"absolute top-0 inset-x-0\"><div class=\"max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3 text-sm\"><span class=\"hidden sm:block text-ink-faint\">Moteur de recherche et annuaire professionnel</span><div class=\"flex items-center gap-3 ml-auto\"><a href=\"/account\" preload=\"mousedown\" class=\"inline-flex items-center h-9 px-4 rounded-full border border-line bg-surface-raised text-ink font-medium hover:bg-surface-sunken transition-colors\">Espace entreprise</a></div></div></div><div class=\"mb-7 select-none text-center flex flex-col items-center\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -67,7 +71,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(approxCompanies(companiesCount))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 71, Col: 82}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 72, Col: 82}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -101,7 +105,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 167, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 168, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -114,7 +118,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 168, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 169, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 			if templ_7745c5c3_Err != nil {
@@ -127,7 +131,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 169, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 170, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -140,7 +144,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue("/js/app.js?h=" + AppJSVersion)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 169, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 170, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -152,7 +156,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(title, canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(title, "", canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -164,6 +168,39 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 // for the hero stats line ("12 800+").
 func approxCompanies(n int) string {
 	return formatTotal(n/100*100) + "+"
+}
+
+// homeStructuredData is the site-level JSON-LD, emitted on the homepage only
+// (Google reads WebSite/Organization markup from the homepage). SearchAction
+// mirrors the real search URL shape (/?q=…) so Google can offer a sitelinks
+// search box. JSON-LD data blocks never execute, so CSP needs no nonce here.
+func homeStructuredData() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var8 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var8 == nil {
+			templ_7745c5c3_Var8 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templ.Raw(`<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://congopro.com/#website","url":"https://congopro.com/","name":"Congopro","inLanguage":"fr","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://congopro.com/?q={search_term_string}"},"query-input":"required name=search_term_string"}},{"@type":"Organization","@id":"https://congopro.com/#organization","name":"Congopro","url":"https://congopro.com/","logo":"https://congopro.com/images/android-chrome-512x512.png"}]}</script>`).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
 }
 
 var _ = templruntime.GeneratedTemplate

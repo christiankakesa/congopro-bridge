@@ -5,7 +5,7 @@ package templates
 // site (brand header, working search, useful links) instead of Go's default
 // plain-text "404 page not found".
 templ NotFoundPage(canonicalURL, nonce, cssVersion string) {
-	@Layout("Page introuvable | Congopro", canonicalURL, nonce, cssVersion) {
+	@Layout("Page introuvable | Congopro", "", canonicalURL, nonce, cssVersion) {
 		@siteHeader()
 		<main class="w-full max-w-xl mx-auto px-4 sm:px-6 pt-16 pb-24 text-center">
 			<p class="font-sora font-semibold text-[64px] leading-none text-accent">404</p>

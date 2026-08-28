@@ -13,6 +13,14 @@ http:
           X-Forwarded-Proto: "https"
     congopro-bridge-compress:
       compress: {}
+    # www → apex 301. The canonical host is congopro.com everywhere (canonical
+    # tags, sitemap, robots.txt); without this redirect both hosts answered 200
+    # and Google received two competing copies of every page.
+    congopro-bridge-redirect-www:
+      redirectRegex:
+        regex: "^https://www\\.congopro\\.com/(.*)"
+        replacement: "https://congopro.com/${1}"
+        permanent: true
 
   routers:
     congopro-bridge-router:
@@ -20,6 +28,7 @@ http:
       service: congopro-bridge-service
       entryPoints: [websecure]
       middlewares:
+        - congopro-bridge-redirect-www
         - congopro-bridge-compress
       # - congopro-bridge-header-mdw
       tls:

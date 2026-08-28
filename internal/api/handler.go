@@ -324,6 +324,9 @@ func (a *AppEngine) AIAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// SitemapHandler serves /sitemap.xml — plain XML, compressed on the wire by
+// Traefik like every other text response. This is the URL robots.txt
+// advertises and the one to submit in Search Console.
 func (a *AppEngine) SitemapHandler(w http.ResponseWriter, r *http.Request) {
 	a.Engine.SitemapMu.RLock()
 	data := a.Engine.SitemapCache
@@ -333,10 +336,28 @@ func (a *AppEngine) SitemapHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not ready", http.StatusServiceUnavailable)
 		return
 	}
-	w.Header().Set("Vary", "Accept-Encoding")
-	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Cache-Control", "max-age=86400") // 1 day
-	w.Header().Set("Content-Type", "application/xml")
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.Write(data)
+}
+
+// SitemapGzHandler serves /sitemap.xml.gz. The gzip bytes ARE the resource
+// here (a real .gz download, per the sitemap spec), not transport encoding —
+// the old handler labelled them Content-Encoding: gzip, so intermediaries
+// transparently decompressed and the URL delivered plain XML under a .gz
+// name. Kept alive because crawlers already know this URL from robots.txt.
+func (a *AppEngine) SitemapGzHandler(w http.ResponseWriter, r *http.Request) {
+	a.Engine.SitemapMu.RLock()
+	data := a.Engine.SitemapGzCache
+	a.Engine.SitemapMu.RUnlock()
+
+	if len(data) == 0 {
+		http.Error(w, "Not ready", http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("Cache-Control", "max-age=86400") // 1 day
+	w.Header().Set("Content-Type", "application/gzip")
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.Write(data)
 }
@@ -346,21 +367,21 @@ func (a *AppEngine) ServeSPAHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AppEngine) HelpHandler(w http.ResponseWriter, r *http.Request) {
-	a.serveStaticPage(w, r, "Aide | Congopro", "help", "Aide et Assistance")
+	a.serveStaticPage(w, r, "Aide | Congopro", "Comment chercher une entreprise, réclamer votre fiche ou mettre en avant votre société sur Congopro : le guide d'utilisation complet.", "help", "Aide et Assistance")
 }
 
 func (a *AppEngine) PrivacyHandler(w http.ResponseWriter, r *http.Request) {
-	a.serveStaticPage(w, r, "Confidentialité | Congopro", "privacy", "Politique de Confidentialité")
+	a.serveStaticPage(w, r, "Confidentialité | Congopro", "Politique de confidentialité de Congopro : quelles données sont collectées, pourquoi, et ce que nous ne faisons jamais avec.", "privacy", "Politique de Confidentialité")
 }
 
 func (a *AppEngine) TermsHandler(w http.ResponseWriter, r *http.Request) {
-	a.serveStaticPage(w, r, "Conditions d'utilisation | Congopro", "terms", "Conditions d'Utilisation")
+	a.serveStaticPage(w, r, "Conditions d'utilisation | Congopro", "Conditions d'utilisation du moteur de recherche et de l'annuaire professionnel Congopro.", "terms", "Conditions d'Utilisation")
 }
 
 // serveStaticPage renders a fully server-rendered content page (help,
 // privacy, terms) — real content in the initial response, no client-side
 // fetch-and-inject round trip, and no SPA JS bundle required to see it.
-func (a *AppEngine) serveStaticPage(w http.ResponseWriter, r *http.Request, title, page, heading string) {
+func (a *AppEngine) serveStaticPage(w http.ResponseWriter, r *http.Request, title, description, page, heading string) {
 	content, err := web.ContentFS.ReadFile("content/" + page + ".html")
 	if err != nil {
 		a.renderNotFound(w, r)
@@ -371,7 +392,7 @@ func (a *AppEngine) serveStaticPage(w http.ResponseWriter, r *http.Request, titl
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600") // 1 hour
 
-	if err := templates.StaticPage(title, canonicalURL(r), nonce, cssHash, heading, string(content)).Render(r.Context(), w); err != nil {
+	if err := templates.StaticPage(title, description, canonicalURL(r), nonce, cssHash, heading, string(content)).Render(r.Context(), w); err != nil {
 		log.Error().Msgf("[templates] render static page %q: %v", page, err)
 	}
 }
@@ -595,7 +616,9 @@ func FaviconHandler(w http.ResponseWriter, r *http.Request) {
 
 func RobotsTxt(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	// One hour, not the old year+immutable: robots.txt is a policy file, and
+	// a year of caching means a crawling mistake takes a year to retract.
+	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.Header().Set("Content-Length", strconv.Itoa(len(web.RobotsTXT)))
 	w.Write(web.RobotsTXT)
 }
@@ -727,8 +750,12 @@ func isHTMXRequest(r *http.Request) bool {
 	return r.Header.Get("HX-Request") == "true"
 }
 
+// canonicalURL builds the page's canonical address on the apex domain — the
+// host the sitemap, robots.txt and Traefik's www→apex redirect all agree on.
+// (It used to say www.congopro.com while the sitemap said congopro.com, which
+// fed Google two contradictory host signals for every page.)
 func canonicalURL(r *http.Request) string {
-	const host = "https://www.congopro.com"
+	const host = "https://congopro.com"
 
 	path := strings.TrimSuffix(r.URL.Path, "/")
 	if path == "" {

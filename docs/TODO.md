@@ -17,12 +17,17 @@
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* (nothing — pull from Later when ready)
+* Re-run PageSpeed (mobile) now that the milestone is deployed and compare
+  against the two reports in Reference — the deferred gtag.js load is the
+  change that should move the performance score.
+* Search Console (property exists — just post-deploy steps, see
+  [SEO.md](SEO.md)): submit `https://congopro.com/sitemap.xml` in Sitemaps,
+  then watch Indexing → Pages while the www→apex consolidation drains
+  through as "Page with redirect" entries.
 
 ## Later
 
-* PageSpeed milestone
-* SEO: Google Search Console & Google Analytics
+* ADS selling from /admin
 * Research: paid MCP server / API for B2B customers to point their own BI
   tools at their filtered data slice (Phase 4 in BACKEND_PROPOSAL.md — only
   worth building once auth + billing exist).
@@ -66,6 +71,23 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* SEO & PageSpeed milestone (2026-08-29, deployed + verified live the same
+  day, runbook in [SEO.md](SEO.md)): the
+  canonical host is now `congopro.com` everywhere — canonical/og/twitter
+  tags, sitemap, robots.txt, plus a Traefik 301 www→apex (before: canonical
+  said www, sitemap said apex, both hosts answered 200 — two competing
+  copies of every page for Google). Per-page meta descriptions (company
+  profiles compose theirs from their own data, ~160-char cap), og/twitter
+  tags follow the page instead of hardcoding the homepage, JSON-LD
+  WebSite+SearchAction+Organization on the home page. New `/sitemap.xml`
+  (robots.txt now points there; the .gz URL kept but serving a real gzip
+  file — it used to double as Content-Encoding and delivered plain XML).
+  robots.txt: Crawl-delay dropped, cache 1y→1h. gtag.js deferred to after
+  `load` (consent stub still inline, events queue in dataLayer) — GA out of
+  the Lighthouse window. Pinned by `layout_seo_test.go`. Wire audit put
+  remaining latency in network RTT to the VPS, not app render; static
+  pipeline already tight (11 KB CSS, immutable + hash-busted assets).
 
 * Telegram bot v2 (2026-08-29): quick actions — claim notifications carry
   inline Approuver/Refuser buttons (callback queries via a getUpdates

@@ -5,7 +5,7 @@
 // for client JS to fill in.
 package templates
 
-templ Layout(title, canonicalURL, nonce, cssVersion string) {
+templ Layout(title, description, canonicalURL, nonce, cssVersion string) {
 	<!DOCTYPE html>
 	<html lang="fr" class="h-full overflow-x-hidden">
 		<head>
@@ -16,14 +16,7 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 			<!-- SEO Standard -->
 			<!-- ========================================== -->
 			<title>{ pageTitle(title) }</title>
-			<meta
-				name="description"
-				content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA."
-			/>
-			<meta
-				name="keywords"
-				content="Congopro, moteur de recherche RDC, annuaire entreprises Congo, professionnels RDC, services Kinshasa, intelligence artificielle Congo, trouver entreprise RDC, business RDC, IA Congo"
-			/>
+			<meta name="description" content={ metaDescription(description) }/>
 			<meta name="robots" content="index,follow"/>
 			<meta name="author" content="Congopro"/>
 			<link rel="canonical" href={ canonicalURL }/>
@@ -32,13 +25,10 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 			<!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
 			<!-- ========================================== -->
 			<meta property="og:type" content="website"/>
-			<meta property="og:url" content="https://www.congopro.com/"/>
-			<meta property="og:title" content="Congopro | Moteur de recherche boosté à l'IA"/>
-			<meta
-				property="og:description"
-				content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA."
-			/>
-			<meta property="og:image" content="https://www.congopro.com/images/og-image.png"/>
+			<meta property="og:url" content={ canonicalURL }/>
+			<meta property="og:title" content={ pageTitle(title) }/>
+			<meta property="og:description" content={ metaDescription(description) }/>
+			<meta property="og:image" content="https://congopro.com/images/og-image.png"/>
 			<meta property="og:site_name" content="Congopro"/>
 			<meta property="og:locale" content="fr_FR"/>
 
@@ -46,13 +36,10 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 			<!-- Twitter Card -->
 			<!-- ========================================== -->
 			<meta name="twitter:card" content="summary_large_image"/>
-			<meta name="twitter:url" content="https://www.congopro.com/"/>
-			<meta name="twitter:title" content="Congopro | Moteur de recherche boosté à l'IA"/>
-			<meta
-				name="twitter:description"
-				content="Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance en RDC grâce à l'IA."
-			/>
-			<meta name="twitter:image" content="https://www.congopro.com/images/twitter-image.png"/>
+			<meta name="twitter:url" content={ canonicalURL }/>
+			<meta name="twitter:title" content={ pageTitle(title) }/>
+			<meta name="twitter:description" content={ metaDescription(description) }/>
+			<meta name="twitter:image" content="https://congopro.com/images/twitter-image.png"/>
 			<meta name="twitter:site" content="@Congopro"/>
 
 			<!-- ========================================== -->
@@ -81,7 +68,6 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 			<meta name="application-name" content="Congopro"/>
 
 			@commonHead(nonce, cssVersion)
-			<script async nonce={ nonce } src="https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG"></script>
 			<script nonce={ nonce }>
 				window.dataLayer = window.dataLayer || [];
 				function gtag() {
@@ -105,6 +91,20 @@ templ Layout(title, canonicalURL, nonce, cssVersion string) {
 				} catch (e) {}
 				gtag("js", new Date());
 				gtag("config", "G-VS32J060KG");
+				// gtag.js is injected only after the load event: everything above
+				// queues in dataLayer and flushes when the library arrives, so no
+				// events are lost, but the ~100 KB of Google script stays out of
+				// the LCP/TBT window that PageSpeed measures.
+				(function () {
+					function load() {
+						var s = document.createElement("script");
+						s.async = true;
+						s.src = "https://www.googletagmanager.com/gtag/js?id=G-VS32J060KG";
+						document.head.appendChild(s);
+					}
+					if (document.readyState === "complete") load();
+					else window.addEventListener("load", load);
+				})();
 			</script>
 		</head>
 		<body class="bg-surface text-ink antialiased min-h-screen flex flex-col overflow-x-hidden" hx-ext="preload">
@@ -148,6 +148,17 @@ func pageTitle(title string) string {
 		return "Congopro | Moteur de recherche le plus intelligent boosté à l'IA"
 	}
 	return title
+}
+
+// metaDescription falls back to the site-wide pitch when a page doesn't
+// supply its own copy. Pages that ARE the product surface (company profiles,
+// help, contact) pass a specific description so search snippets differ per
+// page instead of repeating the homepage line everywhere.
+func metaDescription(description string) string {
+	if description == "" {
+		return "Découvrez Congopro, le moteur de recherche intelligent. Trouvez instantanément des entreprises, services et professionnels de confiance grâce à l'IA."
+	}
+	return description
 }
 
 // scrollToTop mirrors the SPA's results-page scroll-to-top widget

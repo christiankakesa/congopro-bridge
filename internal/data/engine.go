@@ -128,8 +128,12 @@ type Engine struct {
 	initErr      error
 	IndexingDone chan struct{}
 
-	SitemapCache []byte
-	SitemapMu    sync.RWMutex
+	// SitemapCache is the plain XML (served at /sitemap.xml, compressed on
+	// the wire by Traefik); SitemapGzCache is the same bytes pre-gzipped,
+	// served at /sitemap.xml.gz as an actual .gz file per the sitemap spec.
+	SitemapCache   []byte
+	SitemapGzCache []byte
+	SitemapMu      sync.RWMutex
 
 	mu         sync.RWMutex
 	companies  []Company
@@ -834,7 +838,8 @@ func (e *Engine) refreshSitemapCache() {
 	gz.Close()
 
 	e.SitemapMu.Lock()
-	e.SitemapCache = gzBuf.Bytes()
+	e.SitemapCache = buf.Bytes()
+	e.SitemapGzCache = gzBuf.Bytes()
 	e.SitemapMu.Unlock()
 }
 

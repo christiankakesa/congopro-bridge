@@ -4,8 +4,8 @@ package templates
 // terms). bodyHTML is trusted, admin-authored markup (from
 // internal/web/content/*.html) injected as-is via templ.Raw — the same trust
 // boundary the old client-side fetch-and-inject flow already crossed.
-templ StaticPage(title, canonicalURL, nonce, cssVersion, heading, bodyHTML string) {
-	@Layout(title, canonicalURL, nonce, cssVersion) {
+templ StaticPage(title, description, canonicalURL, nonce, cssVersion, heading, bodyHTML string) {
+	@Layout(title, description, canonicalURL, nonce, cssVersion) {
 		@siteHeader()
 		<div class="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-10 pb-28">
 			<h1 class="text-3xl font-sora font-semibold text-ink mb-6">{ heading }</h1>

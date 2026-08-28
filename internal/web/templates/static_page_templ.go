@@ -12,7 +12,7 @@ import templruntime "github.com/a-h/templ/runtime"
 // terms). bodyHTML is trusted, admin-authored markup (from
 // internal/web/content/*.html) injected as-is via templ.Raw — the same trust
 // boundary the old client-side fetch-and-inject flow already crossed.
-func StaticPage(title, canonicalURL, nonce, cssVersion, heading, bodyHTML string) templ.Component {
+func StaticPage(title, description, canonicalURL, nonce, cssVersion, heading, bodyHTML string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -76,7 +76,7 @@ func StaticPage(title, canonicalURL, nonce, cssVersion, heading, bodyHTML string
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(title, canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(title, description, canonicalURL, nonce, cssVersion).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
