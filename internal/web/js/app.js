@@ -96,7 +96,12 @@ function showHome() {
   document.getElementById("statsBar")?.classList.add("hidden");
   document.getElementById("resultsLabel")?.classList.add("hidden");
   stopAdRotation();
-  loadHomepageAd();
+  // The initial page load ships the homepage ad server-rendered (fetching
+  // and inserting one under the centered hero was the mobile CLS penalty).
+  // Only fetch when the container is actually empty — a deep-linked search
+  // (?q=) boots without one, so clearing back to the homepage fills it here.
+  const homeAdC = document.getElementById("homepageAdContainer");
+  if (!homeAdC || homeAdC.classList.contains("hidden")) loadHomepageAd();
   document.getElementById("emptyState")?.classList.add("hidden");
   homeInput.value = "";
   homeClear.classList.add("hidden");
@@ -595,14 +600,8 @@ function stopAdRotation() {
 // GA4 ad impressions: fire once per unique ad shown, deduped since a
 // single ad can carry more than one tracked link (e.g. the homepage
 // card's title and its "Découvrir" button).
-document.body.addEventListener("htmx:afterSwap", (e) => {
-  const target = e.detail.target;
-  if (
-    !target ||
-    (target.id !== "adContainer" && target.id !== "homepageAdContainer")
-  )
-    return;
-  if (typeof gtag !== "function") return;
+function trackAdImpressions(target) {
+  if (!target || typeof gtag !== "function") return;
   const seen = new Set();
   target.querySelectorAll("[data-track-click='true']").forEach((el) => {
     const id = el.getAttribute("data-ad-id");
@@ -614,7 +613,23 @@ document.body.addEventListener("htmx:afterSwap", (e) => {
       ad_placement: el.getAttribute("data-ad-placement"),
     });
   });
+}
+
+document.body.addEventListener("htmx:afterSwap", (e) => {
+  const target = e.detail.target;
+  if (
+    !target ||
+    (target.id !== "adContainer" && target.id !== "homepageAdContainer")
+  )
+    return;
+  trackAdImpressions(target);
 });
+
+// The server-rendered homepage ad never goes through an htmx swap, so its
+// impression is fired here at boot instead (gtag's inline stub queues the
+// event until the deferred gtag.js arrives). Absent on ?q= deep links, where
+// the server deliberately renders no homepage ad.
+trackAdImpressions(document.getElementById("homepageAdContainer"));
 
 // Don't poll for new results-page ads while the results page itself
 // is hidden (i.e. back on the homepage) — the fragment's own

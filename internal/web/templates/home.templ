@@ -1,12 +1,14 @@
 package templates
 
+import "congopro-bridge/internal/ads"
+
 // HomePage is the templ port of the retired index.html SPA shell: the
 // homepage hero and the results view in one page, driven by htmx and
 // /js/app.js (the SPA coordinator extracted from index.html's inline
 // script). Every element ID below is part of the contract with app.js and
 // with the oob fragments in search_results.templ / ads.templ — keep them
 // stable. Footer, scroll-to-top and cookie consent come from Layout.
-templ HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int) {
+templ HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int, homeAd *ads.AdWire) {
 	@Layout(title, "", canonicalURL, nonce, cssVersion) {
 		@homeStructuredData()
 		<div id="homepage" class="relative w-full flex flex-col items-center justify-center flex-1 px-4 pt-20 pb-12">
@@ -67,7 +69,11 @@ templ HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int
 		    Posez une question — l'assistant IA vous répond
 		  </p>
 
-		  <div id="homepageAdContainer" class="hidden mt-6 w-full max-w-[584px] space-y-4"></div>
+		  <!-- The homepage ad is server-rendered into the initial HTML. It used
+	       to arrive via an app.js fetch after the healthz round trip, and
+	       inserting it under this vertically-centered hero shifted the whole
+	       block up — that insertion was most of the mobile CLS penalty. -->
+	  @HomepageAdFragment(homeAd)
 		  if companiesCount >= 5000 {
 		    <p class="mt-8 text-[13px] text-ink-faint">{ approxCompanies(companiesCount) } entreprises · 26 provinces</p>
 		  }

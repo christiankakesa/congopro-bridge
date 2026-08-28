@@ -144,7 +144,10 @@ templ premiumHomepageAd(ad ads.AdWire, safeURL string) {
 			</div>
 			<div class="flex-1 min-w-0">
 				<div class="flex items-center gap-2 mb-1">
-					<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" style={ "background-color: " + color + "15; color: " + color + "; border: 1px solid " + color + "30;" }>
+					<!-- Label text is theme ink, not the advertiser color: on the 8%
+					     tint the raw color fails WCAG AA for mid-tones (Lighthouse
+					     flagged 2.45:1). The brand color stays on the tint + border. -->
+					<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-ink" style={ "background-color: " + color + "15; border: 1px solid " + color + "30;" }>
 						{ label }
 					</span>
 				</div>
@@ -158,7 +161,9 @@ templ premiumHomepageAd(ad ads.AdWire, safeURL string) {
 					data-ad-placement="homepage"
 					style="text-decoration: none;"
 				>
-					<h3 class="text-lg font-bold text-ink truncate tracking-tight mb-1 hover:opacity-80">{ ad.Title }</h3>
+					<!-- Not a heading: an ad title has no place in the page outline, and
+				     an h3 after the page's h1 breaks heading order (a11y audit). -->
+				<p class="text-lg font-bold text-ink truncate tracking-tight mb-1 hover:opacity-80">{ ad.Title }</p>
 				</a>
 				<p class="text-sm text-ink-muted mb-1.5 leading-snug" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{ ad.Description }</p>
 				<div class="flex items-center text-xs font-medium text-ink-faint">
@@ -177,8 +182,8 @@ templ premiumHomepageAd(ad ads.AdWire, safeURL string) {
 					data-ad-id={ ad.ID }
 					data-ad-title={ ad.Title }
 					data-ad-placement="homepage"
-					class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-md text-white shadow-sm hover:opacity-90"
-					style={ "background-color: " + color + "; text-decoration: none;" }
+					class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-md shadow-sm hover:opacity-90"
+					style={ "background-color: " + color + "; color: " + AdCTATextColor(color) + "; text-decoration: none;" }
 				>
 					Découvrir
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1.5 -mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

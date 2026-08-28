@@ -17,13 +17,12 @@
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* Re-run PageSpeed (mobile) now that the milestone is deployed and compare
-  against the two reports in Reference — the deferred gtag.js load is the
-  change that should move the performance score.
-* Search Console (property exists — just post-deploy steps, see
-  [SEO.md](SEO.md)): submit `https://congopro.com/sitemap.xml` in Sitemaps,
-  then watch Indexing → Pages while the www→apex consolidation drains
-  through as "Page with redirect" entries.
+* Re-run the official PageSpeed (mobile) to confirm the round-2 deploy —
+  local Lighthouse against production measured **100/100/100/100**
+  (round 1: 93/94/100/100; CLS 0.151 → 0.001, see SEO.md "Round 2").
+* Search Console: sitemap `https://congopro.com/sitemap.xml` submitted
+  2026-08-29 ✓. Watch Indexing → Pages while the www→apex consolidation
+  drains through as "Page with redirect" entries.
 
 ## Later
 

@@ -30,6 +30,29 @@
   src: url('/fonts/sora-600.woff2') format('woff2');
 }
 
+/* Metric-adjusted local fallbacks: Arial/Liberation Sans reshaped to occupy
+   the same space as the web font, so the swap when Inter/Sora arrive causes
+   no layout shift (the hero reflow was the whole CLS penalty on mobile
+   PageSpeed). Values computed from the actual font files with fontTools —
+   see docs/SEO.md; recompute if a font file is ever replaced. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('Liberation Sans');
+  size-adjust: 107.49%;
+  ascent-override: 90.12%;
+  descent-override: 22.44%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Sora Fallback';
+  src: local('Arial'), local('Liberation Sans');
+  size-adjust: 116.27%;
+  ascent-override: 83.43%;
+  descent-override: 24.94%;
+  line-gap-override: 0%;
+}
+
 /* ── Design tokens ─────────────────────────────────────────────────
    Runtime custom properties: light on :root, dark overrides under
    [data-theme="dark"] (set pre-paint by the theme script in each
@@ -113,8 +136,8 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --shadow-card: var(--shadow-card);
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-display: 'Sora', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
+  --font-display: 'Sora', 'Sora Fallback', system-ui, sans-serif;
 }
 
 :root {

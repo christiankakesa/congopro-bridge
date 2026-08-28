@@ -15,7 +15,7 @@ import (
 // tags must reflect the page, not the homepage.
 func TestLayoutCanonicalHost(t *testing.T) {
 	var sb strings.Builder
-	if err := HomePage("", "https://congopro.com/", "NONCE", "deadbeef", 1500).Render(context.Background(), &sb); err != nil {
+	if err := HomePage("", "https://congopro.com/", "NONCE", "deadbeef", 1500, nil).Render(context.Background(), &sb); err != nil {
 		t.Fatal(err)
 	}
 	home := sb.String()

@@ -340,7 +340,7 @@ func scrollToTop(nonce string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\">\n\t\t(function () {\n\t\t\tconst btn = document.getElementById(\"scrollToTopBtn\");\n\t\t\twindow.addEventListener(\"scroll\", () => {\n\t\t\t\tif (window.scrollY > 300) {\n\t\t\t\t\tbtn.classList.remove(\"opacity-0\", \"translate-y-8\", \"pointer-events-none\");\n\t\t\t\t\tbtn.classList.add(\"opacity-100\", \"translate-y-0\");\n\t\t\t\t} else {\n\t\t\t\t\tbtn.classList.add(\"opacity-0\", \"translate-y-8\", \"pointer-events-none\");\n\t\t\t\t\tbtn.classList.remove(\"opacity-100\", \"translate-y-0\");\n\t\t\t\t}\n\t\t\t});\n\t\t\tbtn.addEventListener(\"click\", () => {\n\t\t\t\twindow.scrollTo({ top: 0, behavior: \"smooth\" });\n\t\t\t});\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\">\n\t\t(function () {\n\t\t\tconst btn = document.getElementById(\"scrollToTopBtn\");\n\t\t\twindow.addEventListener(\"scroll\", () => {\n\t\t\t\tif (window.scrollY > 300) {\n\t\t\t\t\tbtn.classList.remove(\"opacity-0\", \"translate-y-8\", \"pointer-events-none\");\n\t\t\t\t\tbtn.classList.add(\"opacity-100\", \"translate-y-0\");\n\t\t\t\t} else {\n\t\t\t\t\tbtn.classList.add(\"opacity-0\", \"translate-y-8\", \"pointer-events-none\");\n\t\t\t\t\tbtn.classList.remove(\"opacity-100\", \"translate-y-0\");\n\t\t\t\t}\n\t\t\t}, { passive: true });\n\t\t\tbtn.addEventListener(\"click\", () => {\n\t\t\t\twindow.scrollTo({ top: 0, behavior: \"smooth\" });\n\t\t\t});\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

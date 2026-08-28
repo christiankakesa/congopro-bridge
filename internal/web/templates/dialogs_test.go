@@ -70,7 +70,7 @@ func TestClaimButtonsShowBusyState(t *testing.T) {
 func TestNoNativeDialogsInSharedSurfaces(t *testing.T) {
 	c := data.Company{Name: "Congopro", NameSeo: "congopro"}
 	pages := map[string]string{
-		"home":    render(t, HomePage("", "https://x/", "N", CSSVersion, 100)),
+		"home":    render(t, HomePage("", "https://x/", "N", CSSVersion, 100, nil)),
 		"profile": render(t, CompanyPage("C", "https://x/", "N", CSSVersion, &c, false, false)),
 	}
 	for name, h := range pages {

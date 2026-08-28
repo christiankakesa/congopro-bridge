@@ -74,3 +74,22 @@ func TestResultRowLocationPill(t *testing.T) {
 		t.Errorf("country missing from the hidden schema.org block:\n%s", got)
 	}
 }
+
+// TestAdCTATextColor pins the WCAG AA text-color choice for admin-chosen ad
+// backgrounds: mid-tones like #ea8600 fail with white (Lighthouse measured
+// 2.65:1), dark colors keep white, and non-hex input falls back to white.
+func TestAdCTATextColor(t *testing.T) {
+	cases := []struct{ bg, want string }{
+		{"#ea8600", "#111827"}, // the flagged orange: white fails at 2.65:1
+		{"#F59E0B", "#111827"}, // default premium-ad amber
+		{"#be0203", "#ffffff"}, // brand red: white passes
+		{"#0A66C2", "#ffffff"}, // dark blue: white passes at 5.7:1
+		{"#fff", "#111827"},    // 3-digit form
+		{"rebeccapurple", "#ffffff"}, // non-hex → default
+	}
+	for _, c := range cases {
+		if got := AdCTATextColor(c.bg); got != c.want {
+			t.Errorf("AdCTATextColor(%q) = %q, want %q", c.bg, got, c.want)
+		}
+	}
+}

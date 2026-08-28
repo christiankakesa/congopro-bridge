@@ -586,11 +586,30 @@ func (a *AppEngine) FrontendHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *AppEngine) serveSPA(w http.ResponseWriter, r *http.Request, title string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	// no-cache (revalidate), NOT no-store: Chrome refuses back/forward-cache
+	// restoration for no-store documents, and this is a public page with
+	// nothing viewer-specific in it. Authenticated layouts keep no-store.
+	w.Header().Set("Cache-Control", "no-cache")
 
 	nonce, _ := r.Context().Value(constants.NonceKey).(string)
 
-	if err := templates.HomePage(title, canonicalURL(r), nonce, cssHash, len(a.Engine.Companies())).Render(r.Context(), w); err != nil {
+	// The homepage ad ships in the initial HTML (same selection the
+	// /api/v1/ads homepage path makes: shuffle the eligible pool, take one).
+	// Fetching it client-side after load inserted it under the vertically
+	// centered hero and shifted the whole block — the CLS penalty on mobile
+	// PageSpeed. Deep links to a search (?q=) boot straight into the results
+	// view, so the hidden homepage gets no ad there — app.js fetches one
+	// only when the user actually returns to an ad-less homepage.
+	var homeAd *ads.AdWire
+	if strings.TrimSpace(r.URL.Query().Get("q")) == "" {
+		if st := a.Ads.Settings(); st.Active {
+			if eAds := a.Ads.EligibleAds("", time.Now()); len(eAds) > 0 {
+				homeAd = &eAds[rand.Intn(len(eAds))]
+			}
+		}
+	}
+
+	if err := templates.HomePage(title, canonicalURL(r), nonce, cssHash, len(a.Engine.Companies()), homeAd).Render(r.Context(), w); err != nil {
 		log.Error().Err(err).Msg("render home page")
 	}
 }

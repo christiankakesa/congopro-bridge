@@ -65,6 +65,50 @@ exhausted that day — re-run the linked reports when needed):
 Re-measure at <https://pagespeed.web.dev/analysis?url=https%3A%2F%2Fcongopro.com>
 (mobile), or `curl "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://congopro.com&strategy=mobile"`.
 
+### Round 2 (2026-08-29, after the first deploy)
+
+Post-deploy Lighthouse (mobile emulation): **Performance 93 · Accessibility
+94 · Best Practices 100 · SEO 100**. The remaining deductions decomposed
+into four concrete causes, all fixed the same day — Lighthouse against
+production after the round-2 deploy: **100 · 100 · 100 · 100**, CLS
+0.151 → 0.001 (the only remaining shift is the cookie banner's 0.001):
+
+* **CLS 0.15 (the entire penalty)** — two causes, both hitting the
+  vertically-centered hero. The big one (0.11): the homepage ad used to be
+  fetched by app.js *after* the healthz round trip and inserted below the
+  hero, shifting the whole centered block up. The ad is now server-rendered
+  into the initial HTML (`serveSPA` picks it exactly like the /api/v1/ads
+  homepage path; app.js only fetches when the container is empty, e.g.
+  clearing back from a `?q=` deep link, and fires the SSR ad's `view_ad`
+  impression at boot since it never passes through an htmx swap). The small
+  one (0.04): web-font swap reflow, fixed with metric-adjusted local
+  fallbacks (`Sora Fallback` / `Inter Fallback` in
+  [input.css](../internal/web/css/input.css)) — Arial/Liberation reshaped
+  via `size-adjust` + `ascent/descent-override` so the swap occupies
+  identical space. **If a font file is ever replaced, recompute the
+  values** with fontTools: average a–z+space advance widths
+  (English-frequency weighted) of web font vs fallback gives `size-adjust`;
+  hhea ascent/descent ÷ UPM ÷ size-adjust gives the overrides.
+* **Accessibility: the premium homepage ad** — advertiser-chosen colors
+  produced 2.45:1 (label) and 2.65:1 (white CTA text on `#ea8600`), and the
+  ad title was an `h3` that broke heading order. Label text is now theme
+  ink (color stays on the tint/border), the CTA text color is chosen by
+  WCAG luminance (`AdCTATextColor`, pinned in safe_test.go), and the title
+  is a styled `p` — an ad has no place in the page outline.
+* **Back/forward cache blocked** — the homepage served
+  `no-cache, no-store`; Chrome refuses bfcache for `no-store` documents.
+  Now `no-cache` (public page, nothing viewer-specific). Authenticated
+  layouts keep `no-store`. A second bfcache reason comes from Google's own
+  gtag request and is not actionable.
+* **Non-passive scroll listener** — the scroll-to-top widget's listener now
+  passes `{ passive: true }`.
+
+Not worth chasing: "unused JavaScript ~67 KB" is gtag.js itself (already
+deferred past `load`); ~3 KB from app.js being unminified (a JS minifier is
+not worth a Node build dependency); htmx's ES5 patterns ("legacy
+JavaScript"). Speed Index reflects the late cookie-banner paint, which is
+the banner doing its job.
+
 ## Search Console — property exists for years; what this milestone changes
 
 No setup needed. After deploying this milestone:

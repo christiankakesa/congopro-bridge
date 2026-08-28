@@ -8,13 +8,15 @@ package templates
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
+import "congopro-bridge/internal/ads"
+
 // HomePage is the templ port of the retired index.html SPA shell: the
 // homepage hero and the results view in one page, driven by htmx and
 // /js/app.js (the SPA coordinator extracted from index.html's inline
 // script). Every element ID below is part of the contract with app.js and
 // with the oob fragments in search_results.templ / ads.templ — keep them
 // stable. Footer, scroll-to-top and cookie consent come from Layout.
-func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int) templ.Component {
+func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int, homeAd *ads.AdWire) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -59,7 +61,11 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<span class=\"wordmark mt-4 font-sora font-semibold text-4xl sm:text-5xl leading-none\"><span class=\"logo-a\">Congopro</span> <span class=\"logo-b\">Bridge.</span></span><h1 class=\"mt-5 font-sora font-semibold text-lg sm:text-[22px] text-ink tracking-tight\">Toutes les entreprises en un instant.</h1><p class=\"mt-2 text-sm sm:text-[15px] text-ink-muted max-w-md leading-relaxed\">Rapide, Gratuit, et Efficace.</p></div><div class=\"w-full max-w-[584px] space-y-4\"><div class=\"search-box flex items-center gap-2 px-4 py-3 w-full\"><svg id=\"homeSearchIcon\" class=\"w-5 h-5 text-ink-faint shrink-0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z\"></path></svg> <svg id=\"homeSpinner\" class=\"spinner w-5 h-5 text-accent shrink-0 hidden\" fill=\"none\" viewBox=\"0 0 24 24\"><circle class=\"opacity-20\" cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-width=\"4\"></circle> <path class=\"opacity-75\" fill=\"currentColor\" d=\"M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z\"></path></svg> <input id=\"homeInput\" name=\"q\" type=\"text\" aria-label=\"Rechercher une entreprise, un service ou un professionnel\" placeholder=\"Que recherchez-vous aujourd'hui ?\" autocomplete=\"off\" spellcheck=\"false\" class=\"flex-1 text-base text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0\" hx-get=\"/api/v1/search\" hx-target=\"#resultsList\" hx-swap=\"innerHTML transition:true\" hx-sync=\"this:replace\" hx-replace-url=\"true\" hx-trigger=\"input delay:260ms\"> <button id=\"homeClear\" class=\"hidden text-ink-faint hover:text-ink transition-colors shrink-0\" aria-label=\"Effacer la recherche\"><svg class=\"w-5 h-5\" viewBox=\"0 0 20 20\" fill=\"currentColor\"><path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z\" clip-rule=\"evenodd\"></path></svg></button> <button id=\"homeSearchBtn\" type=\"button\" aria-label=\"Rechercher\" class=\"ml-1 w-10 h-10 shrink-0 rounded-full bg-accent hover:bg-accent-hover text-on-accent flex items-center justify-center transition-colors shadow-card\"><svg class=\"w-[18px] h-[18px]\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" d=\"M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z\"></path></svg></button></div><p id=\"homeStatus\" class=\"text-center text-sm text-ink-faint min-h-[1.25rem]\"></p></div><div class=\"mt-5 flex flex-wrap justify-center gap-2 w-full max-w-[584px]\"><button type=\"button\" data-search-chip=\"banque\" class=\"hero-chip\">Banques</button> <button type=\"button\" data-search-chip=\"télécom\" class=\"hero-chip\">Télécoms</button> <button type=\"button\" data-search-chip=\"restaurant\" class=\"hero-chip\">Restaurants</button> <button type=\"button\" data-search-chip=\"santé\" class=\"hero-chip\">Santé</button> <button type=\"button\" data-search-chip=\"transport\" class=\"hero-chip\">Transport</button> <button type=\"button\" data-search-chip=\"éducation\" class=\"hero-chip\">Éducation</button></div><p class=\"mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-full bg-accent-soft text-accent text-[13px] font-medium\"><svg class=\"w-[15px] h-[15px]\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2l1.8 5.6L19.5 9l-5.7 1.4L12 16l-1.8-5.6L4.5 9l5.7-1.4z\"></path> <path d=\"M19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9z\"></path></svg> Posez une question — l'assistant IA vous répond</p><div id=\"homepageAdContainer\" class=\"hidden mt-6 w-full max-w-[584px] space-y-4\"></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<span class=\"wordmark mt-4 font-sora font-semibold text-4xl sm:text-5xl leading-none\"><span class=\"logo-a\">Congopro</span> <span class=\"logo-b\">Bridge.</span></span><h1 class=\"mt-5 font-sora font-semibold text-lg sm:text-[22px] text-ink tracking-tight\">Toutes les entreprises en un instant.</h1><p class=\"mt-2 text-sm sm:text-[15px] text-ink-muted max-w-md leading-relaxed\">Rapide, Gratuit, et Efficace.</p></div><div class=\"w-full max-w-[584px] space-y-4\"><div class=\"search-box flex items-center gap-2 px-4 py-3 w-full\"><svg id=\"homeSearchIcon\" class=\"w-5 h-5 text-ink-faint shrink-0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z\"></path></svg> <svg id=\"homeSpinner\" class=\"spinner w-5 h-5 text-accent shrink-0 hidden\" fill=\"none\" viewBox=\"0 0 24 24\"><circle class=\"opacity-20\" cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-width=\"4\"></circle> <path class=\"opacity-75\" fill=\"currentColor\" d=\"M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z\"></path></svg> <input id=\"homeInput\" name=\"q\" type=\"text\" aria-label=\"Rechercher une entreprise, un service ou un professionnel\" placeholder=\"Que recherchez-vous aujourd'hui ?\" autocomplete=\"off\" spellcheck=\"false\" class=\"flex-1 text-base text-ink placeholder:text-ink-faint bg-transparent outline-none min-w-0\" hx-get=\"/api/v1/search\" hx-target=\"#resultsList\" hx-swap=\"innerHTML transition:true\" hx-sync=\"this:replace\" hx-replace-url=\"true\" hx-trigger=\"input delay:260ms\"> <button id=\"homeClear\" class=\"hidden text-ink-faint hover:text-ink transition-colors shrink-0\" aria-label=\"Effacer la recherche\"><svg class=\"w-5 h-5\" viewBox=\"0 0 20 20\" fill=\"currentColor\"><path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z\" clip-rule=\"evenodd\"></path></svg></button> <button id=\"homeSearchBtn\" type=\"button\" aria-label=\"Rechercher\" class=\"ml-1 w-10 h-10 shrink-0 rounded-full bg-accent hover:bg-accent-hover text-on-accent flex items-center justify-center transition-colors shadow-card\"><svg class=\"w-[18px] h-[18px]\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" d=\"M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z\"></path></svg></button></div><p id=\"homeStatus\" class=\"text-center text-sm text-ink-faint min-h-[1.25rem]\"></p></div><div class=\"mt-5 flex flex-wrap justify-center gap-2 w-full max-w-[584px]\"><button type=\"button\" data-search-chip=\"banque\" class=\"hero-chip\">Banques</button> <button type=\"button\" data-search-chip=\"télécom\" class=\"hero-chip\">Télécoms</button> <button type=\"button\" data-search-chip=\"restaurant\" class=\"hero-chip\">Restaurants</button> <button type=\"button\" data-search-chip=\"santé\" class=\"hero-chip\">Santé</button> <button type=\"button\" data-search-chip=\"transport\" class=\"hero-chip\">Transport</button> <button type=\"button\" data-search-chip=\"éducation\" class=\"hero-chip\">Éducation</button></div><p class=\"mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-full bg-accent-soft text-accent text-[13px] font-medium\"><svg class=\"w-[15px] h-[15px]\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2l1.8 5.6L19.5 9l-5.7 1.4L12 16l-1.8-5.6L4.5 9l5.7-1.4z\"></path> <path d=\"M19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9z\"></path></svg> Posez une question — l'assistant IA vous répond</p><!-- The homepage ad is server-rendered into the initial HTML. It used\n\t       to arrive via an app.js fetch after the healthz round trip, and\n\t       inserting it under this vertically-centered hero shifted the whole\n\t       block up — that insertion was most of the mobile CLS penalty. -->")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = HomepageAdFragment(homeAd).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -71,7 +77,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(approxCompanies(companiesCount))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 72, Col: 82}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 78, Col: 82}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -105,7 +111,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 168, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 174, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -118,7 +124,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 169, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 175, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 			if templ_7745c5c3_Err != nil {
@@ -131,7 +137,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(nonce)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 170, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 176, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -144,7 +150,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int)
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue("/js/app.js?h=" + AppJSVersion)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 170, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/home.templ`, Line: 176, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
