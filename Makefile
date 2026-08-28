@@ -76,7 +76,7 @@ RSYNC        := rsync -az --progress --delete \
          dev-deps-up dev-mail-down dev-mail-test dev-mail-up dev-search-reset dev-stack-down \
          dev-stack-logs dev-stack-logs-app dev-stack-reset dev-stack-up dev-test-integration \
          prod-app-logs prod-app-push prod-app-restart prod-app-start prod-app-status \
-         prod-digest-install prod-digest-now prod-digest-status prod-staff-telegram-link \
+         docs-pdf prod-digest-install prod-digest-now prod-digest-status prod-staff-telegram-link \
          prod-app-stop prod-backup-install prod-backup-list prod-backup-logs prod-backup-offsite-configure prod-backup-offsite-pull prod-backup-offsite-status prod-db-restore-offsite prod-backup-now \
          prod-backup-pull prod-backup-status prod-bootstrap-all prod-bootstrap-app \
          prod-config-push prod-db-check prod-db-import prod-db-import-ads prod-db-install \
@@ -683,6 +683,18 @@ prod-staff-telegram-link:
 	@echo "▶ Linking staff ↔ Telegram on $(DEPLOY_HOST)…"
 	@ssh -t $(_ssh_opts) $(DEPLOY_USER)@$(DEPLOY_HOST) "cd $(REMOTE_DIR) && sudo bash -c 'set -a && . ./$(APP_ENV_FILE) && set +a && ./$(BINARY) -link-telegram'"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Documentation
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Renders the team onboarding guide to PDF for sharing with new admins.
+docs-pdf:
+	@command -v pandoc >/dev/null || { echo "pandoc not installed: sudo apt install pandoc weasyprint" >&2; exit 1; }
+	@# No --metadata title: the file already opens with an H1, and setting a
+	@# title as well makes pandoc print the heading twice on page one.
+	pandoc BUSINESS_WORKFLOW.md -o BUSINESS_WORKFLOW.pdf --pdf-engine=weasyprint
+	@echo "✓ BUSINESS_WORKFLOW.pdf"
+
 prod-backup-status:
 	@$(SSH) "sudo systemctl status congopro-bridge-db-backup.timer --no-pager -l || true"
 	@$(SSH) "echo 'local last-success:   '\$$(cat $(BACKUP_DIR)/last-success 2>/dev/null || echo '(none)'); \
@@ -858,6 +870,7 @@ help:
 	@echo "    dev-test-integration     Integration-tagged tests against local Postgres"
 	@echo "    dev-mail-up/-down        Mailpit local email capture (UI http://localhost:8025)"
 	@echo "    dev-mail-test TO=…       Send one real test email through the .env SMTP account"
+	@echo "    docs-pdf                 Render BUSINESS_WORKFLOW.md to PDF (team onboarding guide)"
 	@echo "    dev-stack-up/-down       Whole stack in docker, app container included"
 	@echo "    dev-stack-reset          ⚠ DESTROYS the local Meilisearch volume"
 	@echo "    dev-stack-logs[-app]     Follow compose logs"
