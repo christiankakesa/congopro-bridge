@@ -107,8 +107,15 @@ all three; none set disables the promote endpoints cleanly (503).
 - **401 from Stripe in logs** — `STRIPE_SECRET_KEY` empty or a test key
   against live mode.
 
-## Follow-ups (tracked in TODO.md)
+## Ranking
 
-- Promoted ranking in Meilisearch (pin or weight) — v1 ships badges only.
+Promoted companies that match a query are pinned to the top of the search
+results, keeping Meilisearch's relevance order within each group. The pin is
+applied Go-side in the search handler (`pinPromoted`, over the same
+active/`past_due` set that drives the badge) — deliberately NOT a Meilisearch
+ranking rule, so a subscription changes ranking the instant its webhook lands,
+with no reindex and no interaction with the hybrid semantic scoring.
+
+## Follow-ups (tracked in TODO.md)
 - Admin revenue view joining `promotions` and ads attribution.
 - Renewal reminder emails via the existing mailer.

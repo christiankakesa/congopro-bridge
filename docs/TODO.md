@@ -7,8 +7,6 @@
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
 * Telegram bot as notification/quick-action layer on top of the CMS.
-* Promoted-listing ranking (pin/badge-weight in Meilisearch) — v1 ships
-  badges only.
 * Admin revenue view (promotions + ads attribution).
 
 ## Later
@@ -56,6 +54,11 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Promoted-listing ranking (2026-08-28): promoted companies pin to the top
+  of matching search results, Go-side (`pinPromoted` in the search handler)
+  rather than a Meilisearch ranking rule — instant on webhook, no reindex,
+  no coupling with hybrid scoring. Promise copy on /account/promote updated.
 
 * Disaster recovery rehearsed on production (2026-08-28): `prod-db-restore`
   run against the live database with a fresh dump — service stopped,

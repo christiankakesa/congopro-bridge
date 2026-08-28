@@ -754,7 +754,7 @@ func AccountPromotePage(nonce, email string, eligible []promotions.EligibleCompa
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<div class=\"max-w-lg mt-8\"><h1 class=\"text-xl font-sora font-semibold text-ink mb-1\">Mise en avant</h1><p class=\"text-sm text-ink-faint mb-6\">Votre entreprise apparaît avec un badge «&nbsp;Promu&nbsp;» sur sa fiche et dans les résultats. ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<div class=\"max-w-lg mt-8\"><h1 class=\"text-xl font-sora font-semibold text-ink mb-1\">Mise en avant</h1><p class=\"text-sm text-ink-faint mb-6\">Votre entreprise remonte en tête des résultats de recherche, avec un badge «&nbsp;Promu&nbsp;» sur sa fiche et dans les résultats. ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

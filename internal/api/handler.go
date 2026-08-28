@@ -190,6 +190,15 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		results = []data.SearchResult{}
 	}
 
+	// Paid "Mise en avant": promoted companies that match the query are
+	// pinned to the top (see pinPromoted). Both the HTML and JSON branches
+	// serve the pinned order so API consumers see what the site shows.
+	promoted := map[string]bool{}
+	if len(results) > 0 {
+		promoted = a.promotedSet(r, results)
+		results = pinPromoted(results, promoted)
+	}
+
 	if htmxReq {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if q != "" {
@@ -201,7 +210,7 @@ func (a *AppEngine) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		if searchErr != "" {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-		templates.SearchResultsFragment(q, results, len(results), searchErr, a.promotedSet(r, results)).Render(r.Context(), w)
+		templates.SearchResultsFragment(q, results, len(results), searchErr, promoted).Render(r.Context(), w)
 		return
 	}
 
