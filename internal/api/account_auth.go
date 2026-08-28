@@ -105,8 +105,13 @@ func (a *AppEngine) AccountRequestCodeHandler(w http.ResponseWriter, r *http.Req
 	code, err := customers.IssueCode(r.Context(), a.DB, email)
 	if err != nil {
 		if err == customers.ErrCooldown {
-			// Not an error for the user: their code is already in flight.
-			http.Redirect(w, r, verifyURL(email, ""), http.StatusSeeOther)
+			// Not an error for the user: their previous code is still valid
+			// and no second email is sent. The verify page is told so
+			// (?again=1) — telling someone a code was "just sent" when
+			// nothing left the server is how a missing email turns into a
+			// mystery. `next` survives so a claim flow still lands home.
+			log.Info().Msgf("[account] otp cooldown, no mail sent to=%s", email)
+			http.Redirect(w, r, verifyURL(email, next)+"&again=1", http.StatusSeeOther)
 			return
 		}
 		log.Error().Msgf("[account] issue code: %v", err)
@@ -117,6 +122,7 @@ func (a *AppEngine) AccountRequestCodeHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	sentAt := time.Now()
 	if err := a.Mailer.Send(mail.Message{
 		To:      email,
 		Subject: "Votre code de connexion — Congopro",
@@ -137,6 +143,11 @@ func (a *AppEngine) AccountRequestCodeHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Logged on success, not only on failure: when a code never arrives, the
+	// first question is whether the relay accepted it at all, and silence in
+	// the log answers nothing.
+	log.Info().Msgf("[account] otp mail accepted by relay to=%s in=%s", email, time.Since(sentAt).Round(time.Millisecond))
+
 	http.Redirect(w, r, verifyURL(email, next), http.StatusSeeOther)
 }
 
@@ -148,7 +159,11 @@ func (a *AppEngine) AccountVerifyPageHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templates.AccountVerifyPage(nonceFrom(r), email, "", safeNext(r.URL.Query().Get("next"))).Render(r.Context(), w)
+	templates.AccountVerifyPage(
+		nonceFrom(r), email, "",
+		r.URL.Query().Get("again") == "1",
+		safeNext(r.URL.Query().Get("next")),
+	).Render(r.Context(), w)
 }
 
 // POST /account/verify — check the code, create the account on first login,
@@ -168,7 +183,7 @@ func (a *AppEngine) AccountVerifyCodeHandler(w http.ResponseWriter, r *http.Requ
 	renderVerifyErr := func(status int, msg string) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(status)
-		templates.AccountVerifyPage(nonceFrom(r), email, msg, "").Render(r.Context(), w)
+		templates.AccountVerifyPage(nonceFrom(r), email, msg, false, "").Render(r.Context(), w)
 	}
 
 	if err := customers.VerifyCode(r.Context(), a.DB, email, code); err != nil {
