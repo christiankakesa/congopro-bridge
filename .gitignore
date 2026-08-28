@@ -19,3 +19,8 @@ congopro-bridge-logos.zip
 *!congopro.com!*.xml.gz
 # WSL alternate-data-stream files left behind by Windows downloads.
 *:Zone.Identifier
+
+# The app binary when built into the repo root (make build puts it in
+# /build/). Tailwind auto-scans the tree and a Go binary carries every
+# template string literal, so a stray one here silently pollutes style.min.css.
+/congopro-bridge
