@@ -204,7 +204,7 @@ dev-mail-down:
 # real OVH account (and a real inbox) once, before anything depends on email.
 dev-mail-test:
 	@if [ -z "$(TO)" ]; then echo "Usage: make dev-mail-test TO=you@example.com" >&2; exit 2; fi
-	go run ./cmd/dev-mail-test $(TO)
+	go run ./cmd/mail-test $(TO)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Database (local dev — docker compose)
