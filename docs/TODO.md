@@ -2,7 +2,18 @@
 
 ## Now
 
-* (nothing — pull from Next when ready)
+* **OVH deliverability incident (opened 2026-08-29).** OVH's relay accepted
+  5 OTP emails to Gmail on Aug 27 (`250 Queued`, zero app errors) but Google's
+  DMARC aggregate for that day counts only 4 congopro.com messages total —
+  all matching OTHER sends that arrived fine. So the relay dropped them
+  silently, no NDR. App / DNS / Gmail all exonerated (a probe byte-identical
+  to a real OTP was delivered). Ticket open with OVH, with queue ref
+  InternalId=40368397616226 and Message-ID evidence. Follow-ups:
+  - watch `hello@` for late NDRs (the SMTP reason would be gold);
+  - pull the next Google DMARC report (covers Aug 28) from `ask@` — do the
+    10:51 test and the 04:4x/04:5x OTPs show up?
+  - when OVH answers, retest OTP login end-to-end from the app;
+  - if OVH drags: consider a second SMTP provider as fallback for OTP mail.
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
