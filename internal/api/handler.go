@@ -26,6 +26,7 @@ import (
 	"congopro-bridge/internal/data"
 	"congopro-bridge/internal/mail"
 	"congopro-bridge/internal/promotions"
+	"congopro-bridge/internal/telegram"
 	"congopro-bridge/internal/web"
 	"congopro-bridge/internal/web/templates"
 )
@@ -56,6 +57,11 @@ type AppEngine struct {
 	// nil (Stripe disabled or faked out in tests) renders the page with a
 	// warning banner and blank amounts instead of failing.
 	StripeSubs SubscriptionReader
+
+	// Telegram posts staff notifications (new claims, contact messages,
+	// promotion events…) to a private chat. nil disables them silently —
+	// notifications are best-effort by design, see notify_telegram.go.
+	Telegram telegram.Notifier
 }
 
 type ErrorResponse struct {

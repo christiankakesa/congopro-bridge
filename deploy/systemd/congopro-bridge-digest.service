@@ -1,0 +1,25 @@
+# Sends the daily staff digest (companies added, pending claims, active
+# promotions, MRR) to the Telegram chat. Triggered by
+# congopro-bridge-digest.timer — a oneshot flag mode of the app binary, so
+# the server itself keeps zero clock code and a deploy restart can't eat
+# the send.
+[Unit]
+Description=Congopro Bridge daily staff digest (Telegram)
+After=postgresql.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ops
+Group=ops
+
+# DATABASE_URL, TELEGRAM_*, STRIPE_* all live in the app's env file.
+EnvironmentFile=/opt/congopro-bridge/congopro-bridge.env
+WorkingDirectory=/opt/congopro-bridge
+ExecStart=/opt/congopro-bridge/congopro-bridge -digest
+
+# Hardening — same posture as the main service.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

@@ -6,7 +6,9 @@
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* Telegram bot as notification/quick-action layer on top of the CMS.
+* Telegram bot v2: quick actions (approve/reject claims from the chat via
+  callback queries — needs a receiver and Telegram↔staff identity mapping;
+  v1 is deliberately send-only).
 
 ## Later
 
@@ -53,6 +55,16 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Telegram staff notifications v1 (2026-08-28): send-only bot posting to a
+  private chat — new claims (with /admin/claims deep link), contact
+  messages, promotion activated/past-due/canceled (transition-gated via
+  RowsAffected/RETURNING so webhook replays never re-notify), companies on
+  their transition into published, ERROR-level logs (zerolog hook:
+  non-blocking, rate-limited, `[telegram]`-marker loop guard), and a daily
+  07:00 digest via systemd timer + `-digest` flag
+  (`make prod-digest-install/-now/-status`). Config is all-or-nothing
+  TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID; empty disables everything cleanly.
 
 * Admin revenue view (2026-08-28): /admin/revenue — MRR and per-subscription
   amounts fetched live from Stripe (prices are immutable, so old subscribers

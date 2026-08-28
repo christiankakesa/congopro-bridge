@@ -78,6 +78,7 @@ type promoteFixture struct {
 	companyID  string
 	checkout   *fakeCheckout
 	webhookURL string
+	telegram   *captureNotifier
 }
 
 // newPromoteFixture: a server with the promote+webhook routes, a customer
@@ -97,10 +98,12 @@ func newPromoteFixture(t *testing.T, checkout *fakeCheckout, webhookSecret strin
 	}
 	t.Cleanup(pool.Close)
 
+	tg := newCaptureNotifier()
 	a := &AppEngine{
 		DB: pool, Mailer: &captureMailer{}, MailEnabled: true,
 		StripeCheckout: checkout,
 		StripeEnabled:  checkout != nil,
+		Telegram:       tg,
 	}
 	if webhookSecret != "" {
 		a.StripeWebhookSecret = webhookSecret
@@ -139,6 +142,7 @@ func newPromoteFixture(t *testing.T, checkout *fakeCheckout, webhookSecret strin
 		srv: srv, pool: pool, client: noRedirectClient(token),
 		email: email, companyID: companyID, checkout: checkout,
 		webhookURL: srv.URL + "/webhooks/stripe",
+		telegram:   tg,
 	}
 }
 
@@ -237,6 +241,16 @@ func TestStripeWebhookSignatureAndLifecycle(t *testing.T) {
 	if ok, _ := promotions.IsPromoted(ctx, f.pool, f.companyID); !ok {
 		t.Fatal("promotion not active after webhook")
 	}
+	if msg := f.telegram.waitOne(t); !strings.Contains(msg, "Mise en avant activée") || !strings.Contains(msg, "WH SARL") {
+		t.Fatalf("activation notification = %q", msg)
+	}
+
+	// Stripe replays webhooks: the same completed event again touches zero
+	// rows and must NOT re-notify the staff chat.
+	if code := postWebhook(t, f.webhookURL, secret, completed, secret); code != http.StatusOK {
+		t.Fatalf("replayed completed: %d, want 200", code)
+	}
+	f.telegram.expectNone(t)
 
 	// subscription.updated with a period end fills what the failed
 	// retrieve left empty.
@@ -270,6 +284,15 @@ func TestStripeWebhookSignatureAndLifecycle(t *testing.T) {
 	if ok, _ := promotions.IsPromoted(ctx, f.pool, f.companyID); ok {
 		t.Fatal("promotion must stop after subscription.deleted")
 	}
+	if msg := f.telegram.waitOne(t); !strings.Contains(msg, "Mise en avant résiliée") {
+		t.Fatalf("cancellation notification = %q", msg)
+	}
+
+	// Replayed delete: zero rows → silence.
+	if code := postWebhook(t, f.webhookURL, secret, deleted, secret); code != http.StatusOK {
+		t.Fatalf("replayed deleted: %d, want 200", code)
+	}
+	f.telegram.expectNone(t)
 }
 
 func TestFormatPrice(t *testing.T) {

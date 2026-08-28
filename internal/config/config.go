@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -57,6 +58,11 @@ type Config struct {
 	StripeSecretKey     string
 	StripeWebhookSecret string
 	StripePriceID       string
+
+	// Telegram — staff notifications to a private chat. All-or-nothing:
+	// both set enables the bot, both empty disables it cleanly.
+	TelegramBotToken string
+	TelegramChatID   string
 }
 
 // StripeEnabled reports whether promoted listings (Stripe) are configured.
@@ -88,6 +94,34 @@ func (c *Config) MailConfig() (mail.Config, bool) {
 		FromAddress: c.SMTPFrom,
 		FromName:    c.SMTPFromName,
 	}, true
+}
+
+// TelegramEnabled reports whether staff notifications are configured.
+func (c *Config) TelegramEnabled() bool {
+	return c.TelegramBotToken != ""
+}
+
+// ValidateTelegram enforces the all-or-nothing Telegram contract at boot:
+// either both TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are set, or neither.
+func (c *Config) ValidateTelegram() error {
+	if c.TelegramBotToken == "" && c.TelegramChatID == "" {
+		return nil
+	}
+	if c.TelegramBotToken == "" || c.TelegramChatID == "" {
+		return errors.New("config: Telegram requires TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID together")
+	}
+	// BotFather tokens look like "1234567890:AAF…" — a chat id or a bare
+	// bot name pasted here would fail only at the first notification.
+	bot, _, ok := strings.Cut(c.TelegramBotToken, ":")
+	if !ok || bot == "" || strings.TrimLeft(bot, "0123456789") != "" {
+		return fmt.Errorf("config: TELEGRAM_BOT_TOKEN must look like \"<digits>:<secret>\" (from @BotFather) — got %q", redactID(c.TelegramBotToken))
+	}
+	// Chat ids are integers; group/channel ids are negative (-100…). Get
+	// yours from getUpdates after messaging the bot.
+	if _, err := strconv.ParseInt(c.TelegramChatID, 10, 64); err != nil {
+		return fmt.Errorf("config: TELEGRAM_CHAT_ID must be an integer chat id (negative for groups) — got %q; send the bot a message, then read chat.id from https://api.telegram.org/bot<token>/getUpdates", redactID(c.TelegramChatID))
+	}
+	return nil
 }
 
 // ValidateStripe enforces the all-or-nothing Stripe contract at boot:
@@ -258,6 +292,9 @@ func Load() *Config {
 	cfg.StripeSecretKey = unquote(os.Getenv("STRIPE_SECRET_KEY"))
 	cfg.StripeWebhookSecret = unquote(os.Getenv("STRIPE_WEBHOOK_SECRET"))
 	cfg.StripePriceID = unquote(os.Getenv("STRIPE_PRICE_ID"))
+
+	cfg.TelegramBotToken = unquote(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	cfg.TelegramChatID = unquote(os.Getenv("TELEGRAM_CHAT_ID"))
 
 	// Separate embedder endpoint only makes sense when explicitly set;
 	// otherwise Meilisearch uses the same Ollama as the app itself.

@@ -93,10 +93,15 @@ func TestPromotions_FullLifecycle(t *testing.T) {
 		t.Fatalf("pending promo must remove eligibility, got %d", len(el))
 	}
 
-	// checkout.session.completed → active.
+	// checkout.session.completed → active; the first apply is a real
+	// transition (drives the activation notification).
 	periodEnd := time.Now().AddDate(0, 1, 0).Truncate(time.Second)
-	if err := ApplyCheckoutCompleted(ctx, promoPool, "cs_test_123", "cus_test_1", "sub_test_1", periodEnd); err != nil {
+	activated, err := ApplyCheckoutCompleted(ctx, promoPool, "cs_test_123", "cus_test_1", "sub_test_1", periodEnd)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if !activated {
+		t.Fatal("first checkout apply must report activated")
 	}
 
 	promoted, err := PromotedCompanyIDs(ctx, promoPool, []string{companyID})
@@ -107,9 +112,14 @@ func TestPromotions_FullLifecycle(t *testing.T) {
 		t.Fatal("IsPromoted false after activation")
 	}
 
-	// Replay the same event: no state change, no error.
-	if err := ApplyCheckoutCompleted(ctx, promoPool, "cs_test_123", "cus_test_1", "sub_test_1", periodEnd); err != nil {
+	// Replay the same event: no state change, no error — and no reported
+	// transition, so a replayed webhook can never re-notify.
+	activated, err = ApplyCheckoutCompleted(ctx, promoPool, "cs_test_123", "cus_test_1", "sub_test_1", periodEnd)
+	if err != nil {
 		t.Fatalf("replay: %v", err)
+	}
+	if activated {
+		t.Fatal("replay must not report activated")
 	}
 
 	// The admin revenue listing sees the promotion with the customer email
@@ -134,17 +144,40 @@ func TestPromotions_FullLifecycle(t *testing.T) {
 		t.Fatal("AllForAdmin: activated promotion not listed")
 	}
 
-	// subscription.updated → past_due; badge still shows (grace).
-	if err := ApplySubscriptionUpdated(ctx, promoPool, "sub_test_1", "past_due", periodEnd); err != nil {
+	// subscription.updated → past_due; badge still shows (grace). The
+	// transition is reported (drives the past-due notification)…
+	oldSt, newSt, err := ApplySubscriptionUpdated(ctx, promoPool, "sub_test_1", "past_due", periodEnd)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if oldSt != "active" || newSt != "past_due" {
+		t.Fatalf("updated transition = %q→%q, want active→past_due", oldSt, newSt)
+	}
+	// …and a same-status replay reports no transition.
+	oldSt, newSt, err = ApplySubscriptionUpdated(ctx, promoPool, "sub_test_1", "past_due", periodEnd)
+	if err != nil || oldSt != newSt {
+		t.Fatalf("updated replay = %q→%q, %v; want equal statuses", oldSt, newSt, err)
+	}
+	// Unknown subscription: ignored, empty transition.
+	if o, n, err := ApplySubscriptionUpdated(ctx, promoPool, "sub_unknown", "active", periodEnd); err != nil || o != "" || n != "" {
+		t.Fatalf("unknown sub = %q→%q, %v; want empty, nil", o, n, err)
 	}
 	if ok, _ := IsPromoted(ctx, promoPool, companyID); !ok {
 		t.Fatal("past_due must remain promoted (grace period semantics)")
 	}
 
-	// subscription.deleted → canceled; slot freed.
-	if err := ApplySubscriptionDeleted(ctx, promoPool, "sub_test_1"); err != nil {
+	// subscription.deleted → canceled; slot freed. First delete is a real
+	// transition, the replay is not.
+	canceled, err := ApplySubscriptionDeleted(ctx, promoPool, "sub_test_1")
+	if err != nil {
 		t.Fatal(err)
+	}
+	if !canceled {
+		t.Fatal("first delete must report canceled")
+	}
+	canceled, err = ApplySubscriptionDeleted(ctx, promoPool, "sub_test_1")
+	if err != nil || canceled {
+		t.Fatalf("delete replay = %v, %v; want false, nil", canceled, err)
 	}
 	if ok, _ := IsPromoted(ctx, promoPool, companyID); ok {
 		t.Fatal("canceled must stop promotion")

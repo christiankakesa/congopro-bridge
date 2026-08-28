@@ -101,6 +101,11 @@ func (a *AppEngine) ContactSubmitHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Mirror to the staff chat — email delivery has proven fallible, and
+	// this fires only after Send succeeded, so the honeypot and validation
+	// paths (which returned earlier) can never reach it.
+	go a.notifyTelegram(msgContactMessage(form.Name, subject))
+
 	a.renderContact(w, r, templates.ContactForm{}, nil, true, http.StatusOK)
 }
 

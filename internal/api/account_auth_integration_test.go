@@ -241,7 +241,8 @@ func TestAccountClaimFlow(t *testing.T) {
 	})
 
 	// The full account mux (customer side)…
-	a := &AppEngine{DB: pool, Mailer: capturer, MailEnabled: true}
+	tg := newCaptureNotifier()
+	a := &AppEngine{DB: pool, Mailer: capturer, MailEnabled: true, Telegram: tg}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /account", a.WithSecurityHeaders(a.RequireCustomerAuth(a.AccountDashboardHandler)))
 	mux.HandleFunc("GET /account/login", a.WithSecurityHeaders(a.AccountLoginPageHandler))
@@ -280,6 +281,13 @@ func TestAccountClaimFlow(t *testing.T) {
 	})
 	if r.StatusCode != http.StatusSeeOther || r.Header.Get("Location") != "/account" {
 		t.Fatalf("claim submit: %d %q", r.StatusCode, r.Header.Get("Location"))
+	}
+
+	// The staff chat hears about it, with the company, the claimant, and a
+	// deep link into the admin queue.
+	if msg := tg.waitOne(t); !strings.Contains(msg, "Nouvelle réclamation") ||
+		!strings.Contains(msg, "Flow SARL") || !strings.Contains(msg, "/admin/claims") {
+		t.Fatalf("claim notification = %q", msg)
 	}
 
 	// The claim appears in the customer's dashboard.

@@ -76,6 +76,7 @@ RSYNC        := rsync -az --progress --delete \
          dev-deps-up dev-mail-down dev-mail-test dev-mail-up dev-search-reset dev-stack-down \
          dev-stack-logs dev-stack-logs-app dev-stack-reset dev-stack-up dev-test-integration \
          prod-app-logs prod-app-push prod-app-restart prod-app-start prod-app-status \
+         prod-digest-install prod-digest-now prod-digest-status \
          prod-app-stop prod-backup-install prod-backup-list prod-backup-logs prod-backup-offsite-configure prod-backup-offsite-pull prod-backup-offsite-status prod-db-restore-offsite prod-backup-now \
          prod-backup-pull prod-backup-status prod-bootstrap-all prod-bootstrap-app \
          prod-config-push prod-db-check prod-db-import prod-db-import-ads prod-db-install \
@@ -394,6 +395,8 @@ prod-secrets-init:
 #   make prod-secrets-set KEY=STRIPE_SECRET_KEY
 #   make prod-secrets-set KEY=STRIPE_WEBHOOK_SECRET
 #   make prod-secrets-set KEY=STRIPE_PRICE_ID
+#   make prod-secrets-set KEY=TELEGRAM_BOT_TOKEN
+#   make prod-secrets-set KEY=TELEGRAM_CHAT_ID
 #
 # Live keys belong here and ONLY here — never in .env, which is dev and holds
 # test keys. Run prod-app-restart afterwards to load them.
@@ -645,6 +648,31 @@ prod-backup-now:
 	@echo "▶ Running an ad-hoc backup on $(DEPLOY_HOST)…"
 	@$(SSH) "sudo systemctl start congopro-bridge-db-backup.service"
 	@$(MAKE) prod-backup-status
+
+# ── Daily staff digest (Telegram) ─────────────────────────────────────────────
+
+prod-digest-install:
+	@echo "▶ Installing daily digest timer on $(DEPLOY_HOST)…"
+	@# `enable --now` on a timer that has never run counts as a missed trigger,
+	@# so Persistent=true fires a catch-up digest the instant it is installed.
+	@# Against a binary predating -digest that catch-up fails the unit with a
+	@# bare "status=2/INVALIDARGUMENT" — check the flag exists before enabling.
+	@$(SSH) "$(REMOTE_DIR)/$(BINARY) -h 2>&1 | grep -q -- -digest" \
+	  || { echo "✗ deployed binary has no -digest flag — run 'make prod-deploy' first" >&2; exit 1; }
+	@$(RSYNC) deploy/systemd/congopro-bridge-digest.service $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/congopro-bridge-digest.service
+	@$(RSYNC) deploy/systemd/congopro-bridge-digest.timer $(DEPLOY_USER)@$(DEPLOY_HOST):/tmp/congopro-bridge-digest.timer
+	@$(SSH) "sudo mv /tmp/congopro-bridge-digest.service /tmp/congopro-bridge-digest.timer /etc/systemd/system/ && sudo systemctl daemon-reload"
+	@$(SSH) "sudo systemctl enable --now congopro-bridge-digest.timer"
+	@echo "✓ digest timer installed — next run: $$($(SSH) 'systemctl show congopro-bridge-digest.timer -p NextElapseUSecRealtime --value')"
+
+prod-digest-now:
+	@echo "▶ Sending an ad-hoc digest from $(DEPLOY_HOST)…"
+	@$(SSH) "sudo systemctl start congopro-bridge-digest.service"
+	@$(MAKE) prod-digest-status
+
+prod-digest-status:
+	@$(SSH) "sudo systemctl status congopro-bridge-digest.timer --no-pager -l || true"
+	@$(SSH) "sudo journalctl -u congopro-bridge-digest.service -n 10 --no-pager || true"
 
 prod-backup-status:
 	@$(SSH) "sudo systemctl status congopro-bridge-db-backup.timer --no-pager -l || true"

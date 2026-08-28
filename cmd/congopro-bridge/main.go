@@ -20,6 +20,7 @@ import (
 	"congopro-bridge/internal/logger"
 	"congopro-bridge/internal/mail"
 	"congopro-bridge/internal/middlewares/ratelimiter"
+	"congopro-bridge/internal/telegram"
 )
 
 func main() {
@@ -27,6 +28,7 @@ func main() {
 	importFlag := flag.Bool("import", false, "import companies from the embedded JSON into postgres and exit")
 	importAdsFlag := flag.Bool("import-ads", false, "import campaigns from the legacy embedded ads.yml into postgres and exit")
 	createAdminFlag := flag.Bool("create-admin", false, "interactively create the first staff account and exit")
+	digestFlag := flag.Bool("digest", false, "compute and send the daily staff digest to Telegram, then exit")
 	flag.Parse()
 
 	logLevel := logger.DetectLogLevel()
@@ -99,6 +101,33 @@ func main() {
 		return
 	}
 
+	if *digestFlag {
+		if cfg.DatabaseURL == "" {
+			log.Fatal().Msg("[digest] DATABASE_URL is not set")
+		}
+		// A mis-set timer must show red in systemctl, not silently no-op.
+		if err := cfg.ValidateTelegram(); err != nil {
+			log.Fatal().Msgf("[digest] %v", err)
+		}
+		if !cfg.TelegramEnabled() {
+			log.Fatal().Msg("[digest] Telegram is not configured — set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID")
+		}
+		pool, err := db.New(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Fatal().Msgf("[digest] failed to connect: %v", err)
+		}
+		defer pool.Close()
+		var subs api.SubscriptionReader
+		if cfg.StripeEnabled() {
+			subs = api.NewStripeService(cfg.StripeSecretKey, cfg.StripePriceID)
+		}
+		if err := runDigest(ctx, pool, subs, telegram.New(cfg.TelegramBotToken, cfg.TelegramChatID)); err != nil {
+			log.Fatal().Msgf("[digest] failed: %v", err)
+		}
+		log.Info().Msg("[digest] sent")
+		return
+	}
+
 	if cfg.MeiliMasterKey == "" {
 		log.Warn().Msg("[startup] MEILI_MASTER_KEY is empty — Meilisearch is running without authentication, anyone reachable on MEILI_URL has full read/write access. Set MEILI_MASTER_KEY except for local, network-isolated development.")
 	}
@@ -116,6 +145,9 @@ func main() {
 	}
 	if err := cfg.ValidateStripe(); err != nil {
 		log.Fatal().Msgf("[startup] invalid Stripe configuration: %v", err)
+	}
+	if err := cfg.ValidateTelegram(); err != nil {
+		log.Fatal().Msgf("[startup] invalid Telegram configuration: %v", err)
 	}
 
 	ratelimiter.SetTrustedProxies(cfg.TrustedProxies)
@@ -170,6 +202,19 @@ func main() {
 		log.Info().Msgf("[startup] Stripe enabled (price %s)", cfg.StripePriceID)
 	} else {
 		log.Info().Msg("[startup] Stripe not configured — promoted listings disabled")
+	}
+
+	// Staff notifications (Telegram). Server mode also forwards ErrorLevel+
+	// log events to the staff chat — the hook is rate-limited and loop-safe
+	// (see internal/telegram/hook.go); flag modes returned earlier, so a CLI
+	// run never attaches it.
+	if cfg.TelegramEnabled() {
+		tg := telegram.New(cfg.TelegramBotToken, cfg.TelegramChatID)
+		apiAppEngine.Telegram = tg
+		log.Logger = log.Logger.Hook(telegram.NewErrorHook(tg, 5))
+		log.Info().Msg("[startup] Telegram staff notifications enabled")
+	} else {
+		log.Info().Msg("[startup] Telegram not configured — staff notifications disabled")
 	}
 
 	mux := http.NewServeMux()

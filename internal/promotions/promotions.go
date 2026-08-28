@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -207,10 +208,11 @@ func IsPromoted(ctx context.Context, db *pgxpool.Pool, companyID string) (bool, 
 
 // ApplyCheckoutCompleted activates the promotion behind a finished
 // checkout session: stamps the Stripe customer + subscription ids and the
-// first period end. Safe to replay.
-func ApplyCheckoutCompleted(ctx context.Context, db *pgxpool.Pool, sessionID, stripeCustomerID, stripeSubscriptionID string, periodEnd time.Time) error {
-	// RowsAffected 0 on replay or unknown session — both fine: nothing to do.
-	_, err := db.Exec(ctx, `
+// first period end. Safe to replay. activated reports whether a row really
+// moved pending→active — RowsAffected 0 on replay or unknown session, so a
+// replayed webhook can never re-trigger a notification.
+func ApplyCheckoutCompleted(ctx context.Context, db *pgxpool.Pool, sessionID, stripeCustomerID, stripeSubscriptionID string, periodEnd time.Time) (activated bool, err error) {
+	tag, err := db.Exec(ctx, `
 		UPDATE promotions SET
 			stripe_customer_id = $2,
 			stripe_subscription_id = $3,
@@ -219,7 +221,10 @@ func ApplyCheckoutCompleted(ctx context.Context, db *pgxpool.Pool, sessionID, st
 			updated_at = now()
 		WHERE stripe_session_id = $1 AND status = 'pending'`,
 		sessionID, stripeCustomerID, stripeSubscriptionID, periodEnd)
-	return err
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 // MapSubscriptionStatus converts a Stripe subscription status to ours.
@@ -236,26 +241,39 @@ func MapSubscriptionStatus(stripeStatus string) string {
 
 // ApplySubscriptionUpdated syncs status and period end from Stripe.
 // Idempotent; unknown subscription ids are ignored (e.g. subscriptions not
-// created through this flow).
-func ApplySubscriptionUpdated(ctx context.Context, db *pgxpool.Pool, stripeSubscriptionID, stripeStatus string, periodEnd time.Time) error {
+// created through this flow). oldStatus/newStatus report the transition for
+// notifications — both empty when no row matched, equal when nothing moved.
+func ApplySubscriptionUpdated(ctx context.Context, db *pgxpool.Pool, stripeSubscriptionID, stripeStatus string, periodEnd time.Time) (oldStatus, newStatus string, err error) {
 	status := MapSubscriptionStatus(stripeStatus)
-	_, err := db.Exec(ctx, `
-		UPDATE promotions SET
+	// UPDATE … FROM a self-select captures the pre-update status in the
+	// same statement — no second query, no race with a concurrent event.
+	err = db.QueryRow(ctx, `
+		UPDATE promotions p SET
 			status = $2,
 			current_period_end = $3,
 			updated_at = now()
-		WHERE stripe_subscription_id = $1`,
-		stripeSubscriptionID, status, periodEnd)
-	return err
+		FROM (SELECT id, status AS old FROM promotions WHERE stripe_subscription_id = $1) prev
+		WHERE p.id = prev.id
+		RETURNING prev.old, p.status`,
+		stripeSubscriptionID, status, periodEnd).Scan(&oldStatus, &newStatus)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", nil // unknown subscription — not ours, nothing to do
+	}
+	return oldStatus, newStatus, err
 }
 
-// ApplySubscriptionDeleted cancels. Idempotent.
-func ApplySubscriptionDeleted(ctx context.Context, db *pgxpool.Pool, stripeSubscriptionID string) error {
-	_, err := db.Exec(ctx, `
+// ApplySubscriptionDeleted cancels. Idempotent; canceled reports whether a
+// row really transitioned (the status guard makes RowsAffected a true
+// signal, so replays never re-notify).
+func ApplySubscriptionDeleted(ctx context.Context, db *pgxpool.Pool, stripeSubscriptionID string) (canceled bool, err error) {
+	tag, err := db.Exec(ctx, `
 		UPDATE promotions SET status = 'canceled', updated_at = now()
 		WHERE stripe_subscription_id = $1 AND status <> 'canceled'`,
 		stripeSubscriptionID)
-	return err
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 func isLiveUnique(err error) bool {

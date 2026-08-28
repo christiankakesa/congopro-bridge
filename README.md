@@ -96,6 +96,8 @@ whole stack including the app in Docker: `make dev-stack-up`.
 | `STRIPE_SECRET_KEY` | *(empty = disabled)* | Stripe key for promoted listings — all three Stripe keys required together |
 | `STRIPE_WEBHOOK_SECRET` | *(empty)* | Signing secret for `POST /webhooks/stripe` (locally: `stripe listen --forward-to localhost:8090/webhooks/stripe`) |
 | `STRIPE_PRICE_ID` | *(empty)* | Monthly recurring Price of the "Mise en avant" product |
+| `TELEGRAM_BOT_TOKEN` | *(empty = disabled)* | Bot token for staff notifications — both Telegram keys required together |
+| `TELEGRAM_CHAT_ID` | *(empty)* | Private staff chat id (negative for groups; read it from `getUpdates`) |
 
 ## CLI flags
 
@@ -104,6 +106,7 @@ whole stack including the app in Docker: `make dev-stack-up`.
 | `-migrate` | Apply pending migrations and exit |
 | `-import` | Upsert the embedded legacy JSON into Postgres and exit |
 | `-create-admin` | Interactively create the first staff account and exit |
+| `-digest` | Send the daily staff digest to Telegram and exit (run by a systemd timer) |
 
 ## API
 

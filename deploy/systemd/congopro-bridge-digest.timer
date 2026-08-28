@@ -1,0 +1,13 @@
+# 07:00 in the SERVER's timezone (CET/CEST on the current VPS) — adjust
+# OnCalendar if the box ever moves timezone.
+[Unit]
+Description=Send the Congopro Bridge daily staff digest every morning
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+# Sends the missed digest on boot if the VPS was down at 07:00.
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

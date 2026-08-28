@@ -83,7 +83,7 @@ func (a *AppEngine) AccountClaimSubmitHandler(w http.ResponseWriter, r *http.Req
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	companyID, _, ok := a.companyForSlug(r.Context(), r.FormValue("company_slug"))
+	companyID, companyName, ok := a.companyForSlug(r.Context(), r.FormValue("company_slug"))
 	if !ok {
 		http.NotFound(w, r)
 		return
@@ -101,5 +101,7 @@ func (a *AppEngine) AccountClaimSubmitHandler(w http.ResponseWriter, r *http.Req
 		renderErr(http.StatusInternalServerError, "Une erreur est survenue. Réessayez dans un instant.")
 		return
 	}
+	// Staff otherwise only discover claims by visiting /admin/claims.
+	go a.notifyTelegram(msgNewClaim(companyName, cust.Email, baseUrl(r)))
 	http.Redirect(w, r, "/account", http.StatusSeeOther)
 }

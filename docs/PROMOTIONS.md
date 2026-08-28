@@ -117,4 +117,5 @@ ranking rule, so a subscription changes ranking the instant its webhook lands,
 with no reindex and no interaction with the hybrid semantic scoring.
 
 ## Follow-ups (tracked in TODO.md)
+
 - Renewal reminder emails via the existing mailer.

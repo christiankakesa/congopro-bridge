@@ -36,12 +36,12 @@ func postContact(t *testing.T, a *AppEngine, form url.Values) *httptest.Response
 }
 
 func validForm() url.Values {
-    return url.Values{
-        "name":    {"Christian"},
-        "email":   {"someone@example.cd"},
-        "subject": {"Correction de fiche"},
-        "message": {"Bonjour, une information est erronée sur ma fiche."},
-    }
+	return url.Values{
+		"name":    {"Christian"},
+		"email":   {"someone@example.cd"},
+		"subject": {"Correction de fiche"},
+		"message": {"Bonjour, une information est erronée sur ma fiche."},
+	}
 }
 
 func TestContact_SendsToConfiguredAddressOnly(t *testing.T) {

@@ -267,6 +267,9 @@ func (a *AppEngine) AdminCompanyCreateHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	a.reloadEngineAsync()
+	if input.form.Status == "published" {
+		go a.notifyTelegram(msgCompanyPublished(input.form.Name, input.form.NameSeo))
+	}
 	http.Redirect(w, r, "/admin/companies?flash=created", http.StatusSeeOther)
 }
 
@@ -335,6 +338,14 @@ func (a *AppEngine) AdminCompanyUpdateHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Pre-update status: the published notification must fire only on the
+	// transition INTO published, never on a re-save. A failed read skips
+	// detection (no notification) rather than failing the save.
+	oldStatus := ""
+	if err := a.DB.QueryRow(r.Context(), `SELECT status FROM companies WHERE id = $1`, id).Scan(&oldStatus); err != nil {
+		log.Warn().Msgf("[admin] pre-update status read %s: %v", id, err)
+	}
+
 	tag, err := a.DB.Exec(r.Context(), `
 		UPDATE companies SET
 			name = $2, name_seo = $3, activity = $4, city = $5, country = $6,
@@ -367,6 +378,9 @@ func (a *AppEngine) AdminCompanyUpdateHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	a.reloadEngineAsync()
+	if oldStatus != "" && oldStatus != "published" && input.form.Status == "published" {
+		go a.notifyTelegram(msgCompanyPublished(input.form.Name, input.form.NameSeo))
+	}
 	http.Redirect(w, r, "/admin/companies?flash=saved", http.StatusSeeOther)
 }
 

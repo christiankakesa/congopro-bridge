@@ -92,8 +92,17 @@ func (a *AppEngine) applyCheckoutCompleted(ctx context.Context, raw json.RawMess
 			log.Warn().Msgf("[stripe] subscription retrieve during checkout (%s) failed, period end left to subscription.updated: %v", subID, err)
 		}
 	}
-	return promotions.ApplyCheckoutCompleted(ctx, a.DB,
+	activated, err := promotions.ApplyCheckoutCompleted(ctx, a.DB,
 		session.ID, cusID, subID, periodEnd)
+	if err == nil && activated {
+		// Fire-and-forget, strictly after the DB write succeeded: nothing
+		// in the notify path may ever influence the webhook's status code
+		// (5xx makes Stripe retry). Replays affect zero rows → no re-notify.
+		if name := a.companyNameForPromotionSession(session.ID); name != "" {
+			go a.notifyTelegram(msgPromotionActivated(name))
+		}
+	}
+	return err
 }
 
 func (a *AppEngine) applySubscriptionUpdated(ctx context.Context, raw json.RawMessage) error {
@@ -101,8 +110,16 @@ func (a *AppEngine) applySubscriptionUpdated(ctx context.Context, raw json.RawMe
 	if err := json.Unmarshal(raw, &sub); err != nil {
 		return err
 	}
-	return promotions.ApplySubscriptionUpdated(ctx, a.DB,
+	oldStatus, newStatus, err := promotions.ApplySubscriptionUpdated(ctx, a.DB,
 		sub.ID, string(sub.Status), time.Unix(subscriptionPeriodEnd(&sub), 0))
+	// Only the transition INTO past_due is worth waking staff for — the
+	// activation and cancellation stories have their own events.
+	if err == nil && oldStatus != newStatus && newStatus == "past_due" {
+		if name := a.companyNameForSubscription(sub.ID); name != "" {
+			go a.notifyTelegram(msgPromotionPastDue(name))
+		}
+	}
+	return err
 }
 
 func (a *AppEngine) applySubscriptionDeleted(ctx context.Context, raw json.RawMessage) error {
@@ -110,7 +127,40 @@ func (a *AppEngine) applySubscriptionDeleted(ctx context.Context, raw json.RawMe
 	if err := json.Unmarshal(raw, &sub); err != nil {
 		return err
 	}
-	return promotions.ApplySubscriptionDeleted(ctx, a.DB, sub.ID)
+	canceled, err := promotions.ApplySubscriptionDeleted(ctx, a.DB, sub.ID)
+	if err == nil && canceled {
+		if name := a.companyNameForSubscription(sub.ID); name != "" {
+			go a.notifyTelegram(msgPromotionCanceled(name))
+		}
+	}
+	return err
+}
+
+// companyNameForPromotionSession resolves the company behind a checkout
+// session for notification text. Best-effort: "" on any failure, and the
+// caller then skips the notification rather than sending a nameless one.
+func (a *AppEngine) companyNameForPromotionSession(sessionID string) string {
+	var name string
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := a.DB.QueryRow(ctx, `
+		SELECT co.name FROM promotions p JOIN companies co ON co.id = p.company_id
+		WHERE p.stripe_session_id = $1`, sessionID).Scan(&name); err != nil {
+		log.Warn().Msgf("[telegram] company lookup for session %s: %v", sessionID, err)
+	}
+	return name
+}
+
+func (a *AppEngine) companyNameForSubscription(subID string) string {
+	var name string
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := a.DB.QueryRow(ctx, `
+		SELECT co.name FROM promotions p JOIN companies co ON co.id = p.company_id
+		WHERE p.stripe_subscription_id = $1`, subID).Scan(&name); err != nil {
+		log.Warn().Msgf("[telegram] company lookup for subscription %s: %v", subID, err)
+	}
+	return name
 }
 
 // subscriptionPeriodEnd reads current_period_end from the first
