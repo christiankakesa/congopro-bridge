@@ -71,7 +71,8 @@ Post-deploy Lighthouse (mobile emulation): **Performance 93 · Accessibility
 94 · Best Practices 100 · SEO 100**. The remaining deductions decomposed
 into four concrete causes, all fixed the same day — Lighthouse against
 production after the round-2 deploy: **100 · 100 · 100 · 100**, CLS
-0.151 → 0.001 (the only remaining shift is the cookie banner's 0.001):
+0.151 → 0.001 (the only remaining shift is the cookie banner's 0.001),
+confirmed the same day on the official pagespeed.web.dev tool:
 
 * **CLS 0.15 (the entire penalty)** — two causes, both hitting the
   vertically-centered hero. The big one (0.11): the homepage ad used to be
@@ -108,6 +109,16 @@ deferred past `load`); ~3 KB from app.js being unminified (a JS minifier is
 not worth a Node build dependency); htmx's ES5 patterns ("legacy
 JavaScript"). Speed Index reflects the late cookie-banner paint, which is
 the banner doing its job.
+
+**Lab 100 is not the ranking input.** PageSpeed still reports "the Chrome
+User Experience Report does not have sufficient real-world speed data for
+this page" — Core Web Vitals only affect ranking once CrUX has enough real
+Chrome traffic to populate, and congopro.com is below that threshold at the
+URL level. So treat 100/100/100/100 as *the site is not the bottleneck*,
+not as a ranking win already banked. The field data that will eventually
+appear is measured from RDC mobile networks, where the wins that matter are
+the ones already made (no images on the homepage, ~9 KB HTML, immutable
+assets) plus, if it ever matters, an edge cache — see the TTFB note above.
 
 ## Search Console baseline (exports of 2026-08-29, data through ~08-21 — pre-fix)
 

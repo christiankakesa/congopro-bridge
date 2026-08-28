@@ -17,14 +17,15 @@
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
-* Re-run the official PageSpeed (mobile) to confirm the round-2 deploy —
-  local Lighthouse against production measured **100/100/100/100**
-  (round 1: 93/94/100/100; CLS 0.151 → 0.001, see SEO.md "Round 2").
-* Search Console: sitemap `https://congopro.com/sitemap.xml` submitted
-  2026-08-29 ✓. Baseline captured in SEO.md (exports through ~08-21):
-  952 apex pages sat excluded as "alternate of www" — watch that bucket
-  flip to Indexed and the 5xx bucket (176, deploy-window 503s, fixed via
-  DataReady) drain. Re-export Coverage in ~2 weeks and compare.
+* **2026-09-12** (~2 weeks after the fix): re-export Search Console
+  Coverage and compare against the baseline table in [SEO.md](SEO.md).
+  What should have moved: the 952 apex pages excluded as "alternate of
+  www" flipping to Indexed, and the 5xx bucket (176, deploy-window 503s,
+  fixed via `DataReady`) no longer growing. Expect a dip-and-recover in
+  Pages as traffic migrates from www URLs to apex ones — that is the
+  consolidation, not a regression.
+  (Sitemap `https://congopro.com/sitemap.xml` submitted 2026-08-29 ✓;
+  PageSpeed mobile confirmed 100/100/100/100 on the official tool ✓.)
 
 ## Later
 
