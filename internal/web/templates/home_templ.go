@@ -88,7 +88,7 @@ func HomePage(title, canonicalURL, nonce, cssVersion string, companiesCount int,
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><div id=\"resultsPage\" class=\"hidden w-full flex-1\"><div id=\"topBar\" class=\"px-4 sm:px-6 py-3 w-full\"><div class=\"flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 max-w-5xl\"><a id=\"logoLink\" href=\"#\" class=\"font-sora text-[24px] sm:text-[26px] tracking-tight shrink-0 select-none leading-none flex items-center gap-1.5\" aria-label=\"Congopro Bridge - retour à l'accueil\"><span><span class=\"wordmark font-sora font-semibold\"><span class=\"logo-a\">Congopro</span> <span class=\"logo-b text-[20px] sm:text-[22px]\">Bridge.</span></span></span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><div id=\"resultsPage\" class=\"hidden w-full flex-1\"><div id=\"topBar\" class=\"px-4 sm:px-6 py-3 w-full\"><div class=\"flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 max-w-2xl mx-auto\"><a id=\"logoLink\" href=\"#\" class=\"font-sora text-[24px] sm:text-[26px] tracking-tight shrink-0 select-none leading-none flex items-center gap-1.5\" aria-label=\"Congopro Bridge - retour à l'accueil\"><span><span class=\"wordmark font-sora font-semibold\"><span class=\"logo-a\">Congopro</span> <span class=\"logo-b text-[20px] sm:text-[22px]\">Bridge.</span></span></span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
