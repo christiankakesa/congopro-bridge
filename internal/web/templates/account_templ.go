@@ -147,7 +147,7 @@ func AccountLoginPage(nonce, errorMsg, next string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"max-w-sm mx-auto mt-16\"><h1 class=\"text-xl font-sora font-semibold text-ink mb-2\">Mon compte</h1><p class=\"text-sm text-ink-faint mb-6\">Recevez un code de connexion par email — pas de mot de passe.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"max-w-sm mx-auto mt-16\"><h1 class=\"text-xl font-sora font-semibold text-ink mb-2\">Espace entreprise</h1><p class=\"text-sm text-ink-faint mb-6\">Recevez un code de connexion par email — pas de mot de passe.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -389,7 +389,7 @@ func AccountDashboard(nonce string, cust *customers.Customer, myClaims []claims.
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"max-w-lg mt-8\"><h1 class=\"text-xl font-sora font-semibold text-ink mb-2\">Mon compte</h1><p class=\"text-sm text-ink-faint mb-6\">Connecté en tant que ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"max-w-lg mt-8\"><h1 class=\"text-xl font-sora font-semibold text-ink mb-2\">Espace entreprise</h1><p class=\"text-sm text-ink-faint mb-6\">Connecté en tant que ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -473,7 +473,7 @@ func AccountDashboard(nonce string, cust *customers.Customer, myClaims []claims.
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = AccountLayout("Mon compte", nonce, email).Render(templ.WithChildren(ctx, templ_7745c5c3_Var16), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = AccountLayout("Espace entreprise", nonce, email).Render(templ.WithChildren(ctx, templ_7745c5c3_Var16), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

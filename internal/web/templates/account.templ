@@ -53,7 +53,7 @@ templ AccountLayout(title, nonce, email string) {
 templ AccountLoginPage(nonce, errorMsg, next string) {
 	@AccountLayout("Connexion", nonce, "") {
 		<div class="max-w-sm mx-auto mt-16">
-			<h1 class="text-xl font-sora font-semibold text-ink mb-2">Mon compte</h1>
+			<h1 class="text-xl font-sora font-semibold text-ink mb-2">Espace entreprise</h1>
 			<p class="text-sm text-ink-faint mb-6">Recevez un code de connexion par email — pas de mot de passe.</p>
 			if errorMsg != "" {
 				<div class="mb-4 rounded-lg bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">
@@ -153,9 +153,9 @@ templ AccountDashboard(nonce string, cust *customers.Customer, myClaims []claims
 			email = cust.Email
 		}
 	}}
-	@AccountLayout("Mon compte", nonce, email) {
+	@AccountLayout("Espace entreprise", nonce, email) {
 		<div class="max-w-lg mt-8">
-			<h1 class="text-xl font-sora font-semibold text-ink mb-2">Mon compte</h1>
+			<h1 class="text-xl font-sora font-semibold text-ink mb-2">Espace entreprise</h1>
 			<p class="text-sm text-ink-faint mb-6">Connecté en tant que { email }.</p>
 
 			if len(myClaims) > 0 {
