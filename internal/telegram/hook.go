@@ -14,11 +14,16 @@ import (
 // ErrorHook forwards ErrorLevel+ log messages to a Notifier so the staff
 // chat sees production errors as they happen.
 //
-// Three properties are non-negotiable and each has a test:
+// Four properties are non-negotiable and each has a test:
 //   - Logging never blocks: Run pushes into a buffered channel with a
 //     non-blocking select; a full buffer drops the message.
 //   - No feedback loop: messages containing "[telegram]" are skipped, and
 //     this package never logs above Warn — a failed forward cannot re-enter.
+//   - No client-disconnect noise: a visitor closing the tab mid-request
+//     cancels r.Context(), and every DB call or template render still in
+//     flight fails with context.Canceled. Handlers log that at Error like
+//     any other failure, which is right for the local log but is not an
+//     incident — so the hook drops it before it reaches the staff chat.
 //   - Bounded volume: at most maxPerMinute messages reach Telegram; drops
 //     are counted and reported on the next delivered message.
 type ErrorHook struct {
@@ -56,6 +61,9 @@ func (h *ErrorHook) Run(_ *zerolog.Event, level zerolog.Level, msg string) {
 	if strings.Contains(msg, "[telegram]") {
 		return // the loop guard — see the package comment
 	}
+	if isClientGone(msg) {
+		return // stays in the local log, never pages anyone
+	}
 	if !h.admit() {
 		return
 	}
@@ -64,6 +72,15 @@ func (h *ErrorHook) Run(_ *zerolog.Event, level zerolog.Level, msg string) {
 	default:
 		h.noteDrop() // full buffer: drop rather than stall the caller
 	}
+}
+
+// isClientGone reports whether a message is the trace of a caller that hung
+// up: the request context was cancelled, so whatever was in flight (pgx
+// query, templ render) returned context.Canceled. Matched on the error text
+// because the hook only sees the formatted message. context.DeadlineExceeded
+// is deliberately not matched — a slow query is a real problem.
+func isClientGone(msg string) bool {
+	return strings.Contains(msg, context.Canceled.Error())
 }
 
 // admit applies the fixed-window rate limit and counts what it refuses.

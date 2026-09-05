@@ -65,6 +65,28 @@ func TestHook_SkipsTelegramMarkedMessages(t *testing.T) {
 	}
 }
 
+func TestHook_SkipsClientDisconnects(t *testing.T) {
+	n := &chanNotifier{sent: make(chan string, 8)}
+	h := NewErrorHook(n, 10)
+
+	// A visitor leaving mid-request cancels r.Context(); the resulting
+	// errors are logged locally but must not page the staff chat. Both the
+	// bare form and pgx's wrapped form carry the context.Canceled text.
+	h.Run(nil, zerolog.ErrorLevel, "[search] promoted lookup: context canceled")
+	h.Run(nil, zerolog.ErrorLevel, "[templates] render company page \"acme\": timeout: context already done: context canceled")
+	// A deadline is a slow query, not a departed client — it must go through.
+	h.Run(nil, zerolog.ErrorLevel, "[search] promoted lookup: context deadline exceeded")
+
+	if msg := waitMsg(t, n); !strings.Contains(msg, "deadline exceeded") {
+		t.Errorf("got %q, want the deadline error", msg)
+	}
+	select {
+	case extra := <-n.sent:
+		t.Errorf("client-disconnect error forwarded: %q", extra)
+	case <-time.After(100 * time.Millisecond):
+	}
+}
+
 func TestHook_RateLimitCountsDrops(t *testing.T) {
 	n := &chanNotifier{sent: make(chan string, 32)}
 	h := NewErrorHook(n, 2)
