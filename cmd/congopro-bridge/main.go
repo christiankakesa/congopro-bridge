@@ -310,6 +310,7 @@ func main() {
 	mux.HandleFunc("GET /admin/revenue", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminRevenueHandler)))
 	mux.HandleFunc("GET /admin/ads", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdsListHandler)))
 	mux.HandleFunc("POST /admin/ads/settings", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdsSettingsHandler)))
+	mux.HandleFunc("POST /admin/ads/preview", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdPreviewHandler)))
 	mux.HandleFunc("GET /admin/ads/new", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdNewFormHandler)))
 	mux.HandleFunc("POST /admin/ads/new", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdCreateHandler)))
 	mux.HandleFunc("GET /admin/ads/{id}/edit", apiAppEngine.WithSecurityHeaders(apiAppEngine.RequireStaffAuth(apiAppEngine.AdminAdEditFormHandler)))

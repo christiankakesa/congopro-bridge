@@ -350,12 +350,36 @@ func (a *AppEngine) renderAdForm(w http.ResponseWriter, r *http.Request, form te
 	if err != nil {
 		log.Error().Msgf("[admin] staff options: %v", err)
 	}
-	labelValues := make([]string, 0, len(ads.LabelPresets))
+	presets := make([]templates.AdLabelPreset, 0, len(ads.LabelPresets))
 	for _, p := range ads.LabelPresets {
-		labelValues = append(labelValues, p.Label)
+		presets = append(presets, templates.AdLabelPreset{Label: p.Label, Color: p.Color})
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	templates.AdminAdForm(nonceFrom(r), a.adminNav(r), form, isNew, errorMsg, staff, labelValues).Render(r.Context(), w)
+	templates.AdminAdForm(nonceFrom(r), a.adminNav(r), form, isNew, errorMsg, staff, presets).Render(r.Context(), w)
+}
+
+// POST /admin/ads/preview — htmx target of the form's live preview. Renders
+// the real ad components from the posted fields; nothing is persisted.
+func (a *AppEngine) AdminAdPreviewHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	form := templates.AdminAdFormData{
+		ID:          strings.TrimSpace(r.FormValue("id")),
+		Title:       strings.TrimSpace(r.FormValue("title")),
+		Description: strings.TrimSpace(r.FormValue("description")),
+		URL:         strings.TrimSpace(r.FormValue("url")),
+		DisplayURL:  strings.TrimSpace(r.FormValue("display_url")),
+		Label:       strings.TrimSpace(r.FormValue("label")),
+		Color:       strings.TrimSpace(r.FormValue("color")),
+		Placement:   strings.TrimSpace(r.FormValue("placement")),
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	if err := templates.AdminAdPreview(form).Render(r.Context(), w); err != nil {
+		log.Error().Msgf("[admin] render ad preview: %v", err)
+	}
 }
 
 func (a *AppEngine) staffOptions(r *http.Request) ([]templates.StaffOption, error) {

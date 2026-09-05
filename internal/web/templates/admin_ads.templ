@@ -17,7 +17,6 @@ templ AdminAdsList(nonce string, nav AdminNav, statusFilter string, list []Admin
 				+ Nouvelle campagne
 			</a>
 		</div>
-
 		<form method="post" action="/admin/ads/settings" class="bg-surface-raised rounded-2xl border border-line shadow-card p-4 mb-6 flex flex-wrap items-end gap-4">
 			<div>
 				<p class="text-xs text-ink-faint uppercase font-medium mb-2">Réglages globaux</p>
@@ -29,7 +28,11 @@ templ AdminAdsList(nonce string, nav AdminNav, statusFilter string, list []Admin
 			<div>
 				<label for="rotation_sec" class="block text-xs text-ink-faint mb-1">Rotation (s)</label>
 				<input
-					type="number" id="rotation_sec" name="rotation_sec" min="1" max="120"
+					type="number"
+					id="rotation_sec"
+					name="rotation_sec"
+					min="1"
+					max="120"
 					value={ strconv.Itoa(settings.RotationSec) }
 					class="field-input max-w-24"
 				/>
@@ -37,7 +40,11 @@ templ AdminAdsList(nonce string, nav AdminNav, statusFilter string, list []Admin
 			<div>
 				<label for="max_per_page" class="block text-xs text-ink-faint mb-1">Max / page</label>
 				<input
-					type="number" id="max_per_page" name="max_per_page" min="1" max="3"
+					type="number"
+					id="max_per_page"
+					name="max_per_page"
+					min="1"
+					max="3"
 					value={ strconv.Itoa(settings.MaxPerPage) }
 					class="field-input max-w-24"
 				/>
@@ -46,7 +53,6 @@ templ AdminAdsList(nonce string, nav AdminNav, statusFilter string, list []Admin
 				Enregistrer
 			</button>
 		</form>
-
 		<nav class="flex items-center gap-1 text-sm mb-4">
 			@adsFilterTab(statusFilter, "", "Toutes")
 			@adsFilterTab(statusFilter, "active", "Actives")
@@ -54,7 +60,6 @@ templ AdminAdsList(nonce string, nav AdminNav, statusFilter string, list []Admin
 			@adsFilterTab(statusFilter, "paused", "En pause")
 			@adsFilterTab(statusFilter, "expired", "Expirées")
 		</nav>
-
 		<div class="bg-surface-raised rounded-2xl border border-line shadow-card overflow-x-auto">
 			if len(list) == 0 {
 				<div class="px-4 py-8 text-sm text-ink-faint text-center">Aucune campagne.</div>
@@ -78,7 +83,8 @@ templ AdminAdsList(nonce string, nav AdminNav, statusFilter string, list []Admin
 								</td>
 								<td class="px-4 py-3 text-ink-muted">{ adPlacementLabel(row.Placement) }</td>
 								<td class="px-4 py-3 text-ink-muted">{ row.Period }</td>
-								<td class="px-4 py-3">@adStatusBadge(row.Status)</td>
+								<td class="px-4 py-3">@adStatusBadge(row.Status)
+</td>
 								<td class="px-4 py-3 text-ink-muted">{ row.SoldByEmail }</td>
 							</tr>
 						}
@@ -135,23 +141,39 @@ templ adStatusBadge(status string) {
 	<span class={ "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium " + cls }>{ label }</span>
 }
 
-templ AdminAdForm(nonce string, nav AdminNav, form AdminAdFormData, isNew bool, errorMsg string, staff []StaffOption, labelValues []string) {
+// AdLabelPreset is one entry of the admin label picker: choosing the label
+// auto-fills the accent color when that field is still empty.
+type AdLabelPreset struct {
+	Label string
+	Color string
+}
+
+templ AdminAdForm(nonce string, nav AdminNav, form AdminAdFormData, isNew bool, errorMsg string, staff []StaffOption, presets []AdLabelPreset) {
 	@AdminLayout(adFormTitle(isNew), nonce, nav) {
-		<div class="max-w-2xl">
-			<div class="flex items-center justify-between mb-6">
-				<h1 class="text-xl font-sora font-semibold text-ink">
-					if isNew {
-						<span>Nouvelle campagne</span>
-					} else {
-						<span>Modifier : { form.Title }</span>
-					}
-				</h1>
+		<div class="flex items-center justify-between gap-4 mb-6">
+			<h1 class="text-xl font-sora font-semibold text-ink min-w-0 truncate">
+				if isNew {
+					<span>Nouvelle campagne</span>
+				} else {
+					<span>Modifier : { form.Title }</span>
+				}
+			</h1>
+			<div class="flex items-center gap-3 shrink-0">
+				<a href="/ads-preview" target="_blank" rel="noopener" class="btn btn-secondary text-sm">
+					Formats publicitaires ↗
+				</a>
 				<a href="/admin/ads" class="text-sm text-ink-faint hover:text-ink">← Retour</a>
 			</div>
-			if errorMsg != "" {
-				<div class="mb-4 rounded-lg bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">{ errorMsg }</div>
-			}
-			<form method="post" class="space-y-4 bg-surface-raised rounded-2xl border border-line shadow-card p-5">
+		</div>
+		if errorMsg != "" {
+			<div class="mb-4 max-w-2xl rounded-lg bg-danger-soft border border-danger-soft text-danger text-sm px-4 py-3">{ errorMsg }</div>
+		}
+		<div class="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+			<form
+				id="ad-form"
+				method="post"
+				class="max-w-2xl space-y-4 bg-surface-raised rounded-2xl border border-line shadow-card p-5"
+			>
 				if isNew {
 					@adField("Identifiant (slug unique)", "id", "text", form.ID, true, "ex : rawbank-homepage-2026")
 				}
@@ -159,56 +181,88 @@ templ AdminAdForm(nonce string, nav AdminNav, form AdminAdFormData, isNew bool, 
 				@adField("Description", "description", "text", form.Description, false, "")
 				@adField("URL de destination (https)", "url", "url", form.URL, true, "")
 				@adField("URL affichée", "display_url", "text", form.DisplayURL, false, "ex : rawbank.cd")
-
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
 						<label for="label" class="block text-sm font-medium text-ink-muted mb-1">Label</label>
-						<input list="ad-label-presets" type="text" id="label" name="label" value={ form.Label }
-							class="field-input"/>
+						<input
+							list="ad-label-presets"
+							type="text"
+							id="label"
+							name="label"
+							value={ form.Label }
+							class="field-input"
+						/>
 						<datalist id="ad-label-presets">
-							for _, lv := range labelValues {
-								<option value={ lv }></option>
+							for _, p := range presets {
+								<option value={ p.Label } data-color={ p.Color }></option>
 							}
 						</datalist>
 					</div>
 					<div>
 						<label for="color" class="block text-sm font-medium text-ink-muted mb-1">Couleur d'accent</label>
-						<input type="text" id="color" name="color" value={ form.Color } placeholder="#be0203"
-							class="field-input"/>
+						<input
+							type="text"
+							id="color"
+							name="color"
+							value={ form.Color }
+							placeholder="#be0203"
+							class="field-input"
+						/>
 					</div>
 				</div>
-
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 					<div>
 						<label for="period_start" class="block text-sm font-medium text-ink-muted mb-1">Début</label>
-						<input type="date" id="period_start" name="period_start" value={ form.PeriodStart }
-							class="field-input"/>
+						<input
+							type="date"
+							id="period_start"
+							name="period_start"
+							value={ form.PeriodStart }
+							class="field-input"
+						/>
 					</div>
 					<div>
 						<label for="period_end" class="block text-sm font-medium text-ink-muted mb-1">Fin (incluse)</label>
-						<input type="date" id="period_end" name="period_end" value={ form.PeriodEnd }
-							class="field-input"/>
+						<input
+							type="date"
+							id="period_end"
+							name="period_end"
+							value={ form.PeriodEnd }
+							class="field-input"
+						/>
 					</div>
 					<div>
 						<label for="weight" class="block text-sm font-medium text-ink-muted mb-1">Poids</label>
-						<input type="number" id="weight" name="weight" min="0" max="100" value={ form.Weight }
-							class="field-input"/>
+						<input
+							type="number"
+							id="weight"
+							name="weight"
+							min="0"
+							max="100"
+							value={ form.Weight }
+							class="field-input"
+						/>
 					</div>
 				</div>
-
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
 						<label for="placement" class="block text-sm font-medium text-ink-muted mb-1">Emplacement</label>
-						<select id="placement" name="placement"
-							class="field-input">
+						<select
+							id="placement"
+							name="placement"
+							class="field-input"
+						>
 							<option value="search_results" selected?={ form.Placement == "search_results" }>Résultats de recherche</option>
 							<option value="homepage" selected?={ form.Placement == "homepage" }>Accueil</option>
 						</select>
 					</div>
 					<div>
 						<label for="status" class="block text-sm font-medium text-ink-muted mb-1">Statut</label>
-						<select id="status" name="status"
-							class="field-input">
+						<select
+							id="status"
+							name="status"
+							class="field-input"
+						>
 							<option value="draft" selected?={ form.Status == "draft" }>Brouillon</option>
 							<option value="active" selected?={ form.Status == "active" }>Active</option>
 							<option value="paused" selected?={ form.Status == "paused" }>En pause</option>
@@ -216,19 +270,20 @@ templ AdminAdForm(nonce string, nav AdminNav, form AdminAdFormData, isNew bool, 
 						</select>
 					</div>
 				</div>
-
 				<div>
 					<label for="keywords" class="block text-sm font-medium text-ink-muted mb-1">Mots-clés (un par ligne — vide = toutes les requêtes)</label>
 					<textarea id="keywords" name="keywords" rows="4" class="field-input font-mono">{ form.Keywords }</textarea>
 				</div>
-
 				<div class="border-t border-line pt-4">
 					<p class="text-xs text-ink-faint uppercase font-medium mb-3">Attribution commerciale</p>
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div>
 							<label for="sold_by" class="block text-sm font-medium text-ink-muted mb-1">Vendu par</label>
-							<select id="sold_by" name="sold_by"
-								class="field-input">
+							<select
+								id="sold_by"
+								name="sold_by"
+								class="field-input"
+							>
 								<option value="">—</option>
 								for _, st := range staff {
 									<option value={ st.ID } selected?={ st.ID == form.SoldByUserID }>{ st.Label }</option>
@@ -237,26 +292,45 @@ templ AdminAdForm(nonce string, nav AdminNav, form AdminAdFormData, isNew bool, 
 						</div>
 						<div>
 							<label for="customer_email" class="block text-sm font-medium text-ink-muted mb-1">Client (email du compte)</label>
-							<input type="email" id="customer_email" name="customer_email" value={ form.CustomerEmail }
-								class="field-input"/>
+							<input
+								type="email"
+								id="customer_email"
+								name="customer_email"
+								value={ form.CustomerEmail }
+								class="field-input"
+							/>
 						</div>
 					</div>
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
 						<div>
 							<label for="price" class="block text-sm font-medium text-ink-muted mb-1">Prix (facultatif)</label>
-							<input type="text" id="price" name="price" value={ form.Price } placeholder="150.00"
-								class="field-input"/>
+							<input
+								type="text"
+								id="price"
+								name="price"
+								value={ form.Price }
+								placeholder="150.00"
+								class="field-input"
+							/>
 						</div>
 						<div>
 							<label for="currency" class="block text-sm font-medium text-ink-muted mb-1">Devise</label>
-							<input type="text" id="currency" name="currency" value={ form.Currency } maxlength="3" placeholder="USD"
-								class="field-input"/>
+							<input
+								type="text"
+								id="currency"
+								name="currency"
+								value={ form.Currency }
+								maxlength="3"
+								placeholder="USD"
+								class="field-input"
+							/>
 						</div>
 					</div>
 				</div>
-
-				<button type="submit"
-					class="btn btn-primary">
+				<button
+					type="submit"
+					class="btn btn-primary"
+				>
 					if isNew {
 						<span>Créer la campagne</span>
 					} else {
@@ -264,8 +338,108 @@ templ AdminAdForm(nonce string, nav AdminNav, form AdminAdFormData, isNew bool, 
 					}
 				</button>
 			</form>
+			<!-- Live preview (desktop only): the real ad components, re-rendered
+			     server-side on every edit. No client-side copy of the markup, so
+			     the preview cannot drift from what the site serves. -->
+			<aside class="hidden lg:block lg:sticky lg:top-6">
+				<p class="text-xs text-ink-faint uppercase font-medium mb-3">Aperçu en direct</p>
+				<div
+					id="ad-preview"
+					hx-post="/admin/ads/preview"
+					hx-trigger="input delay:300ms from:#ad-form, change from:#ad-form"
+					hx-include="#ad-form"
+					hx-swap="innerHTML"
+				>
+					@AdminAdPreview(form)
+				</div>
+			</aside>
 		</div>
+		<script nonce={ nonce }>
+			(function () {
+				var label = document.getElementById("label");
+				var color = document.getElementById("color");
+				var list = document.getElementById("ad-label-presets");
+				if (!label || !color || !list) return;
+				// Remembers the last value we wrote so a later label change can
+				// still update it; a color typed by hand is never overwritten.
+				var autofilled = "";
+				function presetColor(value) {
+					var v = value.trim().toLowerCase();
+					var opts = list.options;
+					for (var i = 0; i < opts.length; i++) {
+						if (opts[i].value.toLowerCase() === v) return opts[i].getAttribute("data-color") || "";
+					}
+					return "";
+				}
+				function sync() {
+					var c = presetColor(label.value);
+					if (!c) return;
+					var current = color.value.trim();
+					if (current !== "" && current !== autofilled) return;
+					color.value = c;
+					autofilled = c;
+					color.dispatchEvent(new Event("input", { bubbles: true }));
+				}
+				label.addEventListener("input", sync);
+				label.addEventListener("change", sync);
+			})();
+		</script>
 	}
+}
+
+// AdminAdPreview renders the campaign as the site will show it, from the
+// form's current values. Also the response body of POST /admin/ads/preview.
+// Missing fields fall back to placeholders so the preview is never blank.
+templ AdminAdPreview(form AdminAdFormData) {
+	{{
+		ad := adPreviewWire(form)
+		safeURL := ValidateURL(ad.URL)
+		urlMissing := safeURL == ""
+		if urlMissing {
+			ad.URL = "https://exemple.cd"
+			safeURL = ad.URL
+			if ad.DisplayURL == "" {
+				ad.DisplayURL = "exemple.cd"
+			}
+		}
+	}}
+	<div class="space-y-3">
+		if ad.Placement == "homepage" {
+			<p class="text-xs text-ink-faint">Emplacement : page d'accueil (premium)</p>
+			@premiumHomepageAd(ad, safeURL)
+		} else {
+			<p class="text-xs text-ink-faint">Emplacement : résultats de recherche</p>
+			<div class="bg-surface-raised rounded-2xl border border-line shadow-card p-4">
+				@adSlot(ad)
+			</div>
+		}
+		if urlMissing {
+			<p class="text-xs text-warning">URL de destination manquante ou invalide (https:// requis) — lien d'exemple affiché.</p>
+		}
+	</div>
+}
+
+func adPreviewWire(form AdminAdFormData) ads.AdWire {
+	ad := ads.AdWire{
+		ID:          form.ID,
+		Title:       form.Title,
+		Description: form.Description,
+		URL:         form.URL,
+		DisplayURL:  form.DisplayURL,
+		Label:       form.Label,
+		Color:       form.Color,
+		Placement:   form.Placement,
+	}
+	if ad.ID == "" {
+		ad.ID = "preview"
+	}
+	if ad.Title == "" {
+		ad.Title = "Titre de la campagne"
+	}
+	if ad.Description == "" {
+		ad.Description = "La description apparaîtra ici."
+	}
+	return ad
 }
 
 templ adField(label, name, inputType, value string, required bool, placeholder string) {
