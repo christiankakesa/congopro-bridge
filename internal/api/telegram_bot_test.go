@@ -171,3 +171,26 @@ func TestHandleUpdate_OrdinaryChatterIgnored(t *testing.T) {
 		t.Fatalf("responder called %d times for chatter, want 0", n)
 	}
 }
+
+// After a supergroup migration the client sends to a new chat id; commands
+// coming back from that chat must be accepted, everything else still not.
+func TestIsStaffChat_AcceptsMigratedChat(t *testing.T) {
+	live := int64(-10042)
+	h := &TelegramHandler{ChatID: -10042, LiveChatID: func() int64 { return live }}
+	if !h.isStaffChat(-10042) || h.isStaffChat(-999) {
+		t.Fatal("configured chat must pass, foreign must not")
+	}
+	live = -1001234567890
+	if !h.isStaffChat(-1001234567890) {
+		t.Error("migrated chat rejected")
+	}
+	if !h.isStaffChat(-10042) {
+		t.Error("configured chat rejected after migration")
+	}
+	if h.isStaffChat(-999) || h.isStaffChat(12345) {
+		t.Error("foreign chat accepted")
+	}
+	if (&TelegramHandler{ChatID: -10042}).isStaffChat(-1001234567890) {
+		t.Error("nil LiveChatID must fall back to ChatID only")
+	}
+}

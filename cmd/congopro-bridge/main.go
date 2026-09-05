@@ -238,7 +238,7 @@ func main() {
 		log.Logger = log.Logger.Hook(telegram.NewErrorHook(tg, 5))
 
 		chatID, _ := strconv.ParseInt(cfg.TelegramChatID, 10, 64) // shape enforced by ValidateTelegram at boot
-		handler := &api.TelegramHandler{App: apiAppEngine, Resp: tg, ChatID: chatID}
+		handler := &api.TelegramHandler{App: apiAppEngine, Resp: tg, ChatID: chatID, LiveChatID: tg.ChatID}
 		var pollCtx context.Context
 		pollCtx, pollCancel = context.WithCancel(context.Background())
 		pollerDone = make(chan struct{})

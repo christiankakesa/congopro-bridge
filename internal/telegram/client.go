@@ -19,8 +19,12 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Notifier is the seam v1 handlers depend on (precedent: mail.Mailer) —
@@ -48,13 +52,47 @@ type SendOptions struct {
 
 // APIError is a non-OK Bot API reply. The poller matches StatusCode == 409
 // (another consumer holds this token's getUpdates) via errors.As.
+//
+// MigrateToChatID is non-zero when Telegram answered "group chat was
+// upgraded to a supergroup chat": the configured chat id is dead for good
+// and this is its replacement. Sends adopt it automatically (see
+// SendMessage); it is kept on the error so the message names the fix.
 type APIError struct {
-	StatusCode  int
-	Description string
+	StatusCode      int
+	Description     string
+	MigrateToChatID int64
 }
 
 func (e *APIError) Error() string {
+	if e.MigrateToChatID != 0 {
+		return fmt.Sprintf("HTTP %d: %s — chat migrated to %d, set TELEGRAM_CHAT_ID=%d",
+			e.StatusCode, e.Description, e.MigrateToChatID, e.MigrateToChatID)
+	}
 	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Description)
+}
+
+// redactedError replaces an error's text (which for *url.Error embeds the
+// full request URL, bot token included) while keeping the chain intact for
+// errors.Is/As — the poller's ctx checks and callers' APIError matches.
+type redactedError struct {
+	msg string
+	err error
+}
+
+func (e *redactedError) Error() string { return e.msg }
+func (e *redactedError) Unwrap() error { return e.err }
+
+// redact hides the bot token in err's text. Journald keeps logs for months;
+// a token in a timeout message is a token to rotate.
+func (c *Client) redact(err error) error {
+	if err == nil || c.token == "" {
+		return nil
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, c.token) {
+		return err
+	}
+	return &redactedError{msg: strings.ReplaceAll(msg, c.token, "<token>"), err: err}
 }
 
 // Client talks to one bot + one chat. Messages are plain text, no
@@ -63,8 +101,13 @@ func (e *APIError) Error() string {
 // anyway, which is all the deep links need.
 type Client struct {
 	token   string
-	chatID  string
 	baseURL string
+	// chatID is the configured staff chat until Telegram reports a
+	// supergroup migration, after which it is the new id for the life of
+	// the process. mu guards it: handlers send from request goroutines
+	// while the poller edits messages on its own.
+	mu     sync.RWMutex
+	chatID string
 	// http serves the short calls (sendMessage & co). pollHTTP exists only
 	// for GetUpdates: a long poll holds the response open for up to
 	// pollTimeoutSec, which the 15s ResponseHeaderTimeout here would abort
@@ -109,6 +152,44 @@ func NewForTest(token, chatID, baseURL string) *Client {
 
 var _ Notifier = (*Client)(nil)
 
+// ChatID returns the chat currently in use as an integer — the configured
+// one, or the supergroup Telegram migrated it to. The bot handler compares
+// incoming updates against it so quick actions keep working after a
+// migration without a restart.
+func (c *Client) ChatID() int64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	id, _ := strconv.ParseInt(c.chatID, 10, 64) // shape enforced by config.ValidateTelegram
+	return id
+}
+
+func (c *Client) currentChat() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.chatID
+}
+
+// adoptMigration switches to the supergroup id named in err, if any, and
+// reports whether the caller should retry. The swap happens once: a
+// concurrent send that lost the race finds the id already updated and
+// simply retries too. The warning is the operator's cue — the process
+// heals itself, the EnvironmentFile does not.
+func (c *Client) adoptMigration(err error) bool {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.MigrateToChatID == 0 {
+		return false
+	}
+	newID := strconv.FormatInt(apiErr.MigrateToChatID, 10)
+	c.mu.Lock()
+	changed := c.chatID != newID
+	c.chatID = newID
+	c.mu.Unlock()
+	if changed {
+		log.Warn().Msgf("[telegram] staff chat was upgraded to a supergroup — now sending to %s for this process; make it permanent with: make prod-secrets-set KEY=TELEGRAM_CHAT_ID (value %s) && make prod-app-restart", newID, newID)
+	}
+	return true
+}
+
 type sendMessageRequest struct {
 	ChatID             string                `json:"chat_id"`
 	Text               string                `json:"text"`
@@ -144,6 +225,9 @@ type apiResponse struct {
 	OK          bool            `json:"ok"`
 	Description string          `json:"description"`
 	Result      json.RawMessage `json:"result"`
+	Parameters  struct {
+		MigrateToChatID int64 `json:"migrate_to_chat_id"`
+	} `json:"parameters"`
 }
 
 // call POSTs one Bot API method. result may be nil when the caller only
@@ -162,7 +246,7 @@ func (c *Client) call(ctx context.Context, httpc *http.Client, method string, pa
 
 	resp, err := httpc.Do(req)
 	if err != nil {
-		return fmt.Errorf("telegram connection: %w", err)
+		return fmt.Errorf("telegram connection: %w", c.redact(err))
 	}
 	defer resp.Body.Close()
 
@@ -171,7 +255,11 @@ func (c *Client) call(ctx context.Context, httpc *http.Client, method string, pa
 		return fmt.Errorf("telegram decode (HTTP %d): %w", resp.StatusCode, err)
 	}
 	if !out.OK {
-		return &APIError{StatusCode: resp.StatusCode, Description: out.Description}
+		return &APIError{
+			StatusCode:      resp.StatusCode,
+			Description:     out.Description,
+			MigrateToChatID: out.Parameters.MigrateToChatID,
+		}
 	}
 	if result != nil {
 		if err := json.Unmarshal(out.Result, result); err != nil {
@@ -187,14 +275,22 @@ func (c *Client) Send(ctx context.Context, text string) error {
 	return c.SendMessage(ctx, text, SendOptions{})
 }
 
-// SendMessage posts one message, optionally with an inline keyboard.
+// SendMessage posts one message, optionally with an inline keyboard. A
+// supergroup-migration reply switches the client to the new chat id and
+// retries once, so a group upgrade costs nothing but a warning.
 func (c *Client) SendMessage(ctx context.Context, text string, opts SendOptions) error {
-	err := c.call(ctx, c.http, "sendMessage", sendMessageRequest{
-		ChatID:             c.chatID,
-		Text:               text,
-		LinkPreviewOptions: linkPreviewOptions{IsDisabled: true},
-		ReplyMarkup:        opts.Keyboard,
-	}, nil)
+	send := func() error {
+		return c.call(ctx, c.http, "sendMessage", sendMessageRequest{
+			ChatID:             c.currentChat(),
+			Text:               text,
+			LinkPreviewOptions: linkPreviewOptions{IsDisabled: true},
+			ReplyMarkup:        opts.Keyboard,
+		}, nil)
+	}
+	err := send()
+	if c.adoptMigration(err) {
+		err = send()
+	}
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) {
@@ -225,13 +321,19 @@ func (c *Client) AnswerCallbackQuery(ctx context.Context, callbackID, text strin
 // would change (a double-tap on already-final text); that is a success
 // for our purposes and is swallowed here.
 func (c *Client) EditMessageText(ctx context.Context, messageID int64, text string, keyboard *InlineKeyboardMarkup) error {
-	err := c.call(ctx, c.http, "editMessageText", editMessageTextRequest{
-		ChatID:             c.chatID,
-		MessageID:          messageID,
-		Text:               text,
-		LinkPreviewOptions: linkPreviewOptions{IsDisabled: true},
-		ReplyMarkup:        keyboard,
-	}, nil)
+	edit := func() error {
+		return c.call(ctx, c.http, "editMessageText", editMessageTextRequest{
+			ChatID:             c.currentChat(),
+			MessageID:          messageID,
+			Text:               text,
+			LinkPreviewOptions: linkPreviewOptions{IsDisabled: true},
+			ReplyMarkup:        keyboard,
+		}, nil)
+	}
+	err := edit()
+	if c.adoptMigration(err) {
+		err = edit()
+	}
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && strings.Contains(apiErr.Description, "message is not modified") {

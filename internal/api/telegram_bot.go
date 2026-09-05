@@ -36,6 +36,22 @@ type TelegramHandler struct {
 	// is ignored before a single query runs — the bot is not a public
 	// surface, and a forwarded button or a DM must do nothing.
 	ChatID int64
+	// LiveChatID, when set, reports the chat the client is actually
+	// sending to — which differs from ChatID after Telegram upgrades the
+	// group to a supergroup mid-process (telegram.Client adopts the new id
+	// on its own). Without it, the bot would keep talking to the new chat
+	// but ignore every command coming back from it until a restart.
+	LiveChatID func() int64
+}
+
+// isStaffChat accepts the configured chat and, if the client has migrated,
+// the chat it migrated to. Nothing else — a forwarded button or a DM must
+// still do nothing.
+func (h *TelegramHandler) isStaffChat(id int64) bool {
+	if id == h.ChatID {
+		return true
+	}
+	return h.LiveChatID != nil && id == h.LiveChatID()
 }
 
 // respondCtx returns a context for the respond phase. Deliberately NOT the
@@ -57,7 +73,7 @@ func (h *TelegramHandler) HandleUpdate(ctx context.Context, u telegram.Update) {
 }
 
 func (h *TelegramHandler) handleCallback(ctx context.Context, cq *telegram.CallbackQuery) {
-	if cq.Message == nil || cq.Message.Chat.ID != h.ChatID {
+	if cq.Message == nil || !h.isStaffChat(cq.Message.Chat.ID) {
 		log.Warn().Msgf("[telegram] callback %s from unexpected chat — ignored", cq.ID)
 		return
 	}
@@ -121,7 +137,7 @@ func (h *TelegramHandler) handleCallback(ctx context.Context, cq *telegram.Callb
 }
 
 func (h *TelegramHandler) handleMessage(ctx context.Context, m *telegram.Message) {
-	if m.Chat.ID != h.ChatID {
+	if !h.isStaffChat(m.Chat.ID) {
 		return // DMs and other chats: silently nothing
 	}
 	cmd := strings.Fields(m.Text)
