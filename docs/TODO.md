@@ -2,18 +2,7 @@
 
 ## Now
 
-* **OVH deliverability incident (opened 2026-08-29).** OVH's relay accepted
-  5 OTP emails to Gmail on Aug 27 (`250 Queued`, zero app errors) but Google's
-  DMARC aggregate for that day counts only 4 congopro.com messages total —
-  all matching OTHER sends that arrived fine. So the relay dropped them
-  silently, no NDR. App / DNS / Gmail all exonerated (a probe byte-identical
-  to a real OTP was delivered). Ticket open with OVH, with queue ref
-  InternalId=40368397616226 and Message-ID evidence. Follow-ups:
-  - watch `hello@` for late NDRs (the SMTP reason would be gold);
-  - pull the next Google DMARC report (covers Aug 28) from `ask@` — do the
-    10:51 test and the 04:4x/04:5x OTPs show up?
-  - when OVH answers, retest OTP login end-to-end from the app;
-  - if OVH drags: consider a second SMTP provider as fallback for OTP mail.
+* (nothing — pull from Next when ready)
 
 ## Next (Phase 2 wrap-up — see [BACKEND_PROPOSAL.md](BACKEND_PROPOSAL.md))
 
@@ -73,6 +62,19 @@ lands in Gmail spam on reputation alone)
   [report 2](https://pagespeed.web.dev/analysis/https-congopro-com/1w6laz73ws?utm_source=search_console&form_factor=mobile&hl=fr)
 
 ## Done (highlights — full history in git)
+
+* Transactional email moved OVH → Brevo (2026-09-05), ending a 9-day total
+  outbound outage. OVH EmailPro accepted every message (`250 Queued`, real
+  SMTP round-trips, zero app errors) and delivered none of them to the
+  outside world — no bounce, no NDR, ticket unanswered for a week. Proof it
+  was not us and not Gmail: Google's DMARC aggregate for Aug 27 counted 4
+  congopro.com messages against ~8 sent; ProtonMail never arrived either;
+  only OVH-internal (`ask@congopro.com`) worked. Lesson recorded: a `250
+  Queued` logged as success is what let this run 9 days — see the canary
+  follow-up below. Zero code changed (internal/mail is provider-agnostic
+  SMTP); DNS gained Brevo DKIM + SPF include, MX stays at OVH for receiving.
+  Watch out: adding a second `_dmarc` record disables DMARC entirely
+  (RFC 7489) — one record per domain, always.
 
 * SEO & PageSpeed milestone (2026-08-29, deployed + verified live the same
   day, runbook in [SEO.md](SEO.md)): the
